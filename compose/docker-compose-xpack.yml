@@ -1,0 +1,18 @@
+version: '2.2'
+
+services:
+  core:
+    volumes:
+    - share-volume:/opt/jumpserver/apps/xpack1
+    depends_on:
+      - xpack
+  xpack:
+    image: core-xpack
+    container_name: core_xpack
+    volumes:
+      - share-volume:/opt/xpack
+    networks:
+      - net
+
+volumes:
+  share-volume:

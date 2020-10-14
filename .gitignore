@@ -1,0 +1,15 @@
+.idea
+*.tar
+.DS_store
+jumpserver-release/compose
+*.rpm
+*.zip
+*.tar.gz
+scripts/docker/
+scripts/images/
+backup
+config.txt
+cofnig.link
+.env
+.bak
+config.link

@@ -1,0 +1,122 @@
+version: '2.2'
+
+services:
+  nginx:
+    image: jumpserver/nginx:alpine2
+    container_name: jms_nginx
+    restart: always
+    ports:
+      - ${HTTP_PORT}:80
+      - ${HTTPS_PORT}:443
+    volumes:
+      - ${VOLUME_DIR}/core/data:/data
+      - ${VOLUME_DIR}/nginx/log:/var/log/nginx
+      - ./nginx/cert:/etc/nginx/cert
+      - ./nginx/http_server.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - core
+      - luna
+      - koko
+      - guacamole
+    healthcheck:
+      test: ["CMD", "test", "-f", "/var/run/nginx.pid"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+    networks:
+      - net
+
+  core:
+    image: jumpserver/core:${VERSION}
+    container_name: jms_core
+    restart: always
+    tty: true
+    command: web
+    env_file:
+      - /opt/jumpserver/config/config.txt
+    volumes:
+      - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
+      - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - net
+
+  koko:
+    image: jumpserver/koko:${VERSION}
+    container_name: jms_koko
+    restart: always
+    tty: true
+    env_file:
+      - /opt/jumpserver/config/config.txt
+    ports:
+      - ${SSH_PORT}:2222
+    depends_on:
+      core:
+        condition: service_healthy
+    volumes:
+      - ${VOLUME_DIR}/koko/data:/opt/koko/data
+    privileged: true
+    healthcheck:
+      test: "ps axu | grep 'koko'"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - net
+
+  luna:
+    image: jumpserver/luna:${VERSION}
+    container_name: jms_luna
+    restart: always
+    env_file:
+      - /opt/jumpserver/config/config.txt
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: "wget http://localhost/luna/ -O -"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - net
+  
+  lina:
+    image: jumpserver/lina:${VERSION}
+    container_name: jms_lina
+    restart: always
+    env_file:
+      - /opt/jumpserver/config/config.txt
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: "wget http://localhost/ -O -"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - net
+
+  guacamole:
+    image: jumpserver/guacamole:${VERSION}
+    container_name: jms_guacamole
+    env_file:
+      - /opt/jumpserver/config/config.txt
+    restart: always
+    volumes:
+      - ${VOLUME_DIR}/guacamole/data:/config/guacamole/data
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - net

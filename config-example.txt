@@ -1,0 +1,95 @@
+# 这是项目总的配置文件, 会作为环境变量加载到各个容器中
+# 格式必须是 KEY=VALUE 不能有空格等
+
+# Compose项目设置
+TAG=master
+COMPOSE_PROJECT_NAME=jms
+COMPOSE_HTTP_TIMEOUT=3600
+DOCKER_CLIENT_TIMEOUT=3600
+DOCKER_SUBNET=192.168.250.0/24
+
+# IPV6
+DOCKER_SUBNET_IPV6=2001:db8:10::/64
+USE_IPV6=0
+
+## 持久化目录, 安装启动后不能再修改, 除非移动原来的持久化到新的位置
+VOLUME_DIR=/opt/jumpserver
+
+# Nginx 配置，这个Nginx是用来分发路径到不同的服务
+HTTP_PORT=8080
+HTTPS_PORT=8443
+SSH_PORT=2222
+
+# LB 配置, 这个Nginx是HA时可以启动负载均衡到不同的主机
+USE_LB=0
+LB_HTTP_PORT=80
+LB_HTTPS_PORT=443
+LB_SSH_PORT=2223
+
+# Task 配置
+USE_TASK=1
+
+# Koko配置
+## 启动数量, 至少4个，少了需要修改配置文件
+CORE_HOST=http://core:8080
+ENABLE_PROXY_PROTOCOL=true
+
+# 是否使用外部MYSQL和REDIS
+USE_EXTERNAL_MYSQL=0
+USE_EXTERNAL_REDIS=0
+
+# Core 配置
+## 启动后不能再修改，否则密码等等信息无法解密
+SECRET_KEY=
+BOOTSTRAP_TOKEN=
+LOG_LEVEL=INFO
+# SESSION_COOKIE_AGE=86400
+# SESSION_EXPIRE_AT_BROWSER_CLOSE=false
+
+# 功能配置
+## 启用二次复合认证配置
+# LOGIN_CONFIRM_ENABLE=false
+## 日志保留天数
+# LOGIN_LOG_KEEP_DAYS=9999
+## 改密计划安全模式
+# CHANGE_AUTH_PLAN_SECURE_MODE_ENABLED=true
+## 查看密码需要MFA
+# SECURITY_VIEW_AUTH_NEED_MFA=true
+
+# MySQL数据库配置
+DB_ENGINE=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=jumpserver
+
+# Redis配置
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# Keycloak 配置方式
+# AUTH_OPENID=true
+# BASE_SITE_URL=https://jumpserver.company.com/
+# AUTH_OPENID_SERVER_URL=https://keycloak.company.com/auth
+# AUTH_OPENID_REALM_NAME=cmp
+# AUTH_OPENID_CLIENT_ID=jumpserver
+# AUTH_OPENID_CLIENT_SECRET=
+# AUTH_OPENID_SHARE_SESSION=true
+# AUTH_OPENID_IGNORE_SSL_VERIFICATION=true
+
+
+# Guacamole 配置
+JUMPSERVER_SERVER=http://core:8080
+JUMPSERVER_KEY_DIR=/config/guacamole/data/key/
+JUMPSERVER_RECORD_PATH=/config/guacamole/data/record/
+JUMPSERVER_DRIVE_PATH=/config/guacamole/data/drive/
+JUMPSERVER_ENABLE_DRIVE=true
+JUMPSERVER_CLEAR_DRIVE_SESSION=true
+JUMPSERVER_CLEAR_DRIVE_SCHEDULE=24
+
+
+# Mysql 容器启动
+MYSQL_ROOT_PASSWORD=
+MYSQL_DATABASE=jumpserver
