@@ -3,11 +3,11 @@ version: '2.2'
 services:
   core:
     volumes:
-    - share-volume:/opt/jumpserver/apps/xpack1
+    - share-volume:/opt/jumpserver/apps/xpack
     depends_on:
       - xpack
   xpack:
-    image: core-xpack
+    image: jumpserver/xpack:${VERSION}
     container_name: core_xpack
     volumes:
       - share-volume:/opt/xpack

@@ -29,6 +29,9 @@ LB_SSH_PORT=2223
 # Task 配置
 USE_TASK=1
 
+# XPack
+USE_XPACK=0
+
 # Koko配置
 ## 启动数量, 至少4个，少了需要修改配置文件
 CORE_HOST=http://core:8080
