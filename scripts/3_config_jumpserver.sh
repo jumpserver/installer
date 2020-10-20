@@ -134,10 +134,14 @@ function set_volume_dir() {
 
 function prepare_config() {
     cwd=$(pwd)
-    cd ${PROJECT_DIR}
+    cd "${PROJECT_DIR}"
 
+    config_dir=$(dirname ${CONFIG_FILE})
+    if [[ ! -d ${config_dir} ]];then
+        cp -r config_init "${config_dir}"
+        cp config-example.txt ${CONFIG_FILE}
+    fi
     if [[ ! -f ${CONFIG_FILE} ]];then
-        mkdir -p $(dirname ${CONFIG_FILE})
         cp config-example.txt ${CONFIG_FILE}
     fi
     if [[ ! -d /opt/jumpserver/config/nginx/cert ]];then

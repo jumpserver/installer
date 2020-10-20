@@ -6,16 +6,16 @@ services:
     container_name: jms_lb
     restart: always
     env_file:
-      - /opt/jumpserver/config/config.txt
+      - ${CONFIG_FILE}
     ports:
       - ${LB_HTTP_PORT}:80
       - ${LB_HTTPS_PORT}:443
       - ${LB_SSH_PORT}:2222
     volumes:
       - ${VOLUME_DIR}/lb/log:/var/log/nginx
-      - /opt/jumpserver/config/nginx/cert:/etc/nginx/cert
-      - /opt/jumpserver/config/nginx/lb_http_server.conf:/etc/nginx/conf.d/default.conf
-      - /opt/jumpserver/config/nginx/lb_ssh_server.conf:/etc/nginx/stream.d/ssh_server.conf
+      - ${CONFIG_DIR}/nginx/cert:/etc/nginx/cert
+      - ${CONFIG_DIR}/nginx/lb_http_server.conf:/etc/nginx/conf.d/default.conf
+      - ${CONFIG_DIR}/nginx/lb_ssh_server.conf:/etc/nginx/stream.d/ssh_server.conf
     healthcheck:
       test: ["CMD", "test", "-f", "/var/run/nginx.pid"]
       interval: 10s

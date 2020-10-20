@@ -83,32 +83,32 @@ function pre_check() {
 }
 
 function get_docker_compose_cmd_line() {
-  cmd="docker-compose -f docker-compose-app.yml "
+  cmd="docker-compose -f compose/docker-compose-app.yml "
   use_ipv6=$(get_config USE_IPV6)
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd="${cmd} -f docker-compose-network.yml "
+    cmd="${cmd} -f compose/docker-compose-network.yml "
   else
-    cmd="${cmd} -f docker-compose-network_ipv6.yml "
+    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml "
   fi
   use_task=$(get_config USE_TASK)
   if [[ "${use_task}" != "0" ]]; then
-    cmd="${cmd} -f docker-compose-task.yml"
+    cmd="${cmd} -f compose/docker-compose-task.yml"
   fi
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
   if [[ "${use_external_mysql}" != "1" ]]; then
-    cmd="${cmd} -f docker-compose-mysql.yml"
+    cmd="${cmd} -f compose/docker-compose-mysql.yml"
   fi
   use_external_redis=$(get_config USE_EXTERNAL_REDIS)
   if [[ "${use_external_redis}" != "1" ]]; then
-    cmd="${cmd} -f docker-compose-redis.yml"
+    cmd="${cmd} -f compose/docker-compose-redis.yml"
   fi
   use_lb=$(get_config USE_LB)
   if [[ "${use_lb}" == "1" ]]; then
-    cmd="${cmd} -f docker-compose-lb.yml"
+    cmd="${cmd} -f compose/docker-compose-lb.yml"
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    cmd="${cmd} -f docker-compose-xpack.yml"
+    cmd="${cmd} -f compose/docker-compose-xpack.yml"
   fi
   echo ${cmd}
 }

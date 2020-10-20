@@ -11,7 +11,7 @@ services:
       core:
         condition: service_healthy
     env_file:
-      - /opt/jumpserver/config/config.txt
+      - ${CONFIG_FILE}
     environment:
       - SERVER_HOSTNAME=${HOSTNAME}
     volumes:

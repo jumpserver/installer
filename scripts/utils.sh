@@ -76,14 +76,15 @@ function test_redis_connect() {
 
 function get_images(){
     images=(
-      "registry.fit2cloud.com/public/redis:alpine"
-      "registry.fit2cloud.com/public/mysql:5"
-      "registry.fit2cloud.com/public/nginx:alpine2"
-      "registry.fit2cloud.com/jumpserver/luna:${VERSION}"
-      "registry.fit2cloud.com/jumpserver/core:${VERSION}"
-      "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
-      "registry.fit2cloud.com/jumpserver/guacamole:${VERSION}"
-      "registry.fit2cloud.com/jumpserver/lina:${VERSION}"
+      "jumpserver/redis:alpine"
+      "jumpserver/mysql:5"
+      "jumpserver/nginx:alpine2"
+      "jumpserver/luna:${VERSION}"
+      "jumpserver/core:${VERSION}"
+      "jumpserver/koko:${VERSION}"
+      "jumpserver/guacamole:${VERSION}"
+      "jumpserver/lina:${VERSION}"
+      "jumpserver/xpack:${VERSION}"
     )
     for image in ${images[@]};do
         echo ${image}

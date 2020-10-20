@@ -8,7 +8,7 @@ services:
       - xpack
   xpack:
     image: jumpserver/xpack:${VERSION}
-    container_name: core_xpack
+    container_name: jms_xpack
     volumes:
       - share-volume:/opt/xpack
     networks:

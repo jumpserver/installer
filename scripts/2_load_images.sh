@@ -1,6 +1,6 @@
 #!/bin/bash
-# Copyright (c) 2014-2019 Beijing Duizhan Tech, Inc., All rights reserved.
-# Author: Jumpserver Team
+# Copyright (c) 2014-2020 Fit2cloud Tech, Inc., All rights reserved.
+# Author: JumpServer Team
 # Mail: support@fit2cloud.com
 #
 
@@ -18,5 +18,7 @@ for image in ${images};do
     if [[ -f ${IMAGE_DIR}/${filename_windows} ]];then
         filename=${filename_windows}
     fi
-    docker load < ${IMAGE_DIR}/${filename}
+    if [[ -f ${filename} ]];then
+        docker load < ${IMAGE_DIR}/${filename}
+    fi
 done

@@ -11,10 +11,10 @@ services:
     restart: always
     volumes:
       - ${VOLUME_DIR}/redis/data:/data
-      - ./redis/redis.conf:/etc/redis.conf
+      - ${CONFIG_DIR}/redis/redis.conf:/etc/redis.conf
     command: ["redis-server", "/etc/redis.conf", "--requirepass", "$REDIS_PASSWORD"]
     env_file:
-      - /opt/jumpserver/config/config.txt
+      - ${CONFIG_FILE}
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "$$REDIS_PASSWORD", "info"]
       interval: 10s
