@@ -6,6 +6,11 @@ services:
     - share-volume:/opt/jumpserver/apps/xpack
     depends_on:
       - xpack
+  celery:
+    volumes:
+      - share-volume:/opt/jumpserver/apps/xpack
+    depends_on:
+      - xpack
   xpack:
     image: jumpserver/xpack:${VERSION}
     container_name: jms_xpack
