@@ -108,7 +108,7 @@ function get_docker_compose_cmd_line() {
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-xpack.yml"
+    cmd="${cmd} -f compose/docker-compose-xpack.yml -f compose/docker-compose-omnidb.yml"
   fi
   echo ${cmd}
 }

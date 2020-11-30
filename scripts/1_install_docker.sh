@@ -18,8 +18,8 @@ function copy_docker() {
    fi
 }
 
-function install_docker() {
-    echo "1. 安装Docker"
+function offline_install_docker() {
+    echo "1. 本地安装Docker"
     old_docker_md5=$(get_file_md5 /usr/bin/dockerd)
     new_docker_md5=$(get_file_md5 ./docker/dockerd)
 
@@ -52,6 +52,33 @@ function install_docker() {
         chmod +x /usr/bin/docker-compose
     fi
 }
+
+function install_docker() {
+    if [[ -f ./docker/dockerd ]];then
+      offline_install_docker
+    else
+      online_install_docker
+    fi
+}
+
+function online_install_docker() {
+    echo "1. 下载安装Docker"
+    yum remove docker \
+    docker-common \
+    docker-selinux \
+    docker-engine -y
+
+    yum install -y yum-utils \
+      device-mapper-persistent-data \
+      lvm2
+
+    yum-config-manager \
+      --add-repo \
+      https://download.docker.com/linux/centos/docker-ce.repo
+
+    yum install -y docker-ce
+}
+
 
 function set_docker_config() {
    key=$1

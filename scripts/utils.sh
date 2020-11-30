@@ -75,6 +75,10 @@ function test_redis_connect() {
 }
 
 function get_images(){
+    scope="all"
+    if [[ ! -z "$1" ]];then
+       scope="$1"
+    fi
     images=(
       "jumpserver/redis:alpine"
       "jumpserver/mysql:5"
@@ -84,11 +88,14 @@ function get_images(){
       "jumpserver/koko:${VERSION}"
       "jumpserver/guacamole:${VERSION}"
       "jumpserver/lina:${VERSION}"
-      "jumpserver/xpack:${VERSION}"
     )
     for image in ${images[@]};do
         echo ${image}
     done
+    if [[ "${scope}" == "all" ]];then
+      echo "jumpserver/xpack:${VERSION}"
+      echo "jumpserver/omnidb:${VERSION}"
+    fi
 }
 
 function read_from_input(){
