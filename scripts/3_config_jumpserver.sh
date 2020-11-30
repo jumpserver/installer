@@ -161,6 +161,7 @@ function prepare_config() {
 }
 
 function set_jumpserver() {
+    echo ""
     echo ">>> 配置Jumpserver"
     prepare_config
     set_secret_key

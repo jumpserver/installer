@@ -63,20 +63,13 @@ function install_docker() {
 
 function online_install_docker() {
     echo "1. 下载安装Docker"
-    yum remove docker \
-    docker-common \
-    docker-selinux \
-    docker-engine -y
-
-    yum install -y yum-utils \
-      device-mapper-persistent-data \
-      lvm2
-
-    yum-config-manager \
-      --add-repo \
-      https://download.docker.com/linux/centos/docker-ce.repo
-
+    yum install -y yum-utils device-mapper-persistent-data lvm2
+    yum-config-manager --add-repo https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+    yum makecache fast
     yum install -y docker-ce
+
+    curl -L "https://get.daocloud.io/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" > /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
 }
 
 
@@ -151,6 +144,7 @@ function start_docker(){
 }
 
 function main(){
+    echo ""
     echo ">>> 安装配置Docker"
     if [[ "${OS}" == 'Darwin' ]];then
         echo "MacOS skip install docker"
