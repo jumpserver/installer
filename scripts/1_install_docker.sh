@@ -150,9 +150,16 @@ function main(){
         echo "MacOS skip install docker"
         return
     fi
-    install_docker
-    config_docker
-    start_docker
+    which docker >/dev/null 2>&1
+    if [ $? -ne 0 ];then
+        install_docker
+    fi
+    if [ ! -f "/etc/docker/daemon.json" ]; then
+        config_docker
+    fi
+    if [ ! "$(systemctl status docker | grep Active | grep running)" ]; then
+        start_docker
+    fi
 }
 
 main
