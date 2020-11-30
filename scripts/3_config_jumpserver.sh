@@ -6,7 +6,7 @@
 
 BASE_DIR=$(cd "$(dirname "$0")";pwd)
 PROJECT_DIR=$(dirname ${BASE_DIR})
-source ${BASE_DIR}/utils.sh
+source "${BASE_DIR}/utils.sh"
 
 
 function set_external_mysql(){
@@ -134,6 +134,9 @@ function set_volume_dir() {
 
 function prepare_config() {
     cwd=$(pwd)
+    if [[ ! -d "${PROJECT_DIR}" ]];then
+      mkdir -p "${PROJECT_DIR}"
+    fi
     cd "${PROJECT_DIR}"
 
     config_dir=$(dirname ${CONFIG_FILE})
@@ -145,7 +148,7 @@ function prepare_config() {
         cp config-example.txt ${CONFIG_FILE}
     fi
     if [[ ! -d /opt/jumpserver/config/nginx/cert ]];then
-      cp -R nginx/cert /opt/jumpserver/config/nginx/
+      cp -R ${PROJECT_DIR}/config_init/nginx/cert /opt/jumpserver/config/nginx/
     fi
 
     if [[ ! -f .env ]];then
