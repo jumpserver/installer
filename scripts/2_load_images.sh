@@ -10,7 +10,7 @@ IMAGE_DIR=images
 
 cd "${BASE_DIR}" || return
 
-function load_image() {
+function load_image_files() {
     echo ">>> 加载镜像"
     images=$(get_images)
     for image in ${images};do
@@ -38,5 +38,11 @@ function pull_image() {
       docker pull "${image}"
     done
 }
+
+if  [[ -d "${IMAGE_DIR}" ]];then
+  load_image_files
+else
+  pull_image
+fi
 
 
