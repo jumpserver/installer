@@ -1,8 +1,4 @@
 #!/bin/bash
-# Copyright (c) 2014-2020 Fit2cloud Tech, Inc., All rights reserved.
-# Author: JumpServer Team
-# Mail: support@fit2cloud.com
-#
 
 BASE_DIR=$(dirname "$0")
 source ${BASE_DIR}/utils.sh
@@ -14,20 +10,32 @@ function load_image_files() {
     echo ">>> 加载镜像"
     images=$(get_images)
     for image in ${images};do
+        echo ""
         filename=$(basename ${image}).tar
         filename_windows=${filename/:/_}
-        has_file=0
         if [[ -f ${IMAGE_DIR}/${filename_windows} ]];then
             filename=${filename_windows}
-            has_file=1
         fi
-        if [[ -f ${filename} ]];then
-            docker load < ${IMAGE_DIR}/${filename}
-            has_file=1
+        if [[ ! -f ${IMAGE_DIR}/${filename} ]];then
+            echo "Error: Image file miss: ${filename}"
+            continue
         fi
-        if [[ "${has_file}" == '0' ]];then
-          echo "Error: Image file 丢失: ${filename}"
+
+        echo -n "${image} <= ${IMAGE_DIR}/${filename}: "
+        md5_filename=$(basename "${image}").md5
+        md5_path=${IMAGE_DIR}/${md5_filename}
+        image_id=$(docker inspect -f {{.ID}} ${image} 2> /dev/null || echo "")
+        saved_id=""
+
+        if [[ -f "${md5_path}" ]];then
+          saved_id=$(cat "${md5_path}")
         fi
+        if [[ ${image_id} != "${saved_id}" ]];then
+            docker load < "${IMAGE_DIR}/${filename}"
+        else
+            echo "has loaded, pass"
+        fi
+
     done
 }
 

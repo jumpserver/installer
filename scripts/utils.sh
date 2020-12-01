@@ -129,7 +129,15 @@ function get_file_md5() {
             echo $(md5sum ${file_path} | awk '{ print $1 }')
         fi
     fi
+}
 
+function check_md5() {
+  file=$1
+  md5_should=$2
+
+  md5=$(get_file_md5 "${file}")
+  [[ "${md5}" == "${md5_should}" ]]
+  return $?
 }
 
 function is_running() {
