@@ -13,16 +13,17 @@ action=${1-}
 target=${2-}
 args="$@"
 
-function upgrade() {
-  bash "${SCRIPT_DIR}/5_db_backup.sh"
-  if [[ "$?" != "0" ]]; then
-    echo "备份数据库失败, 确认成功后可以继续执行一下操作"
-  else
-    echo "备份数据库完成, 接下来"
-  fi
-  echo "1. 下载新的release包，解压，然后在新下载的release包中执行 ./jmsctl.sh load_image 加载新的镜像"
-  echo "2. 然后直接启动 ./jmsctl.sh start"
-}
+cat << "EOF"
+       __                     _____
+      / /_  ______ ___  ____ / ___/___  ______   _____  _____
+ __  / / / / / __ `__ \/ __ \\__ \/ _ \/ ___/ | / / _ \/ ___/
+/ /_/ / /_/ / / / / / / /_/ /__/ /  __/ /   | |/ /  __/ /
+\____/\__,_/_/ /_/ /_/ .___/____/\___/_/    |___/\___/_/
+                    /_/
+
+EOF
+
+echo -e "\t\t\t\t\t Version: \033[33m $VERSION \033[0m \n"
 
 function copy_coco_to_koko() {
   volume_dir=$(get_config VOLUME_DIR)
@@ -108,7 +109,7 @@ function get_docker_compose_cmd_line() {
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-xpack.yml"
+    cmd="${cmd} -f compose/docker-compose-xpack.yml -f compose/docker-compose-omnidb.yml"
   fi
   echo ${cmd}
 }
@@ -121,20 +122,19 @@ function usage() {
   echo "  ./jmsctl.sh --help"
   echo
   echo "Commands: "
-  echo "  install 部署安装JumpServer"
-  echo "  reconfig 配置JumpServer"
-  echo "  upgrade 升级JumpServer说明"
-  echo "  backup_db 备份数据库"
+  echo "  install    部署安装JumpServer"
+  echo "  reconfig   配置JumpServer"
+  echo "  upgrade    升级JumpServer说明"
+  echo "  backup_db  备份数据库"
   echo "  restore_db [db_file] 通过数据库备份文件恢复数据库数据"
   echo "  load_image 重新加载镜像"
-  echo "  start 启动JumpServer"
+  echo "  start      启动JumpServer"
   echo "  restart [service] 重启, 并不会重建服务容器"
-  echo "  reload [service] 重建容器如何需要并重启服务"
-  echo "  status 查看JumpServer状态"
-  echo "  down [service] 删掉容器 不带参数删掉所有"
-  echo "  python 进入core, 运行 python manage.py shell"
-  echo "  db 连接数据库"
-  echo "  ... 其他docker-compose执行的命令 如 logs 等等"
+  echo "  reload [service]  重建容器并重启服务"
+  echo "  down [service]    删掉容器 不带参数删掉所有"
+  echo "  status  查看JumpServer状态"
+  echo "  python  进入core, 运行 python manage.py shell"
+  echo "  db      连接数据库"
 }
 
 function service_to_docker_name() {
@@ -147,9 +147,11 @@ function service_to_docker_name() {
 
 function main() {
   EXE=""
-  if [[ "${action}" != "install" && "${action}" != "reconfig" ]]; then
-    pre_check || return 3
-    EXE=$(get_docker_compose_cmd_line)
+  if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
+    echo ""
+  elif [[ "${action}" != "install" && "${action}" != "reconfig" ]]; then
+  pre_check || return 3
+  EXE=$(get_docker_compose_cmd_line)
   fi
   case "${action}" in
   reconfig)
@@ -224,9 +226,13 @@ function main() {
   --help)
     usage
     ;;
-  *)
-    ${EXE} ${args}
+  -h)
+    usage
     ;;
+  *)
+    echo -e "jmsctl: unknown COMMAND: '$action'"
+    echo -e "See 'jmsctl --help' \n"
+    usage
   esac
 }
 

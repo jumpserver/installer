@@ -8,17 +8,41 @@ BASE_DIR=$(dirname "$0")
 source ${BASE_DIR}/utils.sh
 IMAGE_DIR=images
 
-cd ${BASE_DIR}
-images=$(get_images)
+cd "${BASE_DIR}" || return
 
-echo ">>> 加载镜像"
-for image in ${images};do
-    filename=$(basename ${image}).tar
-    filename_windows=${filename/:/_}
-    if [[ -f ${IMAGE_DIR}/${filename_windows} ]];then
-        filename=${filename_windows}
-    fi
-    if [[ -f ${filename} ]];then
-        docker load < ${IMAGE_DIR}/${filename}
-    fi
-done
+function load_image_files() {
+    echo ">>> 加载镜像"
+    images=$(get_images)
+    for image in ${images};do
+        filename=$(basename ${image}).tar
+        filename_windows=${filename/:/_}
+        has_file=0
+        if [[ -f ${IMAGE_DIR}/${filename_windows} ]];then
+            filename=${filename_windows}
+            has_file=1
+        fi
+        if [[ -f ${filename} ]];then
+            docker load < ${IMAGE_DIR}/${filename}
+            has_file=1
+        fi
+        if [[ "${has_file}" == '0' ]];then
+          echo "Error: Image file 丢失: ${filename}"
+        fi
+    done
+}
+
+function pull_image() {
+    echo ">>> 拉取镜像"
+    images=$(get_images public)
+    for image in ${images};do
+      docker pull "${image}"
+    done
+}
+
+if  [[ -d "${IMAGE_DIR}" ]];then
+  load_image_files
+else
+  pull_image
+fi
+
+

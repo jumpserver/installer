@@ -18,8 +18,8 @@ function copy_docker() {
    fi
 }
 
-function install_docker() {
-    echo "1. 安装Docker"
+function offline_install_docker() {
+    echo "1. 本地安装Docker"
     old_docker_md5=$(get_file_md5 /usr/bin/dockerd)
     new_docker_md5=$(get_file_md5 ./docker/dockerd)
 
@@ -52,6 +52,26 @@ function install_docker() {
         chmod +x /usr/bin/docker-compose
     fi
 }
+
+function install_docker() {
+    if [[ -f ./docker/dockerd ]];then
+      offline_install_docker
+    else
+      online_install_docker
+    fi
+}
+
+function online_install_docker() {
+    echo "1. 下载安装Docker"
+    yum install -y yum-utils device-mapper-persistent-data lvm2
+    yum-config-manager --add-repo https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+    yum makecache fast
+    yum install -y docker-ce
+
+    curl -L "https://get.daocloud.io/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" > /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+}
+
 
 function set_docker_config() {
    key=$1
@@ -124,14 +144,22 @@ function start_docker(){
 }
 
 function main(){
+    echo ""
     echo ">>> 安装配置Docker"
     if [[ "${OS}" == 'Darwin' ]];then
         echo "MacOS skip install docker"
         return
     fi
-    install_docker
-    config_docker
-    start_docker
+    which docker >/dev/null 2>&1
+    if [ $? -ne 0 ];then
+        install_docker
+    fi
+    if [ ! -f "/etc/docker/daemon.json" ]; then
+        config_docker
+    fi
+    if [ ! "$(systemctl status docker | grep Active | grep running)" ]; then
+        start_docker
+    fi
 }
 
 main
