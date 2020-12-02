@@ -25,6 +25,8 @@ function copy_docker() {
 
 function install_docker() {
     echo "1. 安装Docker"
+    command -v docker >/dev/null 2>&1
+
     if [[ -f ./docker/dockerd ]];then
       echo "开始下载 Docker"
       prepare_docker_bin
@@ -140,13 +142,8 @@ function main(){
         echo "MacOS skip install docker"
         return
     fi
-    command -v docker >/dev/null 2>&1
-    if [ $? -ne 0 ];then
-        install_docker
-    fi
-    if [ ! -f "/etc/docker/daemon.json" ]; then
-        config_docker
-    fi
+    install_docker
+    config_docker
     start_docker
 }
 
