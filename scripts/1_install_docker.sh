@@ -25,11 +25,14 @@ function copy_docker() {
 
 function install_docker() {
     echo "1. 安装Docker"
-    command -v docker >/dev/null 2>&1
-
-    if [[ -f ./docker/dockerd ]];then
+    if [[ ! -f ./docker/dockerd ]];then
       echo "开始下载 Docker"
+      rm -rf ./docker
       prepare_docker_bin
+    fi
+    if [[ ! -f ./docker/dockerd ]];then
+       echo "Error: Docker 程序不存在"
+       exit
     fi
     old_docker_md5=$(get_file_md5 /usr/bin/dockerd)
     new_docker_md5=$(get_file_md5 ./docker/dockerd)
