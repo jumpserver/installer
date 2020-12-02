@@ -156,14 +156,26 @@ function is_running() {
     fi
 }
 
+function echo_red(){
+    echo -e "\e[1;31m$1\e[0m"
+}
+
+function echo_green(){
+    echo -e "\e[1;32m$1\e[0m"
+}
+
+function echo_yellow(){
+    echo -e "\e[1;33m$1\e[0m"
+}
+
 function log_success() {
-    echo -e "\033[32m[SUCCESS] $1 \033[0m"
+    echo_green "[SUCCESS] $1"
 }
 
 function log_warn() {
-    echo -e "\033[33m[WARN] $1 \033[0m"
+    echo_yellow "[WARN] $1"
 }
 
 function log_error() {
-    echo -e "\033[31m[ERROR] $1 \033[0m"
+    echo_red "[ERROR] $1"
 }
