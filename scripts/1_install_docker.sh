@@ -1,6 +1,11 @@
 #!/bin/bash
 BASE_DIR=$(dirname "$0")
-source ${BASE_DIR}/utils.sh
+
+# shellcheck source=./util.sh
+. "${BASE_DIR}/utils.sh"
+
+# shellcheck source=./0_prepare.sh
+. "${BASE_DIR}/0_prepare.sh"
 
 DOCKER_CONFIG="/etc/docker/daemon.json"
 docker_exist=0
@@ -8,7 +13,7 @@ docker_version_match=1
 docker_config_change=0
 docker_copy_failed=0
 
-cd ${BASE_DIR}
+cd "${BASE_DIR}" || exit
 
 function copy_docker() {
    cp ./docker/* /usr/bin/ && cp ./docker.service /etc/systemd/system/ && \
@@ -19,7 +24,7 @@ function copy_docker() {
 }
 
 function offline_install_docker() {
-    echo "1. 本地安装Docker"
+    echo "1. 安装Docker"
     old_docker_md5=$(get_file_md5 /usr/bin/dockerd)
     new_docker_md5=$(get_file_md5 ./docker/dockerd)
 
@@ -55,21 +60,9 @@ function offline_install_docker() {
 
 function install_docker() {
     if [[ -f ./docker/dockerd ]];then
-      offline_install_docker
-    else
-      online_install_docker
+      prepare_docker_bin
     fi
-}
-
-function online_install_docker() {
-    echo "1. 下载安装Docker"
-    yum install -y yum-utils device-mapper-persistent-data lvm2
-    yum-config-manager --add-repo https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-    yum makecache fast
-    yum install -y docker-ce
-
-    curl -L "https://get.daocloud.io/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" > /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
+    offline_install_docker
 }
 
 

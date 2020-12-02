@@ -7,6 +7,13 @@ PROJECT_DIR=$(dirname ${SCRIPT_DIR})
 STATIC_ENV=${PROJECT_DIR}/static.env
 OS=$(uname)
 
+DOCKER_VERSION=18.06.2-ce
+DOCKER_COMPOSE_VERSION=1.23.2
+DOCKER_MIRROR="https://mirrors.aliyun.com/docker-ce/linux/static/stable"
+DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
+DOCKER_COMPOSE_MIRROR="https://get.daocloud.io/docker/compose/releases/download"
+DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m`"
+
 
 source ${STATIC_ENV}
 
