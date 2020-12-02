@@ -49,15 +49,16 @@ function prepare_image_files(){
     md5_filename=$(basename "${image}").md5
     md5_path=${IMAGE_DIR}/${md5_filename}
 
-    image_id=$(docker inspect -f {{.ID}} ${image})
+    image_id=$(docker inspect -f "{{.ID}}" ${image})
     saved_id=""
     if [[ -f "${md5_path}" ]];then
       saved_id=$(cat "${md5_path}")
     fi
 
+    mkdir -p "${IMAGE_DIR}"
     if [[ ${image_id} != "${saved_id}" ]];then
       rm -f ${IMAGE_DIR}/${component}*
-      docker save -o "${IMAGE_DIR}/${filename}" "${image}" && echo ${image_id} > ${md5_path}
+      docker save -o "${IMAGE_DIR}/${filename}" "${image}" && echo "${image_id}" > "${md5_path}"
     else
       echo "Same with saved, pass: ${image}"
     fi
