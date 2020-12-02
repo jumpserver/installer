@@ -97,7 +97,7 @@ f.close()
 }
 
 function config_docker() {
-  echo_yellow "2. 配置Docker"
+  echo_yellow "\n2. 配置Docker"
   if [[ -f '/etc/docker/daemon.json' ]]; then
     cp /etc/docker/daemon.json /etc/docker/daemon.json.bak
   fi
@@ -121,7 +121,7 @@ function config_docker() {
 }
 
 function start_docker() {
-  echo_yellow "3. 启动Docker"
+  echo_yellow "\n3. 启动Docker"
   systemctl daemon-reload
   docker_is_running=$(is_running dockerd)
 
