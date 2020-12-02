@@ -3,7 +3,8 @@ BASE_DIR=$(dirname "$0")
 #BASE_DIR=$(cd "$(dirname "$0")";pwd)
 PROJECT_DIR=${BASE_DIR}
 SCRIPT_DIR=${BASE_DIR}/scripts
-source ${BASE_DIR}/utils.sh
+# shellcheck source=./util.sh
+source "${BASE_DIR}/utils.sh"
 target=$1
 
 function main() {

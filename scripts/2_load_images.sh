@@ -1,13 +1,14 @@
 #!/bin/bash
 
 BASE_DIR=$(dirname "$0")
-source ${BASE_DIR}/utils.sh
+# shellcheck source=./util.sh
+source "${BASE_DIR}/utils.sh"
 IMAGE_DIR=images
 
 cd "${BASE_DIR}" || return
 
 function load_image_files() {
-    echo ">>> 加载镜像"
+    echo_green "\n>>> 加载镜像"
     images=$(get_images)
     for image in ${images};do
         echo ""
@@ -17,6 +18,7 @@ function load_image_files() {
             filename=${filename_windows}
         fi
         if [[ ! -f ${IMAGE_DIR}/${filename} ]];then
+            echo_red "镜像文件没有发现: ${IMAGE_DIR}/${filename}"
             continue
         fi
 
@@ -39,14 +41,18 @@ function load_image_files() {
 }
 
 function pull_image() {
-    echo ">>> 拉取镜像"
+    echo_green "\n>>> 二、拉取镜像"
     images=$(get_images public)
+    i=1
     for image in ${images};do
+      echo_yellow "$i. ${image}"
       docker pull "${image}"
+      echo ""
+      (( i++ )) || true
     done
 }
 
-if  [[ -d "${IMAGE_DIR}" ]];then
+if  [[ -d "${IMAGE_DIR}" && -f "${IMAGE_DIR}/redis:alpine.tar" ]];then
   load_image_files
 else
   pull_image

@@ -14,13 +14,13 @@ USE_XPACK="${USE_XPACK-0}"
 
 function prepare_docker_bin() {
   if [[ ! -f /tmp/docker.tar.gz || $(check_md5 /tmp/docker.tar.gz ${DOCKER_MD5}) ]]; then
-    echo "开始下载 Docker"
+    echo "开始下载 Docker 程序 ..."
     wget "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
 
   if [[ ! -f /tmp/docker-compose || $(check_md5 /tmp/docker-compose ${DOCKER_COMPOSE_MD5}) ]]; then
-    echo "开始下载 Docker compose"
+    echo "开始下载 Docker compose 程序 ..."
     wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
   fi
   cp /tmp/docker-compose docker/
@@ -56,7 +56,7 @@ function prepare_image_files() {
       rm -f ${IMAGE_DIR}/${component}*
       docker save -o "${IMAGE_DIR}/${filename}" "${image}" && echo "${image_id}" >"${md5_path}"
     else
-      echo "Same with saved, pass: ${image}"
+      echo "已加载过该镜像, 跳过: ${image}"
     fi
   done
 

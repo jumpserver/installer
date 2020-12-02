@@ -3,7 +3,8 @@
 
 BASE_DIR=$(cd "$(dirname "$0")";pwd)
 PROJECT_DIR=$(dirname ${BASE_DIR})
-source ${BASE_DIR}/utils.sh
+# shellcheck source=./util.sh
+source "${BASE_DIR}/utils.sh"
 action=$1
 target=$2
 
@@ -14,8 +15,7 @@ function list_backup_tags(){
 
 
 function backup_images(){
-    echo
-    echo ">>> 开始备份镜像"
+    echo_green "\n>>> 开始备份镜像"
     images=$(get_images)
     for i in ${images};do
         target_tag=$(date +'%Y%m%d_%H%M%S')

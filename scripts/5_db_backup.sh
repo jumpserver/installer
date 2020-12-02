@@ -1,7 +1,8 @@
 #!/bin/bash
 BASE_DIR=$(dirname "$0")
 PROJECT_DIR=$(dirname ${BASE_DIR})
-source ${BASE_DIR}/utils.sh
+# shellcheck source=./util.sh
+source "${BASE_DIR}/utils.sh"
 BACKUP_DIR=/opt/jumpserver/db_backup
 
 HOST=$(get_config DB_HOST)
@@ -14,7 +15,7 @@ DB_FILE_ZIP=${DB_FILE}.gz
 
 mkdir -p ${BACKUP_DIR}
 
-echo ">>> 开始备份数据库"
+echo_green "\n>>> 开始备份数据库"
 echo "正在备份..."
 backup_cmd="mysqldump --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
 docker run --rm -i --network=jms_net jumpserverpublic/mysql:5 ${backup_cmd} | gzip > ${DB_FILE_ZIP}
