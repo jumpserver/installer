@@ -80,6 +80,8 @@ function make_release() {
   sed -i "s@VERSION=.*@VERSION=${release_version}@g" "${PROJECT_DIR}/static.env"
 
   echo "一、 准备离线包内容"
+  rm -f "${IMAGE_DIR}"/*.tar
+  rm -f "${IMAGE_DIR}"/*.md5
   prepare
 
   echo "二、 打包"
@@ -94,14 +96,17 @@ function make_release() {
   cd ..
 
   echo -e "\n2. 压缩包"
-  time zip -9 -r "${release_name}.zip" "${release_name}" -x '*.git*' '*hudson*' '*travis.yml*'
+  time zip -r "${release_name}.zip" "${release_name}" -x '*.git*' '*hudson*' '*travis.yml*'
   md5=$(get_file_md5 "${release_name}.zip")
-  echo 'md5:' "$md5" > "${release_name}.md5"
 
+  echo 'md5:' "$md5" > "${release_name}.md5"
   release_dir="${PROJECT_DIR}/releases"
   mkdir -p "${release_dir}"
+  rm -f "${release_dir}"/*.zip "${release_dir}"/*md5
   mv "${release_name}.zip" "${release_name}.md5" "${release_dir}"
   echo -e "\n3. 离线生成完成: ${release_dir}/${release_name}.zip"
+
+  cd "${cwd}" || exit
 }
 
 function prepare() {
