@@ -23,8 +23,12 @@ function copy_docker() {
    fi
 }
 
-function offline_install_docker() {
+function install_docker() {
     echo "1. 安装Docker"
+    if [[ -f ./docker/dockerd ]];then
+      echo "开始下载 Docker"
+      prepare_docker_bin
+    fi
     old_docker_md5=$(get_file_md5 /usr/bin/dockerd)
     new_docker_md5=$(get_file_md5 ./docker/dockerd)
 
@@ -56,13 +60,6 @@ function offline_install_docker() {
         cp ./docker/docker-compose /usr/bin/
         chmod +x /usr/bin/docker-compose
     fi
-}
-
-function install_docker() {
-    if [[ -f ./docker/dockerd ]];then
-      prepare_docker_bin
-    fi
-    offline_install_docker
 }
 
 
@@ -143,16 +140,14 @@ function main(){
         echo "MacOS skip install docker"
         return
     fi
-    which docker >/dev/null 2>&1
+    command -v docker >/dev/null 2>&1
     if [ $? -ne 0 ];then
         install_docker
     fi
     if [ ! -f "/etc/docker/daemon.json" ]; then
         config_docker
     fi
-    if [ ! "$(systemctl status docker | grep Active | grep running)" ]; then
-        start_docker
-    fi
+    start_docker
 }
 
 main
