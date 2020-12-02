@@ -134,30 +134,33 @@ function set_volume_dir() {
 
 function prepare_config() {
     cwd=$(pwd)
-    if [[ ! -d "${PROJECT_DIR}" ]];then
-      mkdir -p "${PROJECT_DIR}"
-    fi
-    cd "${PROJECT_DIR}"
+    cd "${PROJECT_DIR}" || exit
 
-    config_dir=$(dirname ${CONFIG_FILE})
+    config_dir=$(dirname "${CONFIG_FILE}")
     if [[ ! -d ${config_dir} ]];then
+        config_dir_parent=$(dirname "${config_dir}")
+        mkdir -p "${config_dir_parent}"
         cp -r config_init "${config_dir}"
-        cp config-example.txt ${CONFIG_FILE}
+        cp config-example.txt "${CONFIG_FILE}"
     fi
     if [[ ! -f ${CONFIG_FILE} ]];then
-        cp config-example.txt ${CONFIG_FILE}
-    fi
-    if [[ ! -d /opt/jumpserver/config/nginx/cert ]];then
-      cp -R ${PROJECT_DIR}/config_init/nginx/cert /opt/jumpserver/config/nginx/
+        cp config-example.txt "${CONFIG_FILE}"
     fi
 
-    if [[ ! -f .env ]];then
-        ln -s ${CONFIG_FILE} .env
+    # 迁移nginx的证书
+    if [[ ! -d /opt/jumpserver/config/nginx/cert ]];then
+      cp -R "${PROJECT_DIR}/config_init/nginx/cert" "${config_dir}/nginx/"
     fi
-    mkdir -p /opt/jumpserver/config/backup
+
+    # .env 会被docker compose使用
+    if [[ ! -f .env ]];then
+        ln -s "${CONFIG_FILE}" .env
+    fi
+    backup_dir="${config_dir}/backup"
+    mkdir -p "${backup_dir}"
     now=$(date +'%Y-%m-%d_%H-%M-%S')
-    cp ${CONFIG_FILE} /opt/jumpserver/config/backup/config.txt.${now}
-    cd ${cwd}
+    cp "${CONFIG_FILE}" "${backup_dir}/config.txt.${now}"
+    cd "${cwd}" || exit
 }
 
 function set_jumpserver() {

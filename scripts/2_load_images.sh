@@ -17,14 +17,13 @@ function load_image_files() {
             filename=${filename_windows}
         fi
         if [[ ! -f ${IMAGE_DIR}/${filename} ]];then
-            echo "Error: Image file miss: ${filename}"
             continue
         fi
 
         echo -n "${image} <= ${IMAGE_DIR}/${filename}: "
         md5_filename=$(basename "${image}").md5
         md5_path=${IMAGE_DIR}/${md5_filename}
-        image_id=$(docker inspect -f {{.ID}} ${image} 2> /dev/null || echo "")
+        image_id=$(docker inspect -f "{{.ID}}" "${image}" 2> /dev/null || echo "")
         saved_id=""
 
         if [[ -f "${md5_path}" ]];then

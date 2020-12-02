@@ -12,19 +12,21 @@ DOCKER_COMPOSE_MD5=7f508b543123e8c81ca138d5b36001a2
 IMAGE_DIR="images"
 
 DOCKER_MIRROR="https://mirrors.aliyun.com/docker-ce/linux/static/stable"
+DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
 DOCKER_COMPOSE_MIRROR="https://get.daocloud.io/docker/compose/releases/download"
+DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m`"
 DOCKER_IMAGE_PREFIX="${DOCKER_IMAGE_PREFIX-}"
 USE_XPACK="${USE_XPACK-0}"
 
 
 function prepare_docker_bin(){
   if [[ ! -f /tmp/docker.tar.gz || `check_md5 /tmp/docker.tar.gz ${DOCKER_MD5}` ]]; then
-    wget ${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz -O /tmp/docker.tar.gz
+    wget "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
 
   if [[ ! -f /tmp/docker-compose || `check_md5 /tmp/docker-compose ${DOCKER_COMPOSE_MD5}` ]]; then
-      wget ${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` -O /tmp/docker-compose
+      wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
   fi
   cp /tmp/docker-compose docker/
 }
@@ -66,4 +68,5 @@ function prepare_image_files(){
 
 }
 
+prepare_docker_bin
 prepare_image_files
