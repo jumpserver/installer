@@ -14,11 +14,13 @@ USE_XPACK="${USE_XPACK-0}"
 
 function prepare_docker_bin() {
   if [[ ! -f /tmp/docker.tar.gz || $(check_md5 /tmp/docker.tar.gz ${DOCKER_MD5}) ]]; then
+    echo "开始下载 Docker"
     wget "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
 
   if [[ ! -f /tmp/docker-compose || $(check_md5 /tmp/docker-compose ${DOCKER_COMPOSE_MD5}) ]]; then
+    echo "开始下载 Docker compose"
     wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
   fi
   cp /tmp/docker-compose docker/

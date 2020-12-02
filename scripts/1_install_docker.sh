@@ -25,8 +25,7 @@ function copy_docker() {
 
 function install_docker() {
     echo "1. 安装Docker"
-    if [[ ! -f ./docker/dockerd ]];then
-      echo "开始下载 Docker"
+    if [[ ! -f ./docker/dockerd || ! -f ./docker/docker-compose ]];then
       rm -rf ./docker
       prepare_docker_bin
     fi
