@@ -13,18 +13,6 @@ action=${1-}
 target=${2-}
 args="$@"
 
-cat << "EOF"
-
-     ██╗██╗   ██╗███╗   ███╗██████╗ ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗
-     ██║██║   ██║████╗ ████║██╔══██╗██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗
-     ██║██║   ██║██╔████╔██║██████╔╝███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝
-██   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗
-╚█████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║
- ╚════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
-
-EOF
-
-echo -e "\t\t\t\t\t\t\t\t\t Version: \033[33m $VERSION \033[0m \n"
 
 function copy_coco_to_koko() {
   volume_dir=$(get_config VOLUME_DIR)
@@ -37,17 +25,22 @@ function copy_coco_to_koko() {
 }
 
 function migrate_config() {
+  mkdir -p "${CONFIG_DIR}"
+
+  # v1.5 => v2.0
+  # 原先配置文件都在自己的目录，以后配置文件统一放在 /opt/jumpserver/config 中
   if [[ -f config.txt && ! -f ${CONFIG_FILE} ]]; then
-    mkdir -p "$(dirname ${CONFIG_FILE})"
-    mv config.txt ${CONFIG_FILE}
+    mv config.txt "${CONFIG_FILE}"
     rm -f .env
-    ln -s ${CONFIG_FILE} .env
-    ln -s ${CONFIG_FILE} config.link
+    ln -s "${CONFIG_FILE}" .env
+    ln -s "${CONFIG_FILE}" config.link
   fi
-  if [[ ! -d /opt/jumpserver/config/nginx ]]; then
-    mkdir -p /opt/jumpserver/config/
+
+  # 迁移nginx的证书过去
+  if [[ ! -d ${CONFIG_DIR}/nginx ]]; then
     cp -R nginx /opt/jumpserver/config/
   fi
+
   if [[ -f config.txt ]]; then
     mv config.txt config.txt."$(date '+%s')"
   fi
@@ -151,8 +144,8 @@ function main() {
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""
   elif [[ "${action}" != "install" && "${action}" != "reconfig" ]]; then
-  pre_check || return 3
-  EXE=$(get_docker_compose_cmd_line)
+    pre_check || return 3
+    EXE=$(get_docker_compose_cmd_line)
   fi
   case "${action}" in
   reconfig)
@@ -234,6 +227,7 @@ function main() {
     echo -e "jmsctl: unknown COMMAND: '$action'"
     echo -e "See 'jmsctl --help' \n"
     usage
+    ;;
   esac
 }
 

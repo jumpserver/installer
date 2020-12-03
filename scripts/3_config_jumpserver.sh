@@ -1,9 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2014-2019 Beijing Duizhan Tech, Inc., All rights reserved.
-# Author: Jumpserver Team
-# Mail: support@fit2cloud.com
 #
-
 BASE_DIR=$(cd "$(dirname "$0")";pwd)
 PROJECT_DIR=$(dirname ${BASE_DIR})
 
@@ -27,11 +23,9 @@ function set_external_mysql(){
     mysql_pass=""
     read_from_input mysql_pass "请输入mysql的密码" "" "${mysql_pass}"
 
-    #test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
+    test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
     if [[ "$?" != "0" ]];then
-        echo "测试连接数据库失败, 请重新设置"
-        set_external_mysql
-        return
+        echo "测试连接数据库失败, 可以 Ctrl-C 退出程序重新设置，或者继续"
     fi
     set_config DB_HOST ${mysql_host}
     set_config DB_PORT ${mysql_port}
@@ -75,11 +69,9 @@ function set_external_redis() {
     redis_password=""
     read_from_input redis_password "请输入redis的密码" "" "${redis_password}"
 
-    #test_redis_connect ${redis_host} ${redis_port} ${redis_password}
+    test_redis_connect ${redis_host} ${redis_port} ${redis_password}
     if [[ "$?" != "0" ]];then
-       echo "测试连接Redis失败, 请重新设置"
-       set_external_redis
-       return
+       echo "测试连接Redis失败, 可以 Ctrl-C 退出程序重新设置，或者继续"
     fi
     set_config REDIS_HOST ${redis_host}
     set_config REDIS_PORT ${redis_port}

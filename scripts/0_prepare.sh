@@ -91,7 +91,7 @@ function make_release() {
 
   cd "${PROJECT_DIR}/.." || exit
   echo "1. 拷贝内容"
-  cp -r "${package_name}" "${release_name}"
+  time cp -r "${package_name}" "${release_name}"
   cd "${release_name}" && rm -rf hudson.* .travis.yml .git
   cd ..
 
