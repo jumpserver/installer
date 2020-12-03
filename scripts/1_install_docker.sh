@@ -24,7 +24,6 @@ function copy_docker() {
 }
 
 function install_docker() {
-  echo_yellow "1. 安装Docker"
   if [[ ! -f ./docker/dockerd || ! -f ./docker/docker-compose ]]; then
     rm -rf ./docker
     prepare_docker_bin
@@ -46,10 +45,8 @@ function install_docker() {
     copy_docker
   elif [[ "${docker_version_match}" != "1" ]]; then
     confirm="y"
-    read_from_input confirm "已有Docker与本Release包版本不一致, 是否覆盖" "y/n" "${confirm}"
-    if [[ "$confirm" == "n" ]]; then
-      copy_docker
-    fi
+    echo_yellow "已有 Docker 与 本Release包版本不一致, 开始更新"
+    copy_docker
   fi
 
   if [[ "${docker_copy_failed}" != "0" ]]; then
@@ -97,7 +94,6 @@ f.close()
 }
 
 function config_docker() {
-  echo_yellow "\n2. 配置Docker"
   if [[ -f '/etc/docker/daemon.json' ]]; then
     cp /etc/docker/daemon.json /etc/docker/daemon.json.bak
   fi
@@ -121,7 +117,6 @@ function config_docker() {
 }
 
 function start_docker() {
-  echo_yellow "\n3. 启动Docker"
   systemctl daemon-reload
   docker_is_running=$(is_running dockerd)
 
@@ -156,9 +151,16 @@ echo -e "\t\t\t\t\t\t\t\t\t Version: \033[33m $VERSION \033[0m \n"
     echo "MacOS skip install docker"
     return
   fi
+  echo_yellow "1. 安装Docker"
   install_docker
+  echo_yellow "\n2. 配置Docker"
   config_docker
+  echo_yellow "\n3. 启动Docker"
   start_docker
 }
 
-main
+case $1 in
+run)
+  main
+  ;;
+esac

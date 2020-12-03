@@ -1,24 +1,12 @@
 #!/usr/bin/env bash
-SCRIPT_DIR=$(cd "$(dirname "$0")";pwd)
-if [[ $0 =~ 'jmsctl' ]];then
-  SCRIPT_DIR=${SCRIPT_DIR}/scripts
-fi
-PROJECT_DIR=$(dirname ${SCRIPT_DIR})
-STATIC_ENV=${PROJECT_DIR}/static.env
-OS=$(uname)
 
-DOCKER_VERSION=18.06.2-ce
-DOCKER_COMPOSE_VERSION=1.23.2
-DOCKER_MIRROR="https://mirrors.aliyun.com/docker-ce/linux/static/stable"
-DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
-DOCKER_COMPOSE_MIRROR="https://get.daocloud.io/docker/compose/releases/download"
-DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m`"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
-
-source ${STATIC_ENV}
+# shellcheck source=./const.sh
+source "${BASE_DIR}/const.sh"
 
 function is_confirm(){
-    read confirmed
+    read -r confirmed
     if [[ "${confirmed}" == "y" || "${confirmed}" == "Y" || ${confirmed} == ""  ]]; then
         return 0
     else
@@ -42,17 +30,16 @@ function random_str() {
 
 function get_config() {
     cwd=$(pwd)
-    cd ${PROJECT_DIR}
-    echo ${PROJECT_DIR} > /tmp/bcd
+    cd "${PROJECT_DIR}" || exit
     key=$1
     value=$(grep "^${key}=" ${CONFIG_FILE} | awk -F= '{ print $2 }')
-    echo ${value}
-    cd ${cwd}
+    echo "${value}"
+    cd "${cwd}" || exit
 }
 
 function set_config() {
     cwd=$(pwd)
-    cd ${PROJECT_DIR}
+    cd "${PROJECT_DIR}" || exit
     key=$1
     value=$2
     if [[ "${OS}" == 'Darwin' ]];then
@@ -60,7 +47,7 @@ function set_config() {
     else
         sed -i "s,^${key}=.*$,${key}=${value},g" ${CONFIG_FILE}
     fi
-    cd ${cwd}
+    cd "${cwd}" || exit
 }
 
 function test_mysql_connect() {
@@ -131,9 +118,9 @@ function get_file_md5() {
     file_path=$1
     if [[ -f "${file_path}" ]];then
         if [[ "${OS}" == "Darwin" ]];then
-            echo $(md5 ${file_path} | awk -F= '{ print $2}')
+            md5 "${file_path}" | awk -F= '{ print $2 }'
         else
-            echo $(md5sum ${file_path} | awk '{ print $1 }')
+            md5sum "${file_path}" | awk '{ print $1 }'
         fi
     fi
 }

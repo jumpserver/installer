@@ -212,4 +212,8 @@ function main(){
     finish
 }
 
-main
+case $1 in
+run)
+  main
+  ;;
+esac

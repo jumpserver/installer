@@ -1,14 +1,9 @@
 #!/bin/bash
-BASE_DIR=$(
-  cd "$(dirname "$0")"
-  pwd
-)
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=scripts/utils.sh
-source "${BASE_DIR}/scripts/utils.sh"
-SCRIPT_DIR=${BASE_DIR}/scripts
-STATIC_ENV='static.env'
-# shellcheck source=static.env
-source "${STATIC_ENV}"
+source "${PROJECT_DIR}/scripts/utils.sh"
+
 action=${1-}
 target=${2-}
 args="$@"
@@ -149,38 +144,38 @@ function main() {
   fi
   case "${action}" in
   reconfig)
-    bash ${SCRIPT_DIR}/3_config_jumpserver.sh
+    bash "${SCRIPT_DIR}/3_config_jumpserver.sh run"
     ;;
   install)
-    bash ${SCRIPT_DIR}/4_install_jumpserver.sh
+    bash "${SCRIPT_DIR}/4_install_jumpserver.sh run"
     ;;
   upgrade)
-    bash ${SCRIPT_DIR}/8_upgrade.sh $target
+    bash "${SCRIPT_DIR}/8_upgrade.sh $target"
     ;;
   backup_db)
-    bash ${SCRIPT_DIR}/5_db_backup.sh
+    bash "${SCRIPT_DIR}/5_db_backup.sh run"
     ;;
   restore_db)
-    bash ${SCRIPT_DIR}/6_db_restore.sh $target
+    bash "${SCRIPT_DIR}/6_db_restore.sh $target"
     ;;
   load_image)
-    bash ${SCRIPT_DIR}/2_load_images.sh
+    bash "${SCRIPT_DIR}/2_load_images.sh"
     ;;
   start)
     ${EXE} up -d
     ;;
   restart)
-    ${EXE} restart ${target}
+    ${EXE} restart "${target}"
     ;;
   reload)
     ${EXE} up -d &>/dev/null
-    ${EXE} restart ${target}
+    ${EXE} restart "${target}"
     ;;
   status)
     ${EXE} ps
     ;;
   cmd)
-    echo ${EXE}
+    echo "${EXE}"
     ;;
   down)
     if [[ -z "${target}" ]]; then

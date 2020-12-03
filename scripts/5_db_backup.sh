@@ -28,3 +28,4 @@ if [[ "$code" != "x0" ]];then
 else    
     echo -e "\033[32m备份成功! 备份文件已存放至: ${DB_FILE_ZIP} \033[0m"
 fi
+
