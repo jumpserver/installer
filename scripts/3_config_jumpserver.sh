@@ -176,7 +176,10 @@ function set_jumpserver() {
 
 function finish() {
     echo_green "\n>>> 六、安装完成了"
-    HOST=$(/sbin/ifconfig | grep -A 7 -E 'eth[0-9]+|ens[0-9]+' | grep inet | grep -v inet6|awk '{print $2}'|tr -d "addr:" | head -1)
+    HOST=$(ip addr | grep 'state UP' -A2 | grep inet | egrep -v '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
+    if [ ! "$HOST" ]; then
+        HOST=$(hostname -I | cut -d ' ' -f1)
+    fi
     HTTP_PORT=$(get_config HTTP_PORT)
     HTTPS_PORT=$(get_config HTTPS_PORT)
     SSH_PORT=$(get_config SSH_PORT)
