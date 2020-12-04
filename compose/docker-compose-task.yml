@@ -6,7 +6,7 @@ services:
     container_name: jms_celery
     restart: always
     tty: true
-    command: task
+    command: start task
     depends_on:
       core:
         condition: service_healthy

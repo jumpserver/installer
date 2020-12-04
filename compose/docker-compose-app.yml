@@ -31,7 +31,7 @@ services:
     container_name: jms_core
     restart: always
     tty: true
-    command: web
+    command: start web
     env_file:
       - ${CONFIG_FILE}
     volumes:

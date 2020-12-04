@@ -1,5 +1,5 @@
 #!/bin/bash
-BASE_DIR=$(dirname "$0")
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 PROJECT_DIR=$(dirname ${BASE_DIR})
 # shellcheck source=./util.sh
 source "${BASE_DIR}/utils.sh"

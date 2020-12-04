@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-BASE_DIR=$(cd "$(dirname "$0")";pwd)
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 PROJECT_DIR=$(dirname ${BASE_DIR})
 
 # shellcheck source=./util.sh
@@ -176,7 +176,7 @@ function set_jumpserver() {
 
 function finish() {
     echo_green "\n>>> 六、安装完成了"
-    HOST=$(/sbin/ifconfig | grep -A 7 -E 'eth[0-9]+|ens[0-9]+' | grep inet | grep -v inet6|awk '{print $2}'|tr -d "addr:" | head -1)
+    HOST=$(ip a | grep -A 7 -E 'eth[0-9]+|ens[0-9]+' | grep inet | grep -v inet6|awk '{print $2}'|tr -d "addr:" | head -1 | awk -F/ '{ print $1 }')
     HTTP_PORT=$(get_config HTTP_PORT)
     HTTPS_PORT=$(get_config HTTPS_PORT)
     SSH_PORT=$(get_config SSH_PORT)

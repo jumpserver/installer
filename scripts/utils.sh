@@ -130,8 +130,11 @@ function check_md5() {
   md5_should=$2
 
   md5=$(get_file_md5 "${file}")
-  [[ "${md5}" == "${md5_should}" ]]
-  return $?
+  if [[ "${md5}" == "${md5_should}" ]];then
+    echo "1"
+  else
+    echo "0"
+  fi
 }
 
 function is_running() {

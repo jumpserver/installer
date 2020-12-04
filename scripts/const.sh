@@ -1,9 +1,7 @@
 #!/bin/bash
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-if [[ $0 =~ 'jmsctl' ]];then
-  BASE_DIR=${SCRIPT_DIR}/scripts
-fi
+
 export SCRIPT_DIR="$BASE_DIR"
 PROJECT_DIR=$(dirname "${SCRIPT_DIR}")
 
@@ -11,7 +9,7 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 # shellcheck source=../static.env
 source "${STATIC_ENV}"
 
-readonly OS=$(uname -s)
+export OS=$(uname -s)
 export DOCKER_VERSION=19.03.14
 export DOCKER_MD5=dfa385b37c444c7d97fe78bd5148299d
 export DOCKER_MIRROR="https://mirrors.aliyun.com/docker-ce/linux/static/stable"

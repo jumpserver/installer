@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BASE_DIR=$(dirname "$0")
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
 source "${BASE_DIR}/utils.sh"
 IMAGE_DIR=images
@@ -36,7 +36,7 @@ function load_image_files() {
     if [[ ${image_id} != "${saved_id}" ]]; then
       docker load <"${IMAGE_DIR}/${filename}"
     else
-      echo "has loaded, pass"
+      echo "镜像已加载，跳过"
     fi
 
   done

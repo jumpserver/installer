@@ -1,24 +1,27 @@
 #!/usr/bin/env bash
-BASE_DIR=$(dirname "$0")
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 #BASE_DIR=$(cd "$(dirname "$0")";pwd)
-PROJECT_DIR=${BASE_DIR}
-SCRIPT_DIR=${BASE_DIR}/scripts
 # shellcheck source=./util.sh
 source "${BASE_DIR}/utils.sh"
-source "${BASE_DIR}/static.env"
 source "${BASE_DIR}/1_install_docker.sh"
 
 target=$1
 
+
 function perform_db_migrations() {
+   echo
 }
 
+
 function update_config_if_need() {
+   echo
 }
+
 
 function update_proc_if_need() {
   install_docker
 }
+
 
 function main() {
   echo_yellow "1. 备份数据库"

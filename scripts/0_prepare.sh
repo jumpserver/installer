@@ -8,8 +8,15 @@ IMAGE_DIR="images"
 DOCKER_IMAGE_PREFIX="${DOCKER_IMAGE_PREFIX-}"
 USE_XPACK="${USE_XPACK-0}"
 
+
 function prepare_docker_bin() {
-  if [[ ! -f /tmp/docker.tar.gz || ! $(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}") ]]; then
+  command -v wget &> /dev/null || yum -y install wget
+
+  md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
+  if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
+    echo "Md5 ${DOCKER_MD5}"
+    get_file_md5 /tmp/docker.tar.gz
+    echo "v::          $md5_match"
     echo "开始下载 Docker 程序 ..."
     wget "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz
   else
@@ -17,16 +24,26 @@ function prepare_docker_bin() {
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
 
-  if [[ ! -f /tmp/docker-compose || ! $(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}") ]]; then
+  md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
+  if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
     echo "开始下载 Docker compose 程序 ..."
     wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
   else
     echo "使用 Docker compose 缓存文件: /tmp/docker-compose"
   fi
   cp /tmp/docker-compose docker/
+  chmod +x docker/*
+  export PATH=$PATH:$(pwd)/docker
 }
 
+
 function prepare_image_files() {
+  ps aux | grep -v 'grep' | grep 'docker' &> /dev/null
+  if [[ "$?" != "0" ]];then
+    echo "Docker 没有运行, 请安装并启动"
+    exit 1
+  fi
+
   scope="public"
   if [[ "${USE_XPACK}" == "1" ]]; then
     scope="all"
@@ -111,7 +128,7 @@ function prepare() {
   prepare_image_files
 }
 
-if [[ "$0" != "-bash" ]]; then
+if [[ "$0" = "$BASH_SOURCE"  ]]; then
   case "$1" in
   run)
     prepare
