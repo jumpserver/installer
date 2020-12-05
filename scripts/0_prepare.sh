@@ -128,19 +128,21 @@ function prepare() {
   prepare_image_files
 }
 
-if [[ "$0" = "$BASH_SOURCE"  ]]; then
-  case "$1" in
-  run)
-    prepare
-    ;;
-  prepare)
-    prepare
-    ;;
-  release)
-    make_release "$2"
-    ;;
-  *)
-    echo "Usage: $0 run | prepare | release VERSION"
-    ;;
-  esac
+if [[ "$0" != "$BASH_SOURCE"  ]]; then
+  exit 0
 fi
+
+case "$1" in
+run)
+  prepare
+  ;;
+prepare)
+  prepare
+  ;;
+release)
+  make_release "$2"
+  ;;
+*)
+  echo "Usage: $0 run | prepare | release VERSION"
+  ;;
+esac

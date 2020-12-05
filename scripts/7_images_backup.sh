@@ -59,4 +59,6 @@ function main() {
     esac
 }
 
-main
+if [[  "$0" = "$BASH_SOURCE"  ]];then
+  main
+fi

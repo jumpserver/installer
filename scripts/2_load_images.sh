@@ -62,8 +62,6 @@ function main() {
   fi
 }
 
-case $1 in
-run)
+if [[  "$0" = "$BASH_SOURCE"  ]];then
   main
-  ;;
-esac
+fi

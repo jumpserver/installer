@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-#BASE_DIR=$(cd "$(dirname "$0")";pwd)
 # shellcheck source=./util.sh
 source "${BASE_DIR}/utils.sh"
 source "${BASE_DIR}/1_install_docker.sh"
@@ -9,12 +8,14 @@ target=$1
 
 
 function perform_db_migrations() {
-   echo
+  docker run -it --rm --network=jms_net \
+      --env-file=/opt/jumpserver/config/config.txt \
+      jumpserver/core:${VERSION} upgrade
 }
 
 
 function update_config_if_need() {
-   echo
+  echo
 }
 
 
@@ -50,14 +51,11 @@ function main() {
 
   echo_yellow "\n5. 进行数据库变更"
   echo "表结构变更可能需要一段时间，请耐心等待"
-  docker run -it --rm jumpserver/core:${VERSION} upgrade:
+  perform_db_migrations
 
-  echo "1. 下载新的release包，解压，然后在新下载的release包中执行 ./jmsctl.sh load_image 加载新的镜像"
-  echo "2. 然后直接启动 ./jmsctl.sh start"
+  echo_yellow "\n6. 升级成功, 可以启动程序了"
 }
 
-case $1 in
-run)
+if [[  "$0" = "$BASH_SOURCE"  ]];then
   main
-  ;;
-esac
+fi
