@@ -8,9 +8,8 @@ IMAGE_DIR="images"
 DOCKER_IMAGE_PREFIX="${DOCKER_IMAGE_PREFIX-}"
 USE_XPACK="${USE_XPACK-0}"
 
-
 function prepare_docker_bin() {
-  command -v wget &> /dev/null || yum -y install wget
+  command -v wget &>/dev/null || yum -y install wget
 
   md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
   if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
@@ -36,10 +35,9 @@ function prepare_docker_bin() {
   export PATH=$PATH:$(pwd)/docker
 }
 
-
 function prepare_image_files() {
-  ps aux | grep -v 'grep' | grep 'docker' &> /dev/null
-  if [[ "$?" != "0" ]];then
+  ps aux | grep -v 'grep' | grep 'docker' &>/dev/null
+  if [[ "$?" != "0" ]]; then
     echo "Docker 没有运行, 请安装并启动"
     exit 1
   fi
@@ -128,21 +126,19 @@ function prepare() {
   prepare_image_files
 }
 
-if [[ "$0" != "$BASH_SOURCE"  ]]; then
-  exit 0
+if [[ "$0" == "$BASH_SOURCE" ]]; then
+  case "$1" in
+  run)
+    prepare
+    ;;
+  prepare)
+    prepare
+    ;;
+  release)
+    make_release "$2"
+    ;;
+  *)
+    echo "Usage: $0 run | prepare | release VERSION"
+    ;;
+  esac
 fi
-
-case "$1" in
-run)
-  prepare
-  ;;
-prepare)
-  prepare
-  ;;
-release)
-  make_release "$2"
-  ;;
-*)
-  echo "Usage: $0 run | prepare | release VERSION"
-  ;;
-esac

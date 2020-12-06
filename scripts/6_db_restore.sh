@@ -24,20 +24,20 @@ echo "Start to restore db from: $DB_FILE"
 
 restore_cmd="mysql --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
 
-if [[ ! -f "${DB_FILE}" ]];then
+if [[ ! -f "${DB_FILE}" ]]; then
   echo "文件不存在: ${DB_FILE}"
   exit 2
 fi
 
-if [[ "${DB_FILE}" == *".gz" ]];then
-    gunzip < ${DB_FILE} | docker run --rm -i --network=jms_net jumpserver/mysql:5 ${restore_cmd}
+if [[ "${DB_FILE}" == *".gz" ]]; then
+  gunzip <${DB_FILE} | docker run --rm -i --network=jms_net jumpserver/mysql:5 ${restore_cmd}
 else
-    docker run --rm -i --network=jms_net jumpserver/mysql:5 $restore_cmd < "${DB_FILE}"
+  docker run --rm -i --network=jms_net jumpserver/mysql:5 $restore_cmd <"${DB_FILE}"
 fi
 code="x$?"
-if [[ "$code" != "x0" ]];then
-    echo -e "\033[31m 数据库恢复失败,请检查数据库文件是否完整，或尝试手动恢复！\033[0m"
-    exit 1
-else    
-    echo -e "\033[32m 数据库恢复成功！ \033[0m"
+if [[ "$code" != "x0" ]]; then
+  echo -e "\033[31m 数据库恢复失败,请检查数据库文件是否完整，或尝试手动恢复！\033[0m"
+  exit 1
+else
+  echo -e "\033[32m 数据库恢复成功！ \033[0m"
 fi

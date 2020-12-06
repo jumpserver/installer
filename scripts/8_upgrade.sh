@@ -6,31 +6,27 @@ source "${BASE_DIR}/1_install_docker.sh"
 
 target=$1
 
-
 function perform_db_migrations() {
   docker run -it --rm --network=jms_net \
-      --env-file=/opt/jumpserver/config/config.txt \
-      jumpserver/core:${VERSION} upgrade
+    --env-file=/opt/jumpserver/config/config.txt \
+    jumpserver/core:${VERSION} upgrade
 }
-
 
 function update_config_if_need() {
   echo
 }
 
-
 function update_proc_if_need() {
   install_docker
 }
-
 
 function main() {
   echo_yellow "1. 备份数据库"
   bash ${SCRIPT_DIR}/5_db_backup.sh
 
-  if [[ "$?" != "0" ]];then
+  if [[ "$?" != "0" ]]; then
     read_from_input confirm "备份数据库失败, 继续升级吗?" "Yes/no" "no"
-    if [[ "${confirm}" == "no" ]];then
+    if [[ "${confirm}" == "no" ]]; then
       exit 1
     fi
   fi
@@ -44,7 +40,7 @@ function main() {
   echo_yellow "\n4. 升级镜像文件"
   bash ${SCRIPT_DIR}/2_load_images.sh
 
-  if [[ "$?" != "0" ]];then
+  if [[ "$?" != "0" ]]; then
     echo_read "升级镜像失败, 取消升级"
     exit 2
   fi
@@ -56,6 +52,6 @@ function main() {
   echo_yellow "\n6. 升级成功, 可以启动程序了"
 }
 
-if [[  "$0" = "$BASH_SOURCE"  ]];then
+if [[ "$0" == "$BASH_SOURCE" ]]; then
   main
 fi

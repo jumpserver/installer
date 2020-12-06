@@ -144,16 +144,16 @@ function main() {
   fi
   case "${action}" in
   reconfig)
-    bash "${SCRIPT_DIR}/3_config_jumpserver.sh" run
+    bash "${SCRIPT_DIR}/3_config_jumpserver.sh"
     ;;
   install)
-    bash "${SCRIPT_DIR}/4_install_jumpserver.sh" run
+    bash "${SCRIPT_DIR}/4_install_jumpserver.sh"
     ;;
   upgrade)
     bash "${SCRIPT_DIR}/8_upgrade.sh" "$target"
     ;;
   backup_db)
-    bash "${SCRIPT_DIR}/5_db_backup.sh" run
+    bash "${SCRIPT_DIR}/5_db_backup.sh"
     ;;
   restore_db)
     bash "${SCRIPT_DIR}/6_db_restore.sh" "$target"
