@@ -8,14 +8,15 @@ IMAGE_DIR="images"
 DOCKER_IMAGE_PREFIX="${DOCKER_IMAGE_PREFIX-}"
 USE_XPACK="${USE_XPACK-0}"
 
-function prepare_docker_bin() {
+function prepare_require_pkg() {
   command -v wget &>/dev/null || yum -y install wget
+  command -v zip &>/dev/null || yum -y install zip
+}
 
+function prepare_docker_bin() {
   md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
   if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
-    echo "Md5 ${DOCKER_MD5}"
     get_file_md5 /tmp/docker.tar.gz
-    echo "v::          $md5_match"
     echo "开始下载 Docker 程序 ..."
     wget "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz
   else
@@ -65,10 +66,7 @@ function prepare_image_files() {
     image_id=$(docker inspect -f "{{.ID}}" "${image}")
     saved_id=""
     if [[ -f "${md5_path}" ]]; then
-      echo "M5 file exit"
       saved_id=$(cat "${md5_path}")
-    else
-      echo "Md45 file not exit"
     fi
 
     mkdir -p "${IMAGE_DIR}"
@@ -123,6 +121,8 @@ function make_release() {
 }
 
 function prepare() {
+  prepare_require_pkg
+
   echo "1. 准备 Docker 离线包"
   prepare_docker_bin
 
