@@ -72,37 +72,6 @@ function pre_check() {
   check_env_file || return 4
 }
 
-function get_docker_compose_cmd_line() {
-  cmd="docker-compose -f compose/docker-compose-app.yml "
-  use_ipv6=$(get_config USE_IPV6)
-  if [[ "${use_ipv6}" != "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-network.yml "
-  else
-    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml "
-  fi
-  use_task=$(get_config USE_TASK)
-  if [[ "${use_task}" != "0" ]]; then
-    cmd="${cmd} -f compose/docker-compose-task.yml"
-  fi
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  if [[ "${use_external_mysql}" != "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-mysql.yml"
-  fi
-  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
-  if [[ "${use_external_redis}" != "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-redis.yml"
-  fi
-  use_lb=$(get_config USE_LB)
-  if [[ "${use_lb}" == "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-lb.yml"
-  fi
-  use_xpack=$(get_config USE_XPACK)
-  if [[ "${use_xpack}" == "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-xpack.yml -f compose/docker-compose-omnidb.yml"
-  fi
-  echo ${cmd}
-}
-
 function usage() {
   echo "JumpServer 部署安装脚本"
   echo
@@ -131,7 +100,7 @@ function service_to_docker_name() {
   if [[ "${service:0:3}" != "jms" ]]; then
     service=jms_${service}
   fi
-  echo ${service}
+  echo "${service}"
 }
 
 function main() {
@@ -181,15 +150,15 @@ function main() {
     if [[ -z "${target}" ]]; then
       ${EXE} down
     else
-      ${EXE} stop ${target} && ${EXE} rm ${target}
+      ${EXE} stop "${target}" && ${EXE} rm "${target}"
     fi
     ;;
   tail)
     if [[ -z "${target}" ]]; then
       ${EXE} logs --tail 100 -f
     else
-      docker_name=$(service_to_docker_name ${target})
-      docker logs -f ${docker_name} --tail 100
+      docker_name=$(service_to_docker_name "${target}")
+      docker logs -f "${docker_name}" --tail 100
     fi
     ;;
   python)
@@ -199,18 +168,18 @@ function main() {
     docker exec -it jms_core python /opt/jumpserver/apps/manage.py dbshell
     ;;
   exec)
-    docker_name=$(service_to_docker_name ${target})
-    docker exec -it ${docker_name} sh
+    docker_name=$(service_to_docker_name "${target}")
+    docker exec -it "${docker_name}" sh
     ;;
   backup)
-    bash ${SCRIPT_DIR}/5_db_backup.sh
-    bash ${SCRIPT_DIR}/7_images_backup.sh backup
+    bash "${SCRIPT_DIR}/5_db_backup.sh"
+    bash "${SCRIPT_DIR}/7_images_backup.sh backup"
     ;;
   help)
     usage
     ;;
   cmdline)
-    echo ${EXE}
+    echo "${EXE}"
     ;;
   --help)
     usage
@@ -219,9 +188,7 @@ function main() {
     usage
     ;;
   *)
-    echo -e "jmsctl: unknown COMMAND: '$action'"
-    echo -e "See 'jmsctl --help' \n"
-    usage
+    ${EXE} "${args}"
     ;;
   esac
 }

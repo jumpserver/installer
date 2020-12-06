@@ -62,13 +62,17 @@ function prepare_image_files() {
     md5_filename=$(basename "${image}").md5
     md5_path=${IMAGE_DIR}/${md5_filename}
 
-    image_id=$(docker inspect -f "{{.ID}}" ${image})
+    image_id=$(docker inspect -f "{{.ID}}" "${image}")
     saved_id=""
     if [[ -f "${md5_path}" ]]; then
+      echo "M5 file exit"
       saved_id=$(cat "${md5_path}")
+    else
+      echo "Md45 file not exit"
     fi
 
     mkdir -p "${IMAGE_DIR}"
+    # 这里达不到想要的想过，因为在构建前会删掉目录下的所有文件，所以 save_id 不可能存在
     if [[ ${image_id} != "${saved_id}" ]]; then
       rm -f ${IMAGE_DIR}/${component}*
       image_path="${IMAGE_DIR}/${filename}"
@@ -124,21 +128,19 @@ function prepare() {
 
   echo -e "\n2. 准备镜像离线包"
   prepare_image_files
+
 }
 
-if [[ "$0" == "$BASH_SOURCE" ]]; then
+if [[ "$0" == "${BASH_SOURCE}" ]]; then
   case "$1" in
   run)
     prepare
     ;;
-  prepare)
-    prepare
-    ;;
-  release)
+  make_release)
     make_release "$2"
     ;;
   *)
-    echo "Usage: $0 run | prepare | release VERSION"
+    echo "Usage: $0 run | prepare | make_release VERSION"
     ;;
   esac
 fi

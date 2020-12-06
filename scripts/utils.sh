@@ -170,3 +170,35 @@ function log_warn() {
 function log_error() {
   echo_red "[ERROR] $1"
 }
+
+
+function get_docker_compose_cmd_line() {
+  cmd="docker-compose -f ./compose/docker-compose-app.yml "
+  use_ipv6=$(get_config USE_IPV6)
+  if [[ "${use_ipv6}" != "1" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-network.yml "
+  else
+    cmd="${cmd} -f /compose/docker-compose-network_ipv6.yml "
+  fi
+  use_task=$(get_config USE_TASK)
+  if [[ "${use_task}" != "0" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-task.yml"
+  fi
+  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  if [[ "${use_external_mysql}" != "1" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
+  fi
+  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
+  if [[ "${use_external_redis}" != "1" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-redis.yml"
+  fi
+  use_lb=$(get_config USE_LB)
+  if [[ "${use_lb}" == "1" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-lb.yml"
+  fi
+  use_xpack=$(get_config USE_XPACK)
+  if [[ "${use_xpack}" == "1" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-xpack.yml -f ./compose/docker-compose-omnidb.yml"
+  fi
+  echo "${cmd}"
+}
