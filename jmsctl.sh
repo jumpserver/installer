@@ -92,9 +92,13 @@ function pre_check() {
 function get_docker_compose_cmd_line() {
   cmd="docker-compose -f compose/docker-compose-app.yml "
   use_ipv6=$(get_config USE_IPV6)
+  subnet_ipv6=$(get_config DOCKER_SUBNET_IPV6)
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml "
   else
+    if [ ! "$(ip6tables -t nat -L | grep $subnet_ipv6)" ]; then
+      ip6tables -t nat -A POSTROUTING -s $subnet_ipv6 -j MASQUERADE
+    fi
     cmd="${cmd} -f compose/docker-compose-network_ipv6.yml "
   fi
   use_task=$(get_config USE_TASK)

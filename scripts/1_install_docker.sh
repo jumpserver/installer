@@ -111,7 +111,7 @@ function config_docker() {
   if [[ ! -d "${docker_storage_path}" ]]; then
     mkdir -p ${docker_storage_path}
   fi
-  set_docker_config graph "${docker_storage_path}"
+  set_docker_config data-root "${docker_storage_path}"
   set_docker_config log-driver "json-file"
   set_docker_config log-opts '{"max-size": "10m", "max-file": "3"}'
   diff /etc/docker/daemon.json /etc/docker/daemon.json.bak &>/dev/null
