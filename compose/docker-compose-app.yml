@@ -31,7 +31,7 @@ services:
     container_name: jms_core
     restart: always
     tty: true
-    command: web
+    command: start web
     env_file:
       - ${CONFIG_FILE}
     volumes:
@@ -59,7 +59,7 @@ services:
       core:
         condition: service_healthy
     volumes:
-      - ${CONFIG_DIR}/koko/config.yml:/opt/koko/config.yml
+#      - ${CONFIG_DIR}/koko/config.yml:/opt/koko/config.yml
       - ${VOLUME_DIR}/koko/data:/opt/koko/data
     privileged: true
     healthcheck:

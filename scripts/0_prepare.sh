@@ -1,38 +1,48 @@
 #!/bin/bash
 
-BASE_DIR=$(dirname "$0")
-PROJECT_DIR=$(dirname "${BASE_DIR}")
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
 . "${BASE_DIR}/utils.sh"
 
-DOCKER_MD5=8c4a1d65ddcecf91ae357b434dffe039
-DOCKER_COMPOSE_MD5=7f508b543123e8c81ca138d5b36001a2
 IMAGE_DIR="images"
-
 DOCKER_IMAGE_PREFIX="${DOCKER_IMAGE_PREFIX-}"
 USE_XPACK="${USE_XPACK-0}"
 
+function prepare_require_pkg() {
+  command -v wget &>/dev/null || yum -y install wget
+  command -v zip &>/dev/null || yum -y install zip
+}
 
 function prepare_docker_bin() {
-  if [[ ! -f /tmp/docker.tar.gz || $(check_md5 /tmp/docker.tar.gz ${DOCKER_MD5}) ]]; then
-    echo "1. 开始下载 Docker 程序 ..."
+  md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
+  if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
+    get_file_md5 /tmp/docker.tar.gz
+    echo "开始下载 Docker 程序 ..."
     wget "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz
   else
     echo "使用 Docker 缓存文件: /tmp/docker.tar.gz"
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
 
-  if [[ ! -f /tmp/docker-compose || $(check_md5 /tmp/docker-compose ${DOCKER_COMPOSE_MD5}) ]]; then
+  md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
+  if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
     echo "开始下载 Docker compose 程序 ..."
     wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
   else
     echo "使用 Docker compose 缓存文件: /tmp/docker-compose"
   fi
   cp /tmp/docker-compose docker/
+  chmod +x docker/*
+  export PATH=$PATH:$(pwd)/docker
 }
 
-
 function prepare_image_files() {
+  ps aux | grep -v 'grep' | grep 'docker' &>/dev/null
+  if [[ "$?" != "0" ]]; then
+    echo "Docker 没有运行, 请安装并启动"
+    exit 1
+  fi
+
   scope="public"
   if [[ "${USE_XPACK}" == "1" ]]; then
     scope="all"
@@ -40,7 +50,7 @@ function prepare_image_files() {
   images=$(get_images $scope)
   i=0
   for image in ${images}; do
-    (( i++ )) || true
+    ((i++)) || true
     echo "[${image}]"
     if [[ -n "${DOCKER_IMAGE_PREFIX}" ]]; then
       docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
@@ -53,13 +63,14 @@ function prepare_image_files() {
     md5_filename=$(basename "${image}").md5
     md5_path=${IMAGE_DIR}/${md5_filename}
 
-    image_id=$(docker inspect -f "{{.ID}}" ${image})
+    image_id=$(docker inspect -f "{{.ID}}" "${image}")
     saved_id=""
     if [[ -f "${md5_path}" ]]; then
       saved_id=$(cat "${md5_path}")
     fi
 
     mkdir -p "${IMAGE_DIR}"
+    # 这里达不到想要的想过，因为在构建前会删掉目录下的所有文件，所以 save_id 不可能存在
     if [[ ${image_id} != "${saved_id}" ]]; then
       rm -f ${IMAGE_DIR}/${component}*
       image_path="${IMAGE_DIR}/${filename}"
@@ -99,7 +110,7 @@ function make_release() {
   time zip -r "${release_name}.zip" "${release_name}" -x '*.git*' '*hudson*' '*travis.yml*'
   md5=$(get_file_md5 "${release_name}.zip")
 
-  echo 'md5:' "$md5" > "${release_name}.md5"
+  echo 'md5:' "$md5" >"${release_name}.md5"
   release_dir="${PROJECT_DIR}/releases"
   mkdir -p "${release_dir}"
   rm -f "${release_dir}"/*.zip "${release_dir}"/*md5
@@ -110,18 +121,26 @@ function make_release() {
 }
 
 function prepare() {
+  prepare_require_pkg
+
   echo "1. 准备 Docker 离线包"
   prepare_docker_bin
 
   echo -e "\n2. 准备镜像离线包"
   prepare_image_files
+
 }
 
-case "$1" in
-prepare)
-  prepare
-  ;;
-release):
-  make_release "$2"
-esac
-
+if [[ "$0" == "${BASH_SOURCE}" ]]; then
+  case "$1" in
+  run)
+    prepare
+    ;;
+  make_release)
+    make_release "$2"
+    ;;
+  *)
+    echo "Usage: $0 run | prepare | make_release VERSION"
+    ;;
+  esac
+fi
