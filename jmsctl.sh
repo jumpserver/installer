@@ -8,6 +8,18 @@ action=${1-}
 target=${2-}
 args="$@"
 
+cat <<"EOF"
+
+     ██╗██╗   ██╗███╗   ███╗██████╗ ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗
+     ██║██║   ██║████╗ ████║██╔══██╗██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗
+     ██║██║   ██║██╔████╔██║██████╔╝███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝
+██   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗
+╚█████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║
+╚════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
+
+EOF
+
+echo -e "\t\t\t\t\t\t\t\t\t Version: \033[33m $VERSION \033[0m \n"
 
 function copy_coco_to_koko() {
   volume_dir=$(get_config VOLUME_DIR)
@@ -75,9 +87,13 @@ function pre_check() {
 function get_docker_compose_cmd_line() {
   cmd="docker-compose -f compose/docker-compose-app.yml "
   use_ipv6=$(get_config USE_IPV6)
+  subnet_ipv6=$(get_config DOCKER_SUBNET_IPV6)
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml "
   else
+    if [ ! "$(ip6tables -t nat -L | grep $subnet_ipv6)" ]; then
+      ip6tables -t nat -A POSTROUTING -s $subnet_ipv6 -j MASQUERADE
+    fi
     cmd="${cmd} -f compose/docker-compose-network_ipv6.yml "
   fi
   use_task=$(get_config USE_TASK)
@@ -111,19 +127,22 @@ function usage() {
   echo "  ./jmsctl.sh --help"
   echo
   echo "Commands: "
-  echo "  install    部署安装JumpServer"
-  echo "  reconfig   配置JumpServer"
-  echo "  upgrade    升级JumpServer说明"
-  echo "  backup_db  备份数据库"
-  echo "  restore_db [db_file] 通过数据库备份文件恢复数据库数据"
-  echo "  load_image 重新加载镜像"
-  echo "  start      启动JumpServer"
-  echo "  restart [service] 重启, 并不会重建服务容器"
-  echo "  reload [service]  重建容器并重启服务"
-  echo "  down [service]    删掉容器 不带参数删掉所有"
-  echo "  status  查看JumpServer状态"
-  echo "  python  进入core, 运行 python manage.py shell"
-  echo "  db      连接数据库"
+  echo "  install    安装 JumpServer"
+  echo "  reconfig   配置 JumpServer"
+  echo "  start      启动 JumpServer"
+  echo "  stop       停止 JumpServer"
+  echo "  restart    重启 JumpServer"
+  echo "  status     检查 JumpServer"
+  echo "  down       下线 JumpServer"
+  echo "  upgrade    升级 JumpServer"
+
+  echo "Management Commands: "
+  echo "  load_image           加载 docker 镜像"
+  echo "  python               运行 python manage.py shell"
+  echo "  db                   运行 python manage.py dbshell"
+  echo "  backup_db            备份 数据库"
+  echo "  restore_db [db_file] 通过 数据库备份文件恢复数据"
+
 }
 
 function service_to_docker_name() {

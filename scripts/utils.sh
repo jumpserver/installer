@@ -57,7 +57,7 @@ function test_mysql_connect() {
     password=$4
     db=$5
     command="CREATE TABLE IF NOT EXISTS test(id INT); DROP TABLE test;"
-    docker run -it --rm registry.fit2cloud.com/jumpserver/mysql:5 mysql -h${host} -P${port} -u${user} -p${password} ${db} -e "${command}" 2> /dev/null
+    docker run -it --rm jumpserver/mysql:5 mysql -h${host} -P${port} -u${user} -p${password} ${db} -e "${command}" 2> /dev/null
 }
 
 function test_redis_connect() {
@@ -65,7 +65,7 @@ function test_redis_connect() {
     port=$2
     password=$3
     password=${password:=''}
-    docker run -it --rm registry.fit2cloud.com/jumpserver/redis:alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" > /dev/null
+    docker run -it --rm jumpserver/redis:alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" > /dev/null
 }
 
 function get_images(){
