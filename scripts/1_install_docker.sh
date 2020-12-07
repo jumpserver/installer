@@ -1,5 +1,4 @@
 #!/bin/bash
-#
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
@@ -108,7 +107,7 @@ function config_docker() {
   if [[ ! -d "${docker_storage_path}" ]]; then
     mkdir -p ${docker_storage_path}
   fi
-  set_docker_config graph "${docker_storage_path}"
+  set_docker_config data-root "${docker_storage_path}"
   set_docker_config log-driver "json-file"
   set_docker_config log-opts '{"max-size": "10m", "max-file": "3"}'
   diff /etc/docker/daemon.json /etc/docker/daemon.json.bak &>/dev/null
@@ -134,19 +133,6 @@ function start_docker() {
 }
 
 function main() {
-  cat <<"EOF"
-
-     ██╗██╗   ██╗███╗   ███╗██████╗ ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗
-     ██║██║   ██║████╗ ████║██╔══██╗██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗
-     ██║██║   ██║██╔████╔██║██████╔╝███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝
-██   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗
-╚█████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║
- ╚════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
-
-EOF
-
-  echo -e "\t\t\t\t\t\t\t\t\t Version: \033[33m $VERSION \033[0m \n"
-
   echo_green "\n>>> 一、安装配置Docker"
   if [[ "${OS}" == 'Darwin' ]]; then
     echo "MacOS skip install docker"

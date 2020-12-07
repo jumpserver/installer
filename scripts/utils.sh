@@ -58,7 +58,7 @@ function test_mysql_connect() {
   password=$4
   db=$5
   command="CREATE TABLE IF NOT EXISTS test(id INT); DROP TABLE test;"
-  docker run -it --rm registry.fit2cloud.com/jumpserver/mysql:5 mysql -h${host} -P${port} -u${user} -p${password} ${db} -e "${command}" 2>/dev/null
+  docker run -it --rm jumpserver/mysql:5 mysql -h${host} -P${port} -u${user} -p${password} ${db} -e "${command}" 2>/dev/null
 }
 
 function test_redis_connect() {
@@ -66,7 +66,7 @@ function test_redis_connect() {
   port=$2
   password=$3
   password=${password:=''}
-  docker run -it --rm registry.fit2cloud.com/jumpserver/redis:alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" >/dev/null
+  docker run -it --rm jumpserver/redis:alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" >/dev/null
 }
 
 function get_images() {
@@ -175,10 +175,14 @@ function log_error() {
 function get_docker_compose_cmd_line() {
   cmd="docker-compose -f ./compose/docker-compose-app.yml "
   use_ipv6=$(get_config USE_IPV6)
+  subnet_ipv6=$(get_config DOCKER_SUBNET_IPV6)
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-network.yml "
+    cmd="${cmd} -f compose/docker-compose-network.yml "
   else
-    cmd="${cmd} -f /compose/docker-compose-network_ipv6.yml "
+    if ! ip6tables -t nat -L | grep "${subnet_ipv6}"; then
+      ip6tables -t nat -A POSTROUTING -s "${subnet_ipv6}" -j MASQUERADE
+    fi
+    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml "
   fi
   use_task=$(get_config USE_TASK)
   if [[ "${use_task}" != "0" ]]; then
