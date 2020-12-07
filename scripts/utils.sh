@@ -206,3 +206,8 @@ function get_docker_compose_cmd_line() {
   fi
   echo "${cmd}"
 }
+
+function prepare_online_install_required_pkg() {
+  command -v wget &>/dev/null || yum -y install wget
+  command -v zip &>/dev/null || yum -y install zip
+}

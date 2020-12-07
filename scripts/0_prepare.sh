@@ -8,13 +8,9 @@ IMAGE_DIR="images"
 DOCKER_IMAGE_PREFIX="${DOCKER_IMAGE_PREFIX-}"
 USE_XPACK="${USE_XPACK-0}"
 
-function prepare_require_pkg() {
-  command -v wget &>/dev/null || yum -y install wget
-  command -v zip &>/dev/null || yum -y install zip
-}
-
 function prepare_docker_bin() {
   md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
+  prepare_online_install_required_pkg
   if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
     get_file_md5 /tmp/docker.tar.gz
     echo "开始下载 Docker 程序 ..."
@@ -121,7 +117,7 @@ function make_release() {
 }
 
 function prepare() {
-  prepare_require_pkg
+  prepare_online_install_required_pkg
 
   echo "1. 准备 Docker 离线包"
   prepare_docker_bin
