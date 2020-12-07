@@ -24,9 +24,9 @@ function copy_docker() {
 }
 
 function install_docker() {
+  prepare_docker_bin
   if [[ ! -f ./docker/dockerd || ! -f ./docker/docker-compose ]]; then
     rm -rf ./docker
-    prepare_docker_bin
   fi
   if [[ ! -f ./docker/dockerd ]]; then
     echo_red "Error: Docker 程序不存在"
@@ -138,6 +138,7 @@ function main() {
     echo "MacOS skip install docker"
     return
   fi
+  prepare_docker_bin
   echo_yellow "1. 安装Docker"
   install_docker
   echo_yellow "\n2. 配置Docker"
