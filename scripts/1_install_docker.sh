@@ -24,8 +24,8 @@ function copy_docker() {
 }
 
 function install_docker() {
-  prepare_docker_bin
   if [[ ! -f ./docker/dockerd || ! -f ./docker/docker-compose ]]; then
+    prepare_docker_bin
     rm -rf ./docker
   fi
   if [[ ! -f ./docker/dockerd ]]; then

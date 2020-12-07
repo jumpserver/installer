@@ -8,7 +8,7 @@ IMAGE_DIR=images
 cd "${BASE_DIR}" || return
 
 function load_image_files() {
-  echo_green "\n>>> 加载镜像"
+  echo_green "\n>>> 二、加载镜像"
   images=$(get_images)
   for image in ${images}; do
     echo ""
