@@ -138,7 +138,6 @@ function main() {
     echo "MacOS skip install docker"
     return
   fi
-  prepare_docker_bin
   echo_yellow "1. 安装Docker"
   install_docker
   echo_yellow "\n2. 配置Docker"
