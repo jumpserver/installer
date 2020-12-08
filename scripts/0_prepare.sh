@@ -103,7 +103,7 @@ function make_release() {
   cd ..
 
   echo -e "\n2. 压缩包"
-  time zip -r "${release_name}.zip" "${release_name}" -x '*.git*' '*hudson*' '*travis.yml*'
+  time zip -r "${release_name}.zip" "${release_name}" -x '*.git*' '*hudson*' '*travis.yml*' && rm -rf "${release_name}"
   md5=$(get_file_md5 "${release_name}.zip")
 
   echo 'md5:' "$md5" >"${release_name}.md5"
