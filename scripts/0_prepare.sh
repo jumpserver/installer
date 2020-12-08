@@ -82,7 +82,7 @@ function prepare_image_files() {
 
 function make_release() {
   release_version=$1
-  BUILD_NUMBER=${BUILD_NUMBER-1}
+  BUILD_NUMBER=${3-1}
 
   sed -i "s@VERSION=.*@VERSION=${release_version}@g" "${PROJECT_DIR}/static.env"
 
@@ -133,7 +133,7 @@ if [[ "$0" == "${BASH_SOURCE}" ]]; then
     prepare
     ;;
   make_release)
-    make_release "$2"
+    make_release "$2" "$3"
     ;;
   *)
     echo "Usage: $0 run | prepare | make_release VERSION"
