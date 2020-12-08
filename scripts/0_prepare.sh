@@ -82,7 +82,7 @@ function prepare_image_files() {
 
 function make_release() {
   release_version=$1
-  BUILD_NUMBER=${3-1}
+  BUILD_NUMBER=${2-1}
 
   sed -i "s@VERSION=.*@VERSION=${release_version}@g" "${PROJECT_DIR}/static.env"
 
