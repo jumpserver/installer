@@ -181,7 +181,7 @@ function log_error() {
 
 function get_docker_compose_services() {
   ignore_db="$1"
-  services="core koko guacamole lina luna"
+  services="core koko guacamole lina luna nginx"
   use_task=$(get_config USE_TASK)
   if [[ "${use_task}" != "0" ]]; then
     services+=" celery"

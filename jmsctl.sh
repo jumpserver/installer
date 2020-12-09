@@ -149,18 +149,20 @@ function main() {
     echo "${EXE}"
     ;;
   stop)
-    EXE=$(get_docker_compose_cmd_line ignore_db)
-    if [[ -z "${target}" ]]; then
-      ${EXE} down
-    else
-      ${EXE} stop "${target}" && ${EXE} rm "${target}"
+    if [[ -n "${target}" ]]; then
+      ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
+      return
     fi
+    services=$(get_docker_compose_services ignore_db)
+    for i in ${services}; do
+      ${EXE} stop "${i}" && ${EXE} rm -f "${i}" > /dev/null
+    done
     ;;
   down)
     if [[ -z "${target}" ]]; then
       ${EXE} down
     else
-      ${EXE} stop "${target}" && ${EXE} rm "${target}"
+      ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     fi
     ;;
   tail)
