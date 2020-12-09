@@ -2,6 +2,7 @@
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
 source "${BASE_DIR}/utils.sh"
+# shellcheck source=./1_install_docker.sh
 source "${BASE_DIR}/1_install_docker.sh"
 
 target=$1
@@ -9,11 +10,11 @@ target=$1
 function perform_db_migrations() {
   docker run -it --rm --network=jms_net \
     --env-file=/opt/jumpserver/config/config.txt \
-    jumpserver/core:${VERSION} upgrade
+    jumpserver/core:${VERSION} upgrade_db
 }
 
 function update_config_if_need() {
-  echo
+  echo -n ''
 }
 
 function update_proc_if_need() {
@@ -33,6 +34,7 @@ function main() {
 
   echo_yellow "\n2. 检查配置文件变更"
   update_config_if_need
+  echo_done
 
   echo_yellow "\n3. 检查程序文件变更"
   update_proc_if_need
@@ -43,15 +45,18 @@ function main() {
   if [[ "$?" != "0" ]]; then
     echo_read "升级镜像失败, 取消升级"
     exit 2
+  else
+    echo_done
   fi
 
   echo_yellow "\n5. 进行数据库变更"
   echo "表结构变更可能需要一段时间，请耐心等待"
   perform_db_migrations
+  echo_done
 
   echo_yellow "\n6. 升级成功, 可以启动程序了"
 }
 
-if [[ "$0" == "$BASH_SOURCE" ]]; then
+if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
   main
 fi

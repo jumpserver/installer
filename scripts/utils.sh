@@ -159,6 +159,14 @@ function echo_yellow() {
   echo -e "\033[1;33m$1\033[0m"
 }
 
+function echo_done() {
+  echo "完成"
+}
+
+function echo_failed() {
+  echo_red "失败"
+}
+
 function log_success() {
   echo_green "[SUCCESS] $1"
 }
