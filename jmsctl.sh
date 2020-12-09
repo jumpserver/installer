@@ -157,6 +157,7 @@ function main() {
     for i in ${services}; do
       ${EXE} stop "${i}" && ${EXE} rm -f "${i}" > /dev/null
     done
+    docker volume rm jms_share-volume &> /dev/null
     ;;
   down)
     if [[ -z "${target}" ]]; then
