@@ -1,4 +1,4 @@
-# Jumpserver docker compose
+# JumpServer 安装管理包
 
 ## 环境依赖
   - CentOS 7
@@ -17,7 +17,7 @@ root  soft   nproc     unlimited
 $ reboot  # 重启服务器
 ```
 
-## 安装和一些其他配置
+## 安装
 
 ```bash
 # 安装

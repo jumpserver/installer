@@ -6,7 +6,7 @@ source "${PROJECT_DIR}/scripts/utils.sh"
 
 action=${1-}
 target=${2-}
-args="$@"
+args=( "$@" )
 
 function check_config_file() {
   if [[ ! -f "${CONFIG_FILE}" ]]; then
@@ -65,8 +65,31 @@ function service_to_docker_name() {
   echo "${service}"
 }
 
+EXE=""
+
+function start() {
+  ${EXE} up -d
+}
+
+function stop() {
+  if [[ -n "${target}" ]]; then
+    ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
+    return
+  fi
+  services=$(get_docker_compose_services ignore_db)
+  for i in ${services}; do
+    ${EXE} stop "${i}" && ${EXE} rm -f "${i}" >/dev/null
+  done
+  docker volume rm jms_share-volume &>/dev/null
+}
+
+function restart() {
+  stop
+  echo -e "\n"
+  start
+}
+
 function main() {
-  EXE=""
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""
   elif [[ "${action}" != "install" && "${action}" != "reconfig" ]]; then
@@ -93,14 +116,10 @@ function main() {
     bash "${SCRIPT_DIR}/2_load_images.sh"
     ;;
   start)
-    ${EXE} up -d
+    start
     ;;
   restart)
-    ${EXE} restart "${target}"
-    ;;
-  reload)
-    ${EXE} up -d &>/dev/null
-    ${EXE} restart "${target}"
+    restart
     ;;
   status)
     ${EXE} ps
@@ -109,15 +128,7 @@ function main() {
     echo "${EXE}"
     ;;
   stop)
-    if [[ -n "${target}" ]]; then
-      ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
-      return
-    fi
-    services=$(get_docker_compose_services ignore_db)
-    for i in ${services}; do
-      ${EXE} stop "${i}" && ${EXE} rm -f "${i}" > /dev/null
-    done
-    docker volume rm jms_share-volume &> /dev/null
+    stop
     ;;
   down)
     if [[ -z "${target}" ]]; then
@@ -147,14 +158,17 @@ function main() {
   help)
     usage
     ;;
-  cmdline)
-    echo "${EXE}"
+  show_services)
+    get_docker_compose_services
     ;;
   --help)
     usage
     ;;
   -h)
     usage
+    ;;
+  raw)
+    ${EXE} "${args[@]:1}"
     ;;
   *)
     echo "No such command: ${action}"
@@ -163,4 +177,4 @@ function main() {
   esac
 }
 
-main
+main "$@"

@@ -160,6 +160,7 @@ function echo_yellow() {
 }
 
 function echo_done() {
+  sleep 0.5
   echo "完成"
 }
 
