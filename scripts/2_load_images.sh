@@ -45,7 +45,7 @@ function pull_image() {
   images=$(get_images public)
   i=1
   for image in ${images}; do
-    echo_yellow "${image}"
+    echo "[${image}]"
     docker pull "${image}"
     echo ""
     ((i++)) || true

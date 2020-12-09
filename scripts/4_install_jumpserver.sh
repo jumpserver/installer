@@ -3,20 +3,18 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
 source "${BASE_DIR}/utils.sh"
 
-cat <<"EOF"
+function pre_install() {
+  # 检查 IPv6
+  use_ipv6=$(get_config USE_IPV6)
+  subnet_ipv6=$(get_config DOCKER_SUBNET_IPV6)
+  if [[ "${use_ipv6}" != "1" ]];then
+    if ! ip6tables -t nat -L | grep "${subnet_ipv6}"; then
+        ip6tables -t nat -A POSTROUTING -s "${subnet_ipv6}" -j MASQUERADE
+    fi
+  fi
+}
 
-     ██╗██╗   ██╗███╗   ███╗██████╗ ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗
-     ██║██║   ██║████╗ ████║██╔══██╗██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗
-     ██║██║   ██║██╔████╔██║██████╔╝███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝
-██   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗
-╚█████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║
-╚════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
-
-EOF
-
-echo -e "\t\t\t\t\t\t\t\t\t Version: \033[33m $VERSION \033[0m \n"
-
-function finish() {
+function post_install() {
   echo_green "\n>>> 四、安装完成了"
   HOST=$(ip addr | grep 'state UP' -A2 | grep inet | egrep -v '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
   if [ ! "$HOST" ]; then
@@ -51,13 +49,15 @@ function finish() {
 }
 
 function main() {
+  echo_logo
+  pre_install
   echo_green "\n>>> 一、安装配置Docker"
   (bash "${BASE_DIR}/1_install_docker.sh")
   echo_green "\n>>> 二、加载镜像"
   (bash "${BASE_DIR}/2_load_images.sh")
   echo_green "\n>>> 三、配置JumpServer"
   (bash "${BASE_DIR}/3_config_jumpserver.sh")
-  finish
+  post_install
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then

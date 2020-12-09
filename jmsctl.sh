@@ -72,7 +72,7 @@ function pre_check() {
 }
 
 function usage() {
-  echo "JumpServer 部署安装脚本"
+  echo "JumpServer 部署管理脚本"
   echo
   echo "Usage: "
   echo "  ./jmsctl.sh [COMMAND] [ARGS...]"
@@ -80,14 +80,14 @@ function usage() {
   echo
   echo "Commands: "
   echo "  install    安装 JumpServer"
-  echo "  reconfig   配置 JumpServer"
   echo "  start      启动 JumpServer"
-  echo "  stop       停止 JumpServer"
+  echo "  stop       停止 JumpServer(不停数据库)"
   echo "  restart    重启 JumpServer"
   echo "  status     检查 JumpServer"
-  echo "  down       下线 JumpServer"
+  echo "  down       下线 JumpServer(会停数据库)"
   echo "  upgrade    升级 JumpServer"
-
+  echo "  reconfig   配置 JumpServer"
+  echo
   echo "Management Commands: "
   echo "  load_image           加载 docker 镜像"
   echo "  python               运行 python manage.py shell"
@@ -133,7 +133,7 @@ function main() {
     bash "${SCRIPT_DIR}/2_load_images.sh"
     ;;
   start)
-    ${EXE} up -d
+    ${EXE} up -d -t 3600
     ;;
   restart)
     ${EXE} restart "${target}"
@@ -147,6 +147,14 @@ function main() {
     ;;
   cmd)
     echo "${EXE}"
+    ;;
+  stop)
+    EXE=$(get_docker_compose_cmd_line ignore_db)
+    if [[ -z "${target}" ]]; then
+      ${EXE} down
+    else
+      ${EXE} stop "${target}" && ${EXE} rm "${target}"
+    fi
     ;;
   down)
     if [[ -z "${target}" ]]; then
@@ -173,10 +181,6 @@ function main() {
     docker_name=$(service_to_docker_name "${target}")
     docker exec -it "${docker_name}" sh
     ;;
-  backup)
-    bash "${SCRIPT_DIR}/5_db_backup.sh"
-    bash "${SCRIPT_DIR}/7_images_backup.sh backup"
-    ;;
   help)
     usage
     ;;
@@ -190,7 +194,8 @@ function main() {
     usage
     ;;
   *)
-    ${EXE} "${args}"
+    echo "No such command: ${action}"
+    usage
     ;;
   esac
 }

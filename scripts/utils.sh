@@ -179,38 +179,59 @@ function log_error() {
   echo_red "[ERROR] $1"
 }
 
-
-function get_docker_compose_cmd_line() {
-  cmd="docker-compose -f ./compose/docker-compose-app.yml "
-  use_ipv6=$(get_config USE_IPV6)
-  subnet_ipv6=$(get_config DOCKER_SUBNET_IPV6)
-  if [[ "${use_ipv6}" != "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-network.yml "
-  else
-    if ! ip6tables -t nat -L | grep "${subnet_ipv6}"; then
-      ip6tables -t nat -A POSTROUTING -s "${subnet_ipv6}" -j MASQUERADE
-    fi
-    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml "
-  fi
+function get_docker_compose_services() {
+  ignore_db="$1"
+  services="core koko guacamole lina luna"
   use_task=$(get_config USE_TASK)
   if [[ "${use_task}" != "0" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-task.yml"
+    services+=" celery"
   fi
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  if [[ "${use_external_mysql}" != "1" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
+  if [[ "${use_external_mysql}" != "1" && "${ignore_db}" != "ignore_db" ]]; then
+    services+=" mysql"
   fi
   use_external_redis=$(get_config USE_EXTERNAL_REDIS)
-  if [[ "${use_external_redis}" != "1" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-redis.yml"
+  if [[ "${use_external_redis}" != "1" && "${ignore_db}" != "ignore_db" ]]; then
+    services+=" redis"
   fi
   use_lb=$(get_config USE_LB)
   if [[ "${use_lb}" == "1" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-lb.yml"
+    services+=" lb"
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-xpack.yml -f ./compose/docker-compose-omnidb.yml"
+    services+=" xpack omnidb"
+  fi
+  echo "${services}"
+}
+
+function get_docker_compose_cmd_line() {
+  ignore_db="$1"
+  cmd="docker-compose -f ./compose/docker-compose-app.yml "
+  use_ipv6=$(get_config USE_IPV6)
+  if [[ "${use_ipv6}" != "1" ]]; then
+    cmd="${cmd} -f compose/docker-compose-network.yml "
+  else
+    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml "
+  fi
+  services=$(get_docker_compose_services "$ignore_db")
+  if [[ "${services}" =~ celery ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-task.yml"
+  fi
+  if [[ "${services}" =~ mysql ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
+  fi
+  if [[ "${services}" =~ redis ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-redis.yml"
+  fi
+  if [[ "${services}" =~ lb ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-lb.yml"
+  fi
+  if [[ "${services}" =~ xpack ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-xpack.yml"
+  fi
+  if [[ "${services}" =~ omnidb ]];then
+    cmd="${cmd} -f ./compose/docker-compose-omnidb.yml"
   fi
   echo "${cmd}"
 }
@@ -218,4 +239,19 @@ function get_docker_compose_cmd_line() {
 function prepare_online_install_required_pkg() {
   command -v wget &>/dev/null || yum -y install wget
   command -v zip &>/dev/null || yum -y install zip
+}
+
+function echo_logo() {
+  cat <<"EOF"
+
+       ██╗██╗   ██╗███╗   ███╗██████╗ ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗
+       ██║██║   ██║████╗ ████║██╔══██╗██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗
+       ██║██║   ██║██╔████╔██║██████╔╝███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝
+  ██   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗
+  ╚█████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║
+  ╚════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
+
+EOF
+
+  echo -e "\t\t\t\t\t\t\t\t\t Version: \033[33m $VERSION \033[0m \n"
 }

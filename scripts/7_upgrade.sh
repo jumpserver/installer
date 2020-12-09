@@ -23,13 +23,16 @@ function update_proc_if_need() {
 
 function main() {
   echo_yellow "1. 备份数据库"
-  bash ${SCRIPT_DIR}/5_db_backup.sh
-
-  if [[ "$?" != "0" ]]; then
-    read_from_input confirm "备份数据库失败, 继续升级吗?" "Yes/no" "no"
-    if [[ "${confirm}" == "no" ]]; then
-      exit 1
+  if [[ "${SKIP_BACKUP_DB}" != "1" ]];then
+    if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
+      confirm="no"
+      read_from_input confirm "备份数据库失败, 继续升级吗?" "Yes/no" "no"
+      if [[ "${confirm}" == "no" ]]; then
+        exit 1
+      fi
     fi
+  else
+    echo "SKIP_BACKUP_DB=${SKIP_BACKUP_DB}, 跳过备份数据库"
   fi
 
   echo_yellow "\n2. 检查配置文件变更"
@@ -55,8 +58,10 @@ function main() {
   echo_done
 
   echo_yellow "\n6. 升级成功, 可以启动程序了"
+  echo -e "\n\n"
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
+  echo_logo
   main
 fi
