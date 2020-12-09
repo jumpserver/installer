@@ -278,7 +278,6 @@ function perform_db_migrations() {
     jumpserver/core:"${VERSION}" upgrade_db
 }
 
-
 function check_ipv6_iptables_if_need() {
   # 检查 IPv6
   use_ipv6=$(get_config USE_IPV6)

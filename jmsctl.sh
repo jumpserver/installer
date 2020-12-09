@@ -6,7 +6,7 @@ source "${PROJECT_DIR}/scripts/utils.sh"
 
 action=${1-}
 target=${2-}
-args=( "$@" )
+args=("$@")
 
 function check_config_file() {
   if [[ ! -f "${CONFIG_FILE}" ]]; then
@@ -54,6 +54,7 @@ function usage() {
   echo "  db                   运行 python manage.py dbshell"
   echo "  backup_db            备份 数据库"
   echo "  restore_db [db_file] 通过 数据库备份文件恢复数据"
+  echo "  raw                  执行原始 docker-compose 命令"
 
 }
 
@@ -78,7 +79,10 @@ function stop() {
   fi
   services=$(get_docker_compose_services ignore_db)
   for i in ${services}; do
-    ${EXE} stop "${i}" && ${EXE} rm -f "${i}" >/dev/null
+    ${EXE} stop "${i}"
+  done
+  for i in ${services}; do
+    ${EXE} rm -f "${i}" >/dev/null
   done
   docker volume rm jms_share-volume &>/dev/null
 }
@@ -92,19 +96,40 @@ function restart() {
 function main() {
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""
-  elif [[ "${action}" != "install" && "${action}" != "reconfig" ]]; then
+  elif [[ "${action}" == "install" || "${action}" == "reconfig" ]]; then
+    echo ""
+  else
     pre_check || return 3
     EXE=$(get_docker_compose_cmd_line)
   fi
   case "${action}" in
-  reconfig)
-    bash "${SCRIPT_DIR}/3_config_jumpserver.sh"
-    ;;
   install)
     bash "${SCRIPT_DIR}/4_install_jumpserver.sh"
     ;;
   upgrade)
     bash "${SCRIPT_DIR}/8_upgrade.sh" "$target"
+    ;;
+  reconfig)
+    bash "${SCRIPT_DIR}/1_config_jumpserver.sh"
+    ;;
+  start)
+    start
+    ;;
+  restart)
+    restart
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+    ${EXE} ps
+    ;;
+  down)
+    if [[ -z "${target}" ]]; then
+      ${EXE} down
+    else
+      ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
+    fi
     ;;
   backup_db)
     bash "${SCRIPT_DIR}/5_db_backup.sh"
@@ -113,29 +138,10 @@ function main() {
     bash "${SCRIPT_DIR}/6_db_restore.sh" "$target"
     ;;
   load_image)
-    bash "${SCRIPT_DIR}/2_load_images.sh"
-    ;;
-  start)
-    start
-    ;;
-  restart)
-    restart
-    ;;
-  status)
-    ${EXE} ps
+    bash "${SCRIPT_DIR}/3_load_images.sh"
     ;;
   cmd)
     echo "${EXE}"
-    ;;
-  stop)
-    stop
-    ;;
-  down)
-    if [[ -z "${target}" ]]; then
-      ${EXE} down
-    else
-      ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
-    fi
     ;;
   tail)
     if [[ -z "${target}" ]]; then
@@ -155,20 +161,20 @@ function main() {
     docker_name=$(service_to_docker_name "${target}")
     docker exec -it "${docker_name}" sh
     ;;
-  help)
-    usage
-    ;;
   show_services)
     get_docker_compose_services
+    ;;
+  raw)
+    ${EXE} "${args[@]:1}"
+    ;;
+  help)
+    usage
     ;;
   --help)
     usage
     ;;
   -h)
     usage
-    ;;
-  raw)
-    ${EXE} "${args[@]:1}"
     ;;
   *)
     echo "No such command: ${action}"
