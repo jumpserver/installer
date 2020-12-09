@@ -80,42 +80,6 @@ function prepare_image_files() {
 
 }
 
-function make_release() {
-  release_version=$1
-  BUILD_NUMBER=${2-1}
-
-  sed -i "s@VERSION=.*@VERSION=${release_version}@g" "${PROJECT_DIR}/static.env"
-
-  echo "一、 准备离线包内容"
-  rm -f "${IMAGE_DIR}"/*.tar
-  rm -f "${IMAGE_DIR}"/*.md5
-  prepare
-
-  echo "二、 打包"
-  cwd=$(pwd)
-  package_name=$(basename "${PROJECT_DIR}")
-  release_name="jumpserver-release-${release_version}-$BUILD_NUMBER"
-
-  cd "${PROJECT_DIR}/.." || exit
-  echo "1. 拷贝内容"
-  time cp -r "${package_name}" "${release_name}"
-  cd "${release_name}" && rm -rf hudson.* .travis.yml .git
-  cd ..
-
-  echo -e "\n2. 压缩包"
-  time zip -r "${release_name}.zip" "${release_name}" -x '*.git*' '*hudson*' '*travis.yml*'
-  md5=$(get_file_md5 "${release_name}.zip")
-
-  echo 'md5:' "$md5" >"${release_name}.md5"
-  release_dir="${PROJECT_DIR}/releases"
-  mkdir -p "${release_dir}"
-  rm -f "${release_dir}"/*.zip "${release_dir}"/*md5
-  mv "${release_name}.zip" "${release_name}.md5" "${release_dir}"
-  echo -e "\n3. 离线生成完成: ${release_dir}/${release_name}.zip"
-
-  cd "${cwd}" || exit
-}
-
 function prepare() {
   prepare_online_install_required_pkg
 
@@ -128,15 +92,5 @@ function prepare() {
 }
 
 if [[ "$0" == "${BASH_SOURCE}" ]]; then
-  case "$1" in
-  run)
-    prepare
-    ;;
-  make_release)
-    make_release "$2" "$3"
-    ;;
-  *)
-    echo "Usage: $0 run | prepare | make_release VERSION"
-    ;;
-  esac
+  prepare
 fi

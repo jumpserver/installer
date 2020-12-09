@@ -16,8 +16,10 @@ docker_copy_failed=0
 cd "${BASE_DIR}" || exit
 
 function copy_docker() {
-  cp ./docker/* /usr/bin/ && cp ./docker.service /etc/systemd/system/ &&
-    chmod +x /usr/bin/docker* && chmod 754 /etc/systemd/system/docker.service
+  cp ./docker/* /usr/bin/ \
+  && cp ./docker.service /etc/systemd/system/ \
+  && chmod +x /usr/bin/docker* \
+  && chmod 754 /etc/systemd/system/docker.service
   if [[ "$?" != "0" ]]; then
     docker_copy_failed=1
   fi
@@ -25,8 +27,8 @@ function copy_docker() {
 
 function install_docker() {
   if [[ ! -f ./docker/dockerd || ! -f ./docker/docker-compose ]]; then
-    prepare_docker_bin
     rm -rf ./docker
+    prepare_docker_bin
   fi
   if [[ ! -f ./docker/dockerd ]]; then
     echo_red "Error: Docker 程序不存在"

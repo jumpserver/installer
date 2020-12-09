@@ -10,8 +10,8 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 source "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=19.03.14
-export DOCKER_MD5=dfa385b37c444c7d97fe78bd5148299d
+export DOCKER_VERSION=18.06.2-ce
+export DOCKER_MD5=8c4a1d65ddcecf91ae357b434dffe039
 export DOCKER_MIRROR="https://mirrors.aliyun.com/docker-ce/linux/static/stable"
 DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
 export DOCKER_BIN_URL
