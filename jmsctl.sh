@@ -8,46 +8,11 @@ action=${1-}
 target=${2-}
 args="$@"
 
-function copy_coco_to_koko() {
-  volume_dir=$(get_config VOLUME_DIR)
-  coco_dir="${volume_dir}/coco"
-  koko_dir="${volume_dir}/koko"
-  if [[ ! -d "${koko_dir}" && -d "${coco_dir}" ]]; then
-    mv ${coco_dir} ${koko_dir}
-    ln -s ${koko_dir} ${coco_dir}
-  fi
-}
-
-function migrate_config() {
-  mkdir -p "${CONFIG_DIR}"
-
-  # v1.5 => v2.0
-  # 原先配置文件都在自己的目录，以后配置文件统一放在 /opt/jumpserver/config 中
-  if [[ -f config.txt && ! -f ${CONFIG_FILE} ]]; then
-    mv config.txt "${CONFIG_FILE}"
-    rm -f .env
-    ln -s "${CONFIG_FILE}" .env
-    ln -s "${CONFIG_FILE}" config.link
-  fi
-
-  # 迁移nginx的证书过去
-  if [[ ! -d ${CONFIG_DIR}/nginx ]]; then
-    cp -R nginx /opt/jumpserver/config/
-  fi
-
-  if [[ -f config.txt ]]; then
-    mv config.txt config.txt."$(date '+%s')"
-  fi
-}
-
 function check_config_file() {
   if [[ ! -f "${CONFIG_FILE}" ]]; then
     echo "Config file not found: ${CONFIG_FILE};"
     return 3
   fi
-}
-
-function check_env_file() {
   if [[ -f .env ]]; then
     ls -l .env | grep "${CONFIG_FILE}" &>/dev/null
     code="$?"
@@ -63,12 +28,7 @@ function check_env_file() {
 }
 
 function pre_check() {
-  copy_coco_to_koko
-  # 迁移config文件
-  migrate_config
-
   check_config_file || return 3
-  check_env_file || return 4
 }
 
 function usage() {
@@ -133,7 +93,7 @@ function main() {
     bash "${SCRIPT_DIR}/2_load_images.sh"
     ;;
   start)
-    ${EXE} up -d -t 3600
+    ${EXE} up -d
     ;;
   restart)
     ${EXE} restart "${target}"

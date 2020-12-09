@@ -2,28 +2,54 @@
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
 source "${BASE_DIR}/utils.sh"
-# shellcheck source=./1_install_docker.sh
+# shellcheck source=./2_install_docker.sh
 source "${BASE_DIR}/1_install_docker.sh"
 
 target=$1
 
-function perform_db_migrations() {
-  docker run -it --rm --network=jms_net \
-    --env-file=/opt/jumpserver/config/config.txt \
-    jumpserver/core:${VERSION} upgrade_db
+function migrate_coco_to_koko_v1_54_to_v1_55() {
+  volume_dir=$(get_config VOLUME_DIR)
+  coco_dir="${volume_dir}/coco"
+  koko_dir="${volume_dir}/koko"
+  if [[ ! -d "${koko_dir}" && -d "${coco_dir}" ]]; then
+    mv ${coco_dir} ${koko_dir}
+    ln -s ${koko_dir} ${coco_dir}
+  fi
+}
+
+function migrate_config_v1_5_to_v2_0() {
+  mkdir -p "${CONFIG_DIR}"
+
+  # v1.5 => v2.0
+  # 原先配置文件都在自己的目录，以后配置文件统一放在 /opt/jumpserver/config 中
+  if [[ -f config.txt && ! -f ${CONFIG_FILE} ]]; then
+    mv config.txt "${CONFIG_FILE}"
+    rm -f .env
+    ln -s "${CONFIG_FILE}" .env
+    ln -s "${CONFIG_FILE}" config.link
+  fi
+
+  # 迁移nginx的证书过去
+  if [[ ! -d ${CONFIG_DIR}/nginx ]]; then
+    cp -R nginx /opt/jumpserver/config/
+  fi
+
+  if [[ -f config.txt ]]; then
+    mv config.txt config.txt."$(date '+%s')"
+  fi
 }
 
 function update_config_if_need() {
-  echo -n ''
+  migrate_coco_to_koko_v1_54_to_v1_55
+  migrate_config_v1_5_to_v2_0
 }
 
 function update_proc_if_need() {
   install_docker
 }
 
-function main() {
-  echo_yellow "1. 备份数据库"
-  if [[ "${SKIP_BACKUP_DB}" != "1" ]];then
+function backup_db() {
+  if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
     if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
       confirm="no"
       read_from_input confirm "备份数据库失败, 继续升级吗?" "Yes/no" "no"
@@ -34,28 +60,24 @@ function main() {
   else
     echo "SKIP_BACKUP_DB=${SKIP_BACKUP_DB}, 跳过备份数据库"
   fi
+}
 
-  echo_yellow "\n2. 检查配置文件变更"
-  update_config_if_need
-  echo_done
+function main() {
+  echo_yellow "1. 备份数据库"
+  backup_db || exit 2
+
+  echo_yellow "\n2. 检查配置变更"
+  update_config_if_need && echo_done || (echo_failed; exit  3)
 
   echo_yellow "\n3. 检查程序文件变更"
-  update_proc_if_need
+  update_proc_if_need && echo_done || (echo_failed; exit  4)
 
   echo_yellow "\n4. 升级镜像文件"
-  bash ${SCRIPT_DIR}/2_load_images.sh
-
-  if [[ "$?" != "0" ]]; then
-    echo_read "升级镜像失败, 取消升级"
-    exit 2
-  else
-    echo_done
-  fi
+  bash "${SCRIPT_DIR}/2_load_images.sh" && echo_done || (echo_failed; exit  5)
 
   echo_yellow "\n5. 进行数据库变更"
   echo "表结构变更可能需要一段时间，请耐心等待"
-  perform_db_migrations
-  echo_done
+  perform_db_migrations && echo_done || (echo_failed; exit 6)
 
   echo_yellow "\n6. 升级成功, 可以启动程序了"
   echo -e "\n\n"

@@ -88,8 +88,8 @@ function get_images() {
     echo "${image}"
   done
   if [[ "${scope}" == "all" ]]; then
-    echo "jumpserver/xpack:${VERSION}"
-    echo "jumpserver/omnidb:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/xpack:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
   fi
 }
 
@@ -254,4 +254,37 @@ function echo_logo() {
 EOF
 
   echo -e "\t\t\t\t\t\t\t\t\t Version: \033[33m $VERSION \033[0m \n"
+}
+
+function get_latest_version() {
+  curl -s 'https://api.github.com/repos/jumpserver/jumpserver/releases/latest' |
+    grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' |
+    sed 's/\"//g;s/,//g;s/ //g'
+}
+
+
+function image_has_prefix() {
+  if [[ $1 =~ registry.* ]];then
+    echo "1"
+  else
+    echo "0"
+  fi
+}
+
+function perform_db_migrations() {
+  docker run -it --rm --network=jms_net \
+    --env-file=/opt/jumpserver/config/config.txt \
+    jumpserver/core:"${VERSION}" upgrade_db
+}
+
+
+function check_ipv6_iptables_if_need() {
+  # 检查 IPv6
+  use_ipv6=$(get_config USE_IPV6)
+  subnet_ipv6=$(get_config DOCKER_SUBNET_IPV6)
+  if [[ "${use_ipv6}" != "1" ]];then
+    if ! ip6tables -t nat -L | grep "${subnet_ipv6}"; then
+        ip6tables -t nat -A POSTROUTING -s "${subnet_ipv6}" -j MASQUERADE
+    fi
+  fi
 }

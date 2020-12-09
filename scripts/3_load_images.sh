@@ -37,7 +37,6 @@ function load_image_files() {
     else
       echo "镜像已加载，跳过"
     fi
-
   done
 }
 

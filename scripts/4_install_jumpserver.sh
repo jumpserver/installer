@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
+set -ue
+
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
 source "${BASE_DIR}/utils.sh"
 
 function pre_install() {
-  # 检查 IPv6
-  use_ipv6=$(get_config USE_IPV6)
-  subnet_ipv6=$(get_config DOCKER_SUBNET_IPV6)
-  if [[ "${use_ipv6}" != "1" ]];then
-    if ! ip6tables -t nat -L | grep "${subnet_ipv6}"; then
-        ip6tables -t nat -A POSTROUTING -s "${subnet_ipv6}" -j MASQUERADE
-    fi
-  fi
+  echo
 }
 
 function post_install() {
@@ -51,12 +46,12 @@ function post_install() {
 function main() {
   echo_logo
   pre_install
-  echo_green "\n>>> 一、安装配置Docker"
-  (bash "${BASE_DIR}/1_install_docker.sh")
-  echo_green "\n>>> 二、加载镜像"
-  (bash "${BASE_DIR}/2_load_images.sh")
-  echo_green "\n>>> 三、配置JumpServer"
-  (bash "${BASE_DIR}/3_config_jumpserver.sh")
+  echo_green "\n>>> 一、配置JumpServer"
+  (bash "${BASE_DIR}/1_config_jumpserver.sh")
+  echo_green "\n>>> 二、安装配置Docker"
+  (bash "${BASE_DIR}/2_install_docker.sh")
+  echo_green "\n>>> 三、加载镜像"
+  (bash "${BASE_DIR}/3_load_images.sh")
   post_install
 }
 
