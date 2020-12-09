@@ -39,14 +39,15 @@ function usage() {
   echo "  ./jmsctl.sh --help"
   echo
   echo "Commands: "
-  echo "  install    安装 JumpServer"
-  echo "  start      启动 JumpServer"
-  echo "  stop       停止 JumpServer(不停数据库)"
-  echo "  restart    重启 JumpServer"
-  echo "  status     检查 JumpServer"
-  echo "  down       下线 JumpServer(会停数据库)"
-  echo "  upgrade    升级 JumpServer"
-  echo "  reconfig   配置 JumpServer"
+  echo "  install      安装 JumpServer"
+  echo "  upgrade      升级 JumpServer"
+  echo "  reconfig     配置 JumpServer"
+  echo "  start        启动 JumpServer"
+  echo "  stop         停止 JumpServer (不停数据库)"
+  echo "  restart      重启 JumpServer"
+  echo "  status       检查 JumpServer"
+  echo "  down         下线 JumpServer (会停数据库)"
+  echo "  check_update 检查更新 JumpServer"
   echo
   echo "Management Commands: "
   echo "  load_image           加载 docker 镜像"
@@ -93,6 +94,20 @@ function restart() {
   start
 }
 
+function check_update() {
+  current_version="${VERSION}"
+  latest_version=$(get_latest_version)
+  if [[ "${current_version}" == "${latest_version}" ]];then
+    echo "当前版本已是最新"
+    return
+  fi
+  echo "最新版本是: ${latest_version}"
+  echo "当前版本是: ${current_version}"
+  echo
+  confirm="no"
+  read_from_input confirm "要更新到这个版本吗?" "" "${confirm}"
+}
+
 function main() {
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""
@@ -108,6 +123,9 @@ function main() {
     ;;
   upgrade)
     bash "${SCRIPT_DIR}/8_upgrade.sh" "$target"
+    ;;
+  check_update)
+    check_update
     ;;
   reconfig)
     bash "${SCRIPT_DIR}/1_config_jumpserver.sh"
