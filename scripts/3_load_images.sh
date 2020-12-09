@@ -8,7 +8,6 @@ IMAGE_DIR=images
 cd "${BASE_DIR}" || return
 
 function load_image_files() {
-  echo_green "\n>>> 二、加载镜像"
   images=$(get_images)
   for image in ${images}; do
     echo ""
@@ -38,16 +37,14 @@ function load_image_files() {
     else
       echo "镜像已加载，跳过"
     fi
-
   done
 }
 
 function pull_image() {
-  echo_green "\n>>> 二、拉取镜像"
   images=$(get_images public)
   i=1
   for image in ${images}; do
-    echo_yellow "$i. ${image}"
+    echo "[${image}]"
     docker pull "${image}"
     echo ""
     ((i++)) || true
@@ -62,6 +59,6 @@ function main() {
   fi
 }
 
-if [[ "$0" == "$BASH_SOURCE" ]]; then
+if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
   main
 fi

@@ -1,4 +1,4 @@
-# Jumpserver docker compose
+# JumpServer 安装管理包
 
 ## 环境依赖
   - CentOS 7
@@ -17,7 +17,7 @@ root  soft   nproc     unlimited
 $ reboot  # 重启服务器
 ```
 
-## 安装和一些其他配置
+## 安装
 
 ```bash
 # 安装
@@ -29,14 +29,17 @@ $ ./jmsctl.sh start
 # 重启
 $ ./jmsctl.sh restart
 
-# 干掉容器重新启动
-$ ./jmsctl.sh down && ./jmsctl.sh start
+# 关闭, 不包含数据库
+$ ./jmsctl.sh stop
 
-# 备份
-$ ./jmsctl.sh backup
+# 关闭所有
+$ ./jmsctl.sh down
+
+# 备份数据库
+$ ./jmsctl.sh backup_db
 
 # 查看日志
-$ ./jmsctl.sh log
+$ ./jmsctl.sh tail
 
 # 添加IPV6 转发规则
 $ ip6tables -t nat -A POSTROUTING -s 2001:db8:1::/64 -j MASQUERADE

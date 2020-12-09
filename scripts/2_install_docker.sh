@@ -63,7 +63,7 @@ function install_docker() {
     cp ./docker/docker-compose /usr/bin/
     chmod +x /usr/bin/docker-compose
   fi
-  echo "安装成功"
+  echo_done
 }
 
 function set_docker_config() {
@@ -116,26 +116,35 @@ function config_docker() {
   if [[ "$?" != "0" ]]; then
     docker_config_change=1
   fi
+  echo_done
 }
 
 function start_docker() {
   systemctl daemon-reload
   docker_is_running=$(is_running dockerd)
 
+  ret_code='1'
   if [[ "${docker_is_running}" && "${docker_version_match}" != "1" || "${docker_config_change}" == "1" ]]; then
     confirm="y"
     read_from_input confirm "Docker 版本发生改变 或 docker配置文件发生变化，是否要重启" "y/n" "y"
     if [[ "${confirm}" != "n" ]]; then
       systemctl restart docker
+      ret_code="$?"
     fi
   else
     systemctl start docker
+    ret_code="$?"
   fi
   systemctl enable docker &>/dev/null
+  if [[ "$ret_code" == "0" ]];then
+    echo_done
+  else
+    echo_failed
+  fi
 }
 
 function main() {
-  echo_green "\n>>> 一、安装配置Docker"
+
   if [[ "${OS}" == 'Darwin' ]]; then
     echo "MacOS skip install docker"
     return
@@ -148,6 +157,6 @@ function main() {
   start_docker
 }
 
-if [[ "$0" == "$BASH_SOURCE" ]]; then
+if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
   main
 fi

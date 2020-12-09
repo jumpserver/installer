@@ -18,7 +18,7 @@ services:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
     healthcheck:
-      test: "cd /opt/jumpserver/apps && celery -A ops inspect ping  | grep -o -E 'ansible|celery' | sort | uniq | grep -A 1 'ansible' | grep 'celery' || exit 3"
+      test: "cd /opt/jumpserver/apps && python manage.py check_celery"
       interval: 30s
       timeout: 20s
       retries: 3

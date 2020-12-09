@@ -12,10 +12,15 @@ services:
     depends_on:
       - xpack
   xpack:
-    image: jumpserver/xpack:${VERSION}
+    image: registry.fit2cloud.com/jumpserver/xpack:${VERSION}
     container_name: jms_xpack
     volumes:
       - share-volume:/opt/xpack
+    healthcheck:
+      test: "ls /tmp/lock"
+      interval: 30s
+      timeout: 20s
+      retries: 3
     networks:
       - net
 

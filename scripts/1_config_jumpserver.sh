@@ -46,7 +46,7 @@ function set_internal_mysql() {
 
 function set_mysql() {
   sleep 0.1
-  echo_green "\n>>> 四、 配置MySQL"
+  echo_yellow "\n7. 配置MySQL"
   use_external_mysql="n"
   read_from_input use_external_mysql "是否使用外部mysql" "y/n" "${use_external_mysql}"
 
@@ -55,6 +55,7 @@ function set_mysql() {
   else
     set_internal_mysql
   fi
+  echo_done
 }
 
 function set_external_redis() {
@@ -87,7 +88,7 @@ function set_internal_redis() {
 }
 
 function set_redis() {
-  echo_green "\n>>> 五、 配置Redis"
+  echo_yellow "\n8. 配置Redis"
   use_external_redis="n"
   read_from_input use_external_redis "是否使用外部redis " "y/n" "${use_external_redis}"
   if [[ "${use_external_redis}" == "y" ]]; then
@@ -95,6 +96,7 @@ function set_redis() {
   else
     set_internal_redis
   fi
+  echo_done
 }
 
 function set_secret_key() {
@@ -108,6 +110,7 @@ function set_secret_key() {
     BOOTSTRAP_TOKEN=$(random_str 16)
     set_config BOOTSTRAP_TOKEN ${BOOTSTRAP_TOKEN}
   fi
+  echo_done
 }
 
 function set_volume_dir() {
@@ -125,6 +128,7 @@ function set_volume_dir() {
     mkdir -p ${volume_dir}
   fi
   set_config VOLUME_DIR ${volume_dir}
+  echo_done
 }
 
 function prepare_config() {
@@ -142,6 +146,7 @@ function prepare_config() {
   if [[ ! -f ${CONFIG_FILE} ]]; then
     cp config-example.txt "${CONFIG_FILE}"
   fi
+  echo_done
 
   nginx_cert_dir="${config_dir}/nginx/cert"
   echo_yellow "\n2. 配置 Nginx 证书 ${nginx_cert_dir}"
@@ -149,70 +154,39 @@ function prepare_config() {
   if [[ ! -d ${nginx_cert_dir} ]]; then
     cp -R "${PROJECT_DIR}/config_init/nginx/cert" "${nginx_cert_dir}"
   fi
+  echo_done
 
   # .env 会被docker compose使用
   echo_yellow "\n3. 检查变量文件 .env"
   if [[ ! -f .env ]]; then
     ln -s "${CONFIG_FILE}" .env
   fi
+  echo_done
+
   backup_dir="${config_dir}/backup"
   mkdir -p "${backup_dir}"
   now=$(date +'%Y-%m-%d_%H-%M-%S')
-
   backup_config_file="${backup_dir}/config.txt.${now}"
   echo_yellow "\n4. 备份配置文件 ${backup_config_file}"
   cp "${CONFIG_FILE}" "${backup_config_file}"
+  echo_done
+
   cd "${cwd}" || exit
 }
 
 function set_jumpserver() {
-  echo_green ">>> 三、配置JumpServer"
   prepare_config
   set_secret_key
   set_volume_dir
 }
 
-function finish() {
-  echo_green "\n>>> 六、安装完成了"
-  HOST=$(ip addr | grep 'state UP' -A2 | grep inet | egrep -v '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
-  if [ ! "$HOST" ]; then
-      HOST=$(hostname -I | cut -d ' ' -f1)
-  fi
-  HTTP_PORT=$(get_config HTTP_PORT)
-  HTTPS_PORT=$(get_config HTTPS_PORT)
-  SSH_PORT=$(get_config SSH_PORT)
-
-  echo_yellow "1. 可以使用如下命令启动, 然后访问"
-  echo "./jmsctl.sh start"
-
-  echo_yellow "\n2. 其它一些管理命令"
-  echo "./jmsctl.sh stop"
-  echo "./jmsctl.sh restart"
-  echo "./jmsctl.sh backup"
-  echo "./jmsctl.sh upgrade"
-  echo "更多还有一些命令，你可以 ./jmsctl.sh --help来了解"
-
-  echo_yellow "\n3. 访问 Web 后台页面"
-  echo "http://${HOST}:${HTTP_PORT}"
-  echo "https://${HOST}:${HTTPS_PORT}"
-
-  echo_yellow "\n4. ssh/sftp 访问"
-  echo "ssh admin@${HOST} -p${SSH_PORT}"
-  echo "sftp -P${SSH_PORT} admin@${HOST}"
-
-  echo_yellow "\n5. 更多信息"
-  echo "我们的文档: https://docs.jumpserver.org/"
-  echo "我们的官网: https://www.jumpserver.org/"
-  echo -e "\n\n"
-}
 
 function main() {
   set_jumpserver
   set_mysql
   set_redis
-  finish
 }
 
-if [[ "$0" == "$BASH_SOURCE" ]]; then
+if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
   main
 fi

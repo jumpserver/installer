@@ -6,48 +6,13 @@ source "${PROJECT_DIR}/scripts/utils.sh"
 
 action=${1-}
 target=${2-}
-args="$@"
-
-function copy_coco_to_koko() {
-  volume_dir=$(get_config VOLUME_DIR)
-  coco_dir="${volume_dir}/coco"
-  koko_dir="${volume_dir}/koko"
-  if [[ ! -d "${koko_dir}" && -d "${coco_dir}" ]]; then
-    mv ${coco_dir} ${koko_dir}
-    ln -s ${koko_dir} ${coco_dir}
-  fi
-}
-
-function migrate_config() {
-  mkdir -p "${CONFIG_DIR}"
-
-  # v1.5 => v2.0
-  # 原先配置文件都在自己的目录，以后配置文件统一放在 /opt/jumpserver/config 中
-  if [[ -f config.txt && ! -f ${CONFIG_FILE} ]]; then
-    mv config.txt "${CONFIG_FILE}"
-    rm -f .env
-    ln -s "${CONFIG_FILE}" .env
-    ln -s "${CONFIG_FILE}" config.link
-  fi
-
-  # 迁移nginx的证书过去
-  if [[ ! -d ${CONFIG_DIR}/nginx ]]; then
-    cp -R nginx /opt/jumpserver/config/
-  fi
-
-  if [[ -f config.txt ]]; then
-    mv config.txt config.txt."$(date '+%s')"
-  fi
-}
+args=("$@")
 
 function check_config_file() {
   if [[ ! -f "${CONFIG_FILE}" ]]; then
     echo "Config file not found: ${CONFIG_FILE};"
     return 3
   fi
-}
-
-function check_env_file() {
   if [[ -f .env ]]; then
     ls -l .env | grep "${CONFIG_FILE}" &>/dev/null
     code="$?"
@@ -63,37 +28,34 @@ function check_env_file() {
 }
 
 function pre_check() {
-  copy_coco_to_koko
-  # 迁移config文件
-  migrate_config
-
   check_config_file || return 3
-  check_env_file || return 4
 }
 
 function usage() {
-  echo "JumpServer 部署安装脚本"
+  echo "JumpServer 部署管理脚本"
   echo
   echo "Usage: "
   echo "  ./jmsctl.sh [COMMAND] [ARGS...]"
   echo "  ./jmsctl.sh --help"
   echo
   echo "Commands: "
-  echo "  install    安装 JumpServer"
-  echo "  reconfig   配置 JumpServer"
-  echo "  start      启动 JumpServer"
-  echo "  stop       停止 JumpServer"
-  echo "  restart    重启 JumpServer"
-  echo "  status     检查 JumpServer"
-  echo "  down       下线 JumpServer"
-  echo "  upgrade    升级 JumpServer"
-
+  echo "  install      安装 JumpServer"
+  echo "  upgrade      升级 JumpServer"
+  echo "  reconfig     配置 JumpServer"
+  echo "  start        启动 JumpServer"
+  echo "  stop         停止 JumpServer (不停数据库)"
+  echo "  restart      重启 JumpServer"
+  echo "  status       检查 JumpServer"
+  echo "  down         下线 JumpServer (会停数据库)"
+  echo "  check_update 检查更新 JumpServer"
+  echo
   echo "Management Commands: "
   echo "  load_image           加载 docker 镜像"
   echo "  python               运行 python manage.py shell"
   echo "  db                   运行 python manage.py dbshell"
   echo "  backup_db            备份 数据库"
   echo "  restore_db [db_file] 通过 数据库备份文件恢复数据"
+  echo "  raw                  执行原始 docker-compose 命令"
 
 }
 
@@ -105,23 +67,87 @@ function service_to_docker_name() {
   echo "${service}"
 }
 
+EXE=""
+
+function start() {
+  ${EXE} up -d
+}
+
+function stop() {
+  if [[ -n "${target}" ]]; then
+    ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
+    return
+  fi
+  services=$(get_docker_compose_services ignore_db)
+  for i in ${services}; do
+    ${EXE} stop "${i}"
+  done
+  for i in ${services}; do
+    ${EXE} rm -f "${i}" >/dev/null
+  done
+  docker volume rm jms_share-volume &>/dev/null
+}
+
+function restart() {
+  stop
+  echo -e "\n"
+  start
+}
+
+function check_update() {
+  current_version="${VERSION}"
+  latest_version=$(get_latest_version)
+  if [[ "${current_version}" == "${latest_version}" ]];then
+    echo "当前版本已是最新"
+    return
+  fi
+  echo "最新版本是: ${latest_version}"
+  echo "当前版本是: ${current_version}"
+  echo
+  confirm="no"
+  read_from_input confirm "要更新到这个版本吗?" "" "${confirm}"
+}
+
 function main() {
-  EXE=""
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""
-  elif [[ "${action}" != "install" && "${action}" != "reconfig" ]]; then
+  elif [[ "${action}" == "install" || "${action}" == "reconfig" ]]; then
+    echo ""
+  else
     pre_check || return 3
     EXE=$(get_docker_compose_cmd_line)
   fi
   case "${action}" in
-  reconfig)
-    bash "${SCRIPT_DIR}/3_config_jumpserver.sh"
-    ;;
   install)
     bash "${SCRIPT_DIR}/4_install_jumpserver.sh"
     ;;
   upgrade)
     bash "${SCRIPT_DIR}/8_upgrade.sh" "$target"
+    ;;
+  check_update)
+    check_update
+    ;;
+  reconfig)
+    bash "${SCRIPT_DIR}/1_config_jumpserver.sh"
+    ;;
+  start)
+    start
+    ;;
+  restart)
+    restart
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+    ${EXE} ps
+    ;;
+  down)
+    if [[ -z "${target}" ]]; then
+      ${EXE} down
+    else
+      ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
+    fi
     ;;
   backup_db)
     bash "${SCRIPT_DIR}/5_db_backup.sh"
@@ -130,30 +156,10 @@ function main() {
     bash "${SCRIPT_DIR}/6_db_restore.sh" "$target"
     ;;
   load_image)
-    bash "${SCRIPT_DIR}/2_load_images.sh"
-    ;;
-  start)
-    ${EXE} up -d
-    ;;
-  restart)
-    ${EXE} restart "${target}"
-    ;;
-  reload)
-    ${EXE} up -d &>/dev/null
-    ${EXE} restart "${target}"
-    ;;
-  status)
-    ${EXE} ps
+    bash "${SCRIPT_DIR}/3_load_images.sh"
     ;;
   cmd)
     echo "${EXE}"
-    ;;
-  down)
-    if [[ -z "${target}" ]]; then
-      ${EXE} down
-    else
-      ${EXE} stop "${target}" && ${EXE} rm "${target}"
-    fi
     ;;
   tail)
     if [[ -z "${target}" ]]; then
@@ -173,15 +179,14 @@ function main() {
     docker_name=$(service_to_docker_name "${target}")
     docker exec -it "${docker_name}" sh
     ;;
-  backup)
-    bash "${SCRIPT_DIR}/5_db_backup.sh"
-    bash "${SCRIPT_DIR}/7_images_backup.sh backup"
+  show_services)
+    get_docker_compose_services
+    ;;
+  raw)
+    ${EXE} "${args[@]:1}"
     ;;
   help)
     usage
-    ;;
-  cmdline)
-    echo "${EXE}"
     ;;
   --help)
     usage
@@ -190,9 +195,10 @@ function main() {
     usage
     ;;
   *)
-    ${EXE} "${args}"
+    echo "No such command: ${action}"
+    usage
     ;;
   esac
 }
 
-main
+main "$@"

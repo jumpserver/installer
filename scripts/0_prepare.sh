@@ -33,8 +33,7 @@ function prepare_docker_bin() {
 }
 
 function prepare_image_files() {
-  ps aux | grep -v 'grep' | grep 'docker' &>/dev/null
-  if [[ "$?" != "0" ]]; then
+  if ! pgrep -f "docker" > /dev/null; then
     echo "Docker 没有运行, 请安装并启动"
     exit 1
   fi
@@ -48,7 +47,7 @@ function prepare_image_files() {
   for image in ${images}; do
     ((i++)) || true
     echo "[${image}]"
-    if [[ -n "${DOCKER_IMAGE_PREFIX}" ]]; then
+    if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
       docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
       docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
     else

@@ -2,7 +2,7 @@ version: '2.2'
 
 services:
   omnidb:
-    image: jumpserver/omnidb:${VERSION}
+    image: registry.fit2cloud.com/jumpserver/omnidb:${VERSION}
     container_name: jms_omnidb
     env_file:
       - ${CONFIG_FILE}
