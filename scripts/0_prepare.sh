@@ -8,6 +8,12 @@ IMAGE_DIR="images"
 DOCKER_IMAGE_PREFIX="${DOCKER_IMAGE_PREFIX-}"
 USE_XPACK="${USE_XPACK-0}"
 
+function prepare_config() {
+  if [[ "${USE_XPACK}" == "1" ]]; then
+    sed -i 's@USE_XPACK=.*@USE_XPACK=1@g' "${PROJECT_DIR}"/config-example.txt
+  fi
+}
+
 function prepare_docker_bin() {
   md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
   if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
@@ -79,8 +85,10 @@ function prepare_image_files() {
 
 }
 
+
 function prepare() {
   prepare_online_install_required_pkg
+  prepare_config
 
   echo "1. 准备 Docker 离线包"
   prepare_docker_bin
