@@ -105,7 +105,8 @@ function check_update() {
   echo "当前版本是: ${current_version}"
   echo
   confirm="no"
-  read_from_input confirm "要更新到这个版本吗?" "" "${confirm}"
+  read_from_input confirm "要更新到这个版本吗?" "yes/no" "${confirm}"
+  bash "${SCRIPT_DIR}/7_upgrade.sh" ${latest_version}"
 }
 
 function main() {
@@ -122,7 +123,7 @@ function main() {
     bash "${SCRIPT_DIR}/4_install_jumpserver.sh"
     ;;
   upgrade)
-    bash "${SCRIPT_DIR}/8_upgrade.sh" "$target"
+    bash "${SCRIPT_DIR}/7_upgrade.sh" "$target"
     ;;
   check_update)
     check_update
