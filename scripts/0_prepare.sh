@@ -86,7 +86,7 @@ function prepare_image_files() {
 }
 
 
-function prepare() {
+function main() {
   prepare_online_install_required_pkg
   prepare_config
 
