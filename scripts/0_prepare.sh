@@ -98,6 +98,6 @@ function prepare() {
 
 }
 
-if [[ "$0" == "${BASH_SOURCE}" ]]; then
-  prepare
+if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
+  main
 fi
