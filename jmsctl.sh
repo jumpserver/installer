@@ -106,7 +106,7 @@ function check_update() {
   echo
   confirm="no"
   read_from_input confirm "要更新到这个版本吗?" "yes/no" "${confirm}"
-  bash "${SCRIPT_DIR}/7_upgrade.sh" ${latest_version}"
+  bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
 }
 
 function main() {
