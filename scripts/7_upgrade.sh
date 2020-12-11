@@ -29,19 +29,34 @@ function migrate_config_v1_5_to_v2_0() {
     ln -s "${CONFIG_FILE}" config.link
   fi
 
-  # 迁移nginx的证书过去
-  if [[ ! -d ${CONFIG_DIR}/nginx ]]; then
-    cp -R nginx /opt/jumpserver/config/
-  fi
-
   if [[ -f config.txt ]]; then
     mv config.txt config.txt."$(date '+%s')"
   fi
 }
 
+function migrate_config_v2_5_v2_6() {
+  # 迁移nginx的证书过去
+  configs=("nginx" "core" "koko" "mysql" "redis")
+  for c in "${configs[@]}";do
+    if [[ ! -e ${CONFIG_DIR}/$c ]];then
+      cp -R "${BASE_DIR}/config_init/$c" "${CONFIG_DIR}"
+    fi
+  done
+
+  image_files=""
+  if [[ -d "$BASE_DIR/images" ]];then
+    image_files=$(ls "$BASE_DIR"/images)
+  fi
+  if [[ "${image_files}" =~ xpack ]];then
+    set_config "USE_XPACK" 1
+  fi
+}
+
+
 function update_config_if_need() {
   migrate_coco_to_koko_v1_54_to_v1_55
   migrate_config_v1_5_to_v2_0
+  migrate_config_v2_5_v2_6
 }
 
 function update_proc_if_need() {
