@@ -3,7 +3,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
 source "${BASE_DIR}/utils.sh"
 # shellcheck source=./2_install_docker.sh
-source "${BASE_DIR}/1_install_docker.sh"
+source "${BASE_DIR}/2_install_docker.sh"
 
 target=$1
 
@@ -29,19 +29,25 @@ function migrate_config_v1_5_to_v2_0() {
     ln -s "${CONFIG_FILE}" config.link
   fi
 
-  # 迁移nginx的证书过去
-  if [[ ! -d ${CONFIG_DIR}/nginx ]]; then
-    cp -R nginx /opt/jumpserver/config/
-  fi
-
   if [[ -f config.txt ]]; then
     mv config.txt config.txt."$(date '+%s')"
   fi
 }
 
+function migrate_config_v2_5_v2_6() {
+  # 迁移nginx的证书过去
+  configs=("nginx" "core" "koko" "mysql" "redis")
+  for c in "${configs[@]}";do
+    if [[ ! -e ${CONFIG_DIR}/$c ]];then
+      cp -R "${BASE_DIR}/config_init/$c" "${CONFIG_DIR}"
+    fi
+  done
+}
+
 function update_config_if_need() {
   migrate_coco_to_koko_v1_54_to_v1_55
   migrate_config_v1_5_to_v2_0
+  migrate_config_v2_5_v2_6
 }
 
 function update_proc_if_need() {
@@ -73,7 +79,7 @@ function main() {
   update_proc_if_need && echo_done || (echo_failed; exit  4)
 
   echo_yellow "\n4. 升级镜像文件"
-  bash "${SCRIPT_DIR}/2_load_images.sh" && echo_done || (echo_failed; exit  5)
+  bash "${SCRIPT_DIR}/3_load_images.sh" && echo_done || (echo_failed; exit  5)
 
   echo_yellow "\n5. 进行数据库变更"
   echo "表结构变更可能需要一段时间，请耐心等待"
