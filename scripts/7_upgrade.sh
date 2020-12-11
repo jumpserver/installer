@@ -3,7 +3,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
 source "${BASE_DIR}/utils.sh"
 # shellcheck source=./2_install_docker.sh
-source "${BASE_DIR}/1_install_docker.sh"
+source "${BASE_DIR}/2_install_docker.sh"
 
 target=$1
 
@@ -73,7 +73,7 @@ function main() {
   update_proc_if_need && echo_done || (echo_failed; exit  4)
 
   echo_yellow "\n4. 升级镜像文件"
-  bash "${SCRIPT_DIR}/2_load_images.sh" && echo_done || (echo_failed; exit  5)
+  bash "${SCRIPT_DIR}/3_load_images.sh" && echo_done || (echo_failed; exit  5)
 
   echo_yellow "\n5. 进行数据库变更"
   echo "表结构变更可能需要一段时间，请耐心等待"
