@@ -42,7 +42,16 @@ function migrate_config_v2_5_v2_6() {
       cp -R "${BASE_DIR}/config_init/$c" "${CONFIG_DIR}"
     fi
   done
+
+  image_files=""
+  if [[ -d "$BASE_DIR/images" ]];then
+    image_files=$(ls "$BASE_DIR"/images)
+  fi
+  if [[ "${image_files}" =~ xpack ]];then
+    set_config "USE_XPACK" 1
+  fi
 }
+
 
 function update_config_if_need() {
   migrate_coco_to_koko_v1_54_to_v1_55

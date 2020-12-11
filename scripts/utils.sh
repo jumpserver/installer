@@ -14,7 +14,6 @@ function is_confirm() {
   fi
 }
 
-
 function random_str() {
   len=$1
   if [[ -z ${len} ]]; then
@@ -29,26 +28,45 @@ function random_str() {
   sh -c "${cmd}" | tail -10 | base64 | head -c ${len}
 }
 
+function has_config() {
+  key=$1
+  cwd=$(pwd)
+  grep "^${key}=" "${CONFIG_FILE}" &>/dev/null
+
+  if [[ "$?" == "0" ]]; then
+    echo "1"
+  else
+    echo "0"
+  fi
+}
+
 function get_config() {
   cwd=$(pwd)
-  cd "${PROJECT_DIR}" || exit
   key=$1
-  value=$(grep "^${key}=" ${CONFIG_FILE} | awk -F= '{ print $2 }')
+  value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }')
   echo "${value}"
-  cd "${cwd}" || exit
 }
 
 function set_config() {
-  cwd=$(pwd)
-  cd "${PROJECT_DIR}" || exit
   key=$1
   value=$2
-  if [[ "${OS}" == 'Darwin' ]]; then
-    sed -i '' "s,^${key}=.*$,${key}=${value},g" ${CONFIG_FILE}
-  else
-    sed -i "s,^${key}=.*$,${key}=${value},g" ${CONFIG_FILE}
+
+  has=$(has_config "${key}")
+  if [[ ${has} == "0" ]]; then
+    echo "${key}=${value}" >>"${CONFIG_FILE}"
+    return
   fi
-  cd "${cwd}" || exit
+
+  origin_value=$(get_config "${key}")
+  if [[ "${value}" == "${origin_value}" ]]; then
+    return
+  fi
+
+  if [[ "${OS}" == 'Darwin' ]]; then
+    sed -i '' "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
+  else
+    sed -i "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
+  fi
 }
 
 function test_mysql_connect() {
@@ -231,7 +249,7 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ xpack ]]; then
     cmd="${cmd} -f ./compose/docker-compose-xpack.yml"
   fi
-  if [[ "${services}" =~ omnidb ]];then
+  if [[ "${services}" =~ omnidb ]]; then
     cmd="${cmd} -f ./compose/docker-compose-omnidb.yml"
   fi
   echo "${cmd}"
@@ -263,9 +281,8 @@ function get_latest_version() {
     sed 's/\"//g;s/,//g;s/ //g'
 }
 
-
 function image_has_prefix() {
-  if [[ $1 =~ registry.* ]];then
+  if [[ $1 =~ registry.* ]]; then
     echo "1"
   else
     echo "0"
@@ -282,9 +299,9 @@ function check_ipv6_iptables_if_need() {
   # 检查 IPv6
   use_ipv6=$(get_config USE_IPV6)
   subnet_ipv6=$(get_config DOCKER_SUBNET_IPV6)
-  if [[ "${use_ipv6}" != "1" ]];then
+  if [[ "${use_ipv6}" != "1" ]]; then
     if ! ip6tables -t nat -L | grep "${subnet_ipv6}"; then
-        ip6tables -t nat -A POSTROUTING -s "${subnet_ipv6}" -j MASQUERADE
+      ip6tables -t nat -A POSTROUTING -s "${subnet_ipv6}" -j MASQUERADE
     fi
   fi
 }
