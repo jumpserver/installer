@@ -39,7 +39,7 @@ function migrate_config_v2_5_v2_6() {
   configs=("nginx" "core" "koko" "mysql" "redis")
   for c in "${configs[@]}";do
     if [[ ! -e ${CONFIG_DIR}/$c ]];then
-      cp -R "${BASE_DIR}/config_init/$c" "${CONFIG_DIR}"
+      cp -R "${PROJECT_DIR}/config_init/$c" "${CONFIG_DIR}"
     fi
   done
 
@@ -85,7 +85,7 @@ function main() {
   update_config_if_need && echo_done || (echo_failed; exit  3)
 
   echo_yellow "\n3. 检查程序文件变更"
-  update_proc_if_need && echo_done || (echo_failed; exit  4)
+  update_proc_if_need || (echo_failed; exit  4)
 
   echo_yellow "\n4. 升级镜像文件"
   bash "${SCRIPT_DIR}/3_load_images.sh" && echo_done || (echo_failed; exit  5)
