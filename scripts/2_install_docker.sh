@@ -126,7 +126,7 @@ function start_docker() {
   ret_code='1'
   if [[ "${docker_is_running}" && "${docker_version_match}" != "1" || "${docker_config_change}" == "1" ]]; then
     confirm="y"
-    read_from_input confirm "Docker 版本发生改变 或 docker配置文件发生变化，是否要重启" "y/n" "y"
+    read_from_input confirm "Docker 版本发生改变 或 docker配置文件发生变化，是否要重启" "y/n" "${confirm}"
     if [[ "${confirm}" != "n" ]]; then
       systemctl restart docker
       ret_code="$?"

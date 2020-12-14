@@ -38,24 +38,27 @@ function usage() {
   echo "  ./jmsctl.sh [COMMAND] [ARGS...]"
   echo "  ./jmsctl.sh --help"
   echo
-  echo "Commands: "
-  echo "  install      安装 JumpServer"
-  echo "  upgrade      升级 JumpServer"
-  echo "  reconfig     配置 JumpServer"
-  echo "  start        启动 JumpServer"
-  echo "  stop         停止 JumpServer (不停数据库)"
-  echo "  restart      重启 JumpServer"
-  echo "  status       检查 JumpServer"
-  echo "  down         下线 JumpServer (会停数据库)"
+  echo "Installation Commands: "
+  echo "  install           安装 JumpServer"
+  echo "  upgrade [version] 升级 JumpServer"
+  echo "  check_update      检查更新 JumpServer"
+  echo "  reconfig          重新配置 JumpServer"
   echo
   echo "Management Commands: "
-  echo "  load_image           加载 docker 镜像"
-  echo "  check_update         检查 JumpServer 更新"
-  echo "  python               运行 python manage.py shell"
-  echo "  db                   运行 python manage.py dbshell"
-  echo "  backup_db            备份 数据库"
-  echo "  restore_db [db_file] 通过 数据库备份文件恢复数据"
-  echo "  raw                  执行 docker-compose 原生命令"
+  echo "  start             启动 JumpServer"
+  echo "  stop              停止 JumpServer (不停数据库)"
+  echo "  restart           重启 JumpServer"
+  echo "  status            检查 JumpServer"
+  echo "  down              下线 JumpServer (会停数据库)"
+  echo
+  echo "More Commands: "
+  echo "  load_image        加载 docker 镜像"
+  echo "  python            运行 python manage.py shell"
+  echo "  backup_db         备份数据库"
+  echo "  restore_db [file] 通过数据库备份文件恢复数据"
+  echo "  raw               执行原始 docker-compose 命令"
+  echo "  tail [service]    查看日志"
+
 }
 
 function service_to_docker_name() {
@@ -103,9 +106,11 @@ function check_update() {
   echo "最新版本是: ${latest_version}"
   echo "当前版本是: ${current_version}"
   echo
-  confirm="no"
-  read_from_input confirm "要更新到这个版本吗?" "yes/no" "${confirm}"
-  bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
+  confirm="n"
+  read_from_input confirm "要更新到这个版本吗?" "y/n" "${confirm}"
+  if [[ "${confirm}" == "y" ]];then
+     bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
+  fi
 }
 
 function main() {
