@@ -47,16 +47,15 @@ function usage() {
   echo "  restart      重启 JumpServer"
   echo "  status       检查 JumpServer"
   echo "  down         下线 JumpServer (会停数据库)"
-  echo "  check_update 检查更新 JumpServer"
   echo
   echo "Management Commands: "
   echo "  load_image           加载 docker 镜像"
+  echo "  check_update         检查 JumpServer 更新"
   echo "  python               运行 python manage.py shell"
   echo "  db                   运行 python manage.py dbshell"
   echo "  backup_db            备份 数据库"
   echo "  restore_db [db_file] 通过 数据库备份文件恢复数据"
-  echo "  raw                  执行原始 docker-compose 命令"
-
+  echo "  raw                  执行 docker-compose 原生命令"
 }
 
 function service_to_docker_name() {
