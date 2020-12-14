@@ -78,7 +78,7 @@ function prepare_image_files() {
       echo "保存镜像 ${image} -> ${image_path}"
       docker save -o "${image_path}" "${image}" && echo "${image_id}" >"${md5_path}"
     else
-      echo "已加载过该镜像, 跳过: ${image}"
+      echo "已保存过该镜像, 跳过: ${image}"
     fi
     echo
   done
