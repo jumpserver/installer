@@ -54,7 +54,6 @@ function usage() {
   echo "More Commands: "
   echo "  load_image        加载 docker 镜像"
   echo "  python            运行 python manage.py shell"
-  echo "  db                连接数据库"
   echo "  backup_db         备份数据库"
   echo "  restore_db [file] 通过数据库备份文件恢复数据"
   echo "  raw               执行原始 docker-compose 命令"
