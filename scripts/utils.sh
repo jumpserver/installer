@@ -93,8 +93,8 @@ function get_images() {
     scope="$1"
   fi
   images=(
-    "jumpserver/redis:alpine"
-    "jumpserver/mysql:5"
+    "jumpserver/redis:6.0.9-alpine"
+    "jumpserver/mysql:5.7.32"
     "jumpserver/nginx:alpine2"
     "jumpserver/luna:${VERSION}"
     "jumpserver/core:${VERSION}"
