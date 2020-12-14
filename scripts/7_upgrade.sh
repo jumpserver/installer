@@ -35,7 +35,7 @@ function migrate_config_v1_5_to_v2_0() {
 }
 
 function migrate_config_v2_5_v2_6() {
-  # 迁移nginx的证书过去
+  # 迁移配置文件过去
   configs=("nginx" "core" "koko" "mysql" "redis")
   for c in "${configs[@]}";do
     if [[ ! -e ${CONFIG_DIR}/$c ]];then
@@ -43,12 +43,18 @@ function migrate_config_v2_5_v2_6() {
     fi
   done
 
+  # 处理之前版本没有 USE_XPACK 的问题
   image_files=""
   if [[ -d "$BASE_DIR/images" ]];then
     image_files=$(ls "$BASE_DIR"/images)
   fi
   if [[ "${image_files}" =~ xpack ]];then
     set_config "USE_XPACK" 1
+  fi
+
+  # 处理一下之前 lb_http_server 配置文件没有迁移的问题
+  if [[ ! -f "${CONFIG_DIR}/nginx/lb_http_server.conf" ]];then
+    cp -R "${PROJECT_DIR}"/config_init/nginx/*.conf "${CONFIG_DIR}"/nginx
   fi
 }
 
