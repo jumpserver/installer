@@ -84,7 +84,7 @@ function test_redis_connect() {
   port=$2
   password=$3
   password=${password:=''}
-  docker run -it --rm jumpserver/redis:alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" >/dev/null
+  docker run -it --rm jumpserver/redis:6-alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" >/dev/null
 }
 
 function get_images() {
@@ -93,7 +93,7 @@ function get_images() {
     scope="$1"
   fi
   images=(
-    "jumpserver/redis:alpine"
+    "jumpserver/redis:6-alpine"
     "jumpserver/mysql:5"
     "jumpserver/nginx:alpine2"
     "jumpserver/luna:${VERSION}"

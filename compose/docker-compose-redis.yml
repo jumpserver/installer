@@ -6,7 +6,7 @@ services:
       redis:
         condition: service_healthy
   redis:
-    image: jumpserver/redis:6.0.9-alpine
+    image: jumpserver/redis:6-alpine
     container_name: jms_redis
     restart: always
     volumes:
