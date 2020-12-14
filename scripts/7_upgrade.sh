@@ -72,9 +72,9 @@ function update_proc_if_need() {
 function backup_db() {
   if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
     if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
-      confirm="no"
-      read_from_input confirm "备份数据库失败, 继续升级吗?" "Yes/no" "no"
-      if [[ "${confirm}" == "no" ]]; then
+      confirm="n"
+      read_from_input confirm "备份数据库失败, 继续升级吗?" "y/n" "${confirm}"
+      if [[ "${confirm}" == "n" ]]; then
         exit 1
       fi
     fi
@@ -84,6 +84,22 @@ function backup_db() {
 }
 
 function main() {
+  confirm="n"
+  to_version="${VERSION}"
+  if [[ -n "${target}" ]];then
+    to_version="${target}"
+  fi
+
+  read_from_input confirm "你确定要升级到版本 ${to_version} 吗?" "y/n" "${confirm}"
+  if [[ "${confirm}" != "y" || -z "${to_version}" ]];then
+    exit 3
+  fi
+
+  if [[ -n "${target}" && ${target} != "${VERSION}" ]];then
+    sed -i "s@VERSION=${VERSION}@VERSION=${target}@g" "${PROJECT_DIR}/static.env"
+    export VERSION=${target}
+  fi
+
   echo_yellow "1. 备份数据库"
   backup_db || exit 2
 
