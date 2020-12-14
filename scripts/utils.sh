@@ -272,7 +272,7 @@ function echo_logo() {
 
 EOF
 
-  echo -e "\t\t\t\t\t\t\t\t\tVersion:\033[33m $VERSION \033[0m \n"
+  echo -e "\t\t\t\t\t\t\t\t   Version: \033[33m $VERSION \033[0m \n"
 }
 
 function get_latest_version() {

@@ -90,7 +90,7 @@ function main() {
     to_version="${target}"
   fi
 
-  read_from_input confirm "你确定要升级到版本 ${to_version} 吗?" "y/n" "${confirm}"
+  read_from_input confirm "你确定要升级到 ${to_version} 版本吗?" "y/n" "${confirm}"
   if [[ "${confirm}" != "y" || -z "${to_version}" ]];then
     exit 3
   fi
