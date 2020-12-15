@@ -54,7 +54,11 @@ function migrate_config_v2_5_v2_6() {
 
   # 处理一下之前 lb_http_server 配置文件没有迁移的问题
   if [[ ! -f "${CONFIG_DIR}/nginx/lb_http_server.conf" ]];then
-    cp -R "${PROJECT_DIR}"/config_init/nginx/*.conf "${CONFIG_DIR}"/nginx
+    cp "${PROJECT_DIR}"/config_init/nginx/*.conf "${CONFIG_DIR}"/nginx
+  fi
+
+  if [[ ! -d "${CONFIG_DIR}/nginx/cert" ]];then
+    cp -R "${PROJECT_DIR}"/config_init/nginx/cert" ${CONFIG_DIR}"/nginx
   fi
 }
 
