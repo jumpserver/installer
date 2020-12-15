@@ -57,7 +57,7 @@ function migrate_config_v2_5_v2_6() {
     cp "${PROJECT_DIR}"/config_init/nginx/*.conf "${CONFIG_DIR}"/nginx
   fi
 
-  if [[ ! -d "${CONFIG_DIR}//nginx/cert" ]];then
+  if [[ ! -d "${CONFIG_DIR}/nginx/cert" ]];then
     cp -R "${PROJECT_DIR}"/config_init/nginx/cert" ${CONFIG_DIR}"/nginx
   fi
 }
