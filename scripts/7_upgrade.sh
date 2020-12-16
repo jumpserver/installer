@@ -104,7 +104,6 @@ function main() {
     export VERSION=${target}
   fi
 
-
   echo_yellow "\n1. 检查配置变更"
   update_config_if_need && echo_done || (echo_failed; exit  3)
 
