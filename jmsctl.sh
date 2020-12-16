@@ -10,14 +10,15 @@ args=("$@")
 
 function check_config_file() {
   if [[ ! -f "${CONFIG_FILE}" ]]; then
-    echo "Config file not found: ${CONFIG_FILE};"
+    echo "配置文件没有发现: ${CONFIG_FILE}"
+    echo "如果你是从 v1.5.x 升级的, 请 copy 之前目录中的 config.txt 到 ${CONFIG_FILE}"
     return 3
   fi
   if [[ -f .env ]]; then
     ls -l .env | grep "${CONFIG_FILE}" &>/dev/null
     code="$?"
     if [[ "$code" != "0" ]]; then
-      echo ".env link error, change it"
+      echo ".env 软连接存在问题, 重新更新"
       rm -f .env
     fi
   fi
