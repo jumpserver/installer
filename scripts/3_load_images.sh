@@ -44,7 +44,10 @@ function load_image_files() {
 function pull_image() {
   images=$(get_images public)
   for image in ${images}; do {
-    timeout 300s docker pull "${image}" >/dev/null 2>&1 || {
+    timeout 300s docker pull "${image}" >/dev/null 2>&1 && {
+      echo -ne "Docker: Pulling from ${image} \t"
+      echo -e "[\033[32m OK \033[0m]"
+    } || {
       echo -ne "Docker: Pulling from ${image} \t"
       echo -e "[\033[31m ERROR \033[0m]"
       exit 1

@@ -100,7 +100,6 @@ function main() {
   fi
 
   if [[ -n "${target}" && ${target} != "${VERSION}" ]];then
-    sed -i "s@VERSION=${VERSION}@VERSION=${target}@g" "${PROJECT_DIR}/static.env"
     export VERSION=${target}
   fi
 
@@ -123,6 +122,7 @@ function main() {
   echo_yellow "\n6. 升级成功, 可以重启程序了"
   echo "./jmsctl.sh restart"
   echo -e "\n\n"
+  sed -i "s@VERSION=.*@VERSION=${target}@g" "${PROJECT_DIR}/static.env"
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
