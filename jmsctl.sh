@@ -73,6 +73,7 @@ function service_to_docker_name() {
 EXE=""
 
 function start() {
+  check_ipv6_iptables_if_need
   ${EXE} up -d
 }
 
@@ -150,7 +151,7 @@ function main() {
     ;;
   down)
     if [[ -z "${target}" ]]; then
-      ${EXE} down
+      ${EXE} down -v
     else
       ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     fi

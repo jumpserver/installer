@@ -120,7 +120,8 @@ function main() {
   echo "表结构变更可能需要一段时间，请耐心等待 (请确保数据库在运行)"
   perform_db_migrations && echo_done || (echo_failed; exit 6)
 
-  echo_yellow "\n6. 升级成功, 可以启动程序了"
+  echo_yellow "\n6. 升级成功, 可以重启程序了"
+  echo "./jmsctl.sh restart"
   echo -e "\n\n"
 }
 

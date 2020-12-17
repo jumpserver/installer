@@ -73,7 +73,7 @@ function set_docker_config() {
   if [[ ! -f "${DOCKER_CONFIG}" ]]; then
     config_dir=$(dirname ${DOCKER_CONFIG})
     if [[ ! -d ${config_dir} ]]; then
-      mkdir -p ${config_dir}
+      mkdir -p "${config_dir}"
     fi
     echo -e "{\n}" >>${DOCKER_CONFIG}
   fi
@@ -144,7 +144,6 @@ function start_docker() {
 }
 
 function main() {
-
   if [[ "${OS}" == 'Darwin' ]]; then
     echo "MacOS skip install docker"
     return

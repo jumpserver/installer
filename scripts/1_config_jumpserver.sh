@@ -117,11 +117,13 @@ function set_volume_dir() {
   echo_yellow "\n6. 配置持久化目录 "
   echo "修改日志录像等持久化的目录，可以找个最大的磁盘，并创建目录，如 /opt/jumpserver"
   echo "注意: 安装完后不能再更改, 否则数据库可能丢失"
+  echo
   df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
   volume_dir=$(get_config VOLUME_DIR)
   if [[ -z "${volume_dir}" ]]; then
     volume_dir="/opt/jumpserver"
   fi
+  echo
   read_from_input volume_dir "设置持久化卷存储目录" "" "${volume_dir}"
 
   if [[ ! -d "${volume_dir}" ]]; then
@@ -136,7 +138,9 @@ function prepare_config() {
   cd "${PROJECT_DIR}" || exit
 
   config_dir=$(dirname "${CONFIG_FILE}")
-  echo_yellow "1. 检查配置文件 ${config_dir}"
+  echo_yellow "1. 检查配置文件"
+  echo "各组件使用环境变量式配置文件，而不是 yaml 格式, 配置名称与之前保持一致"
+  echo "配置文件位置: ${CONFIG_FILE}"
   if [[ ! -d ${config_dir} ]]; then
     config_dir_parent=$(dirname "${config_dir}")
     mkdir -p "${config_dir_parent}"
@@ -146,20 +150,17 @@ function prepare_config() {
   if [[ ! -f ${CONFIG_FILE} ]]; then
     cp config-example.txt "${CONFIG_FILE}"
   fi
-  echo_done
-
-  nginx_cert_dir="${config_dir}/nginx/cert"
-  echo_yellow "\n2. 配置 Nginx 证书 ${nginx_cert_dir}"
-  # 迁移 nginx 的证书
-  if [[ ! -d ${nginx_cert_dir} ]]; then
-    cp -R "${PROJECT_DIR}/config_init/nginx/cert" "${nginx_cert_dir}"
+  if [[ ! -f .env ]]; then
+    ln -s "${CONFIG_FILE}" .env
   fi
   echo_done
 
-  # .env 会被docker compose使用
-  echo_yellow "\n3. 检查变量文件 .env"
-  if [[ ! -f .env ]]; then
-    ln -s "${CONFIG_FILE}" .env
+  nginx_cert_dir="${config_dir}/nginx/cert"
+  echo_yellow "\n2. 配置 Nginx 证书"
+  echo "证书位置在: ${nginx_cert_dir}"
+  # 迁移 nginx 的证书
+  if [[ ! -d ${nginx_cert_dir} ]]; then
+    cp -R "${PROJECT_DIR}/config_init/nginx/cert" "${nginx_cert_dir}"
   fi
   echo_done
 
@@ -167,8 +168,18 @@ function prepare_config() {
   mkdir -p "${backup_dir}"
   now=$(date +'%Y-%m-%d_%H-%M-%S')
   backup_config_file="${backup_dir}/config.txt.${now}"
-  echo_yellow "\n4. 备份配置文件 ${backup_config_file}"
+  echo_yellow "\n3. 备份配置文件"
   cp "${CONFIG_FILE}" "${backup_config_file}"
+  echo "备份至 ${backup_config_file}"
+  echo_done
+
+  # IPv6 支持
+  echo_yellow "\n4. 配置网络"
+  confirm="n"
+  read_from_input confirm "需要支持 IPv6 吗?" "y/n" "${confirm}"
+  if [[ "${confirm}" == "y" ]];then
+    set_config USE_IPV6 1
+  fi
   echo_done
 
   cd "${cwd}" || exit
