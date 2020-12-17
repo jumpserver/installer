@@ -43,12 +43,13 @@ function load_image_files() {
 
 function pull_image() {
   images=$(get_images public)
-  i=1
-  for image in ${images}; do
-    echo "[${image}]"
-    docker pull "${image}"
-    echo ""
-    ((i++)) || true
+  for image in ${images}; do {
+    timeout 300s docker pull "${image}" >/dev/null 2>&1 || {
+      echo -ne "Docker: Pulling from ${image} \t"
+      echo -e "[\033[31m ERROR \033[0m]"
+      exit 1
+    }
+  } &
   done
 }
 
@@ -57,6 +58,7 @@ function main() {
     load_image_files
   else
     pull_image
+    wait
   fi
 }
 
