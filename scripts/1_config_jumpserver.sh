@@ -177,7 +177,6 @@ function prepare_config() {
   read_from_input confirm "需要支持 IPv6 吗?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]];then
     set_config USE_IPV6 1
-    check_ipv6_iptables_if_need
   fi
   echo_done
 

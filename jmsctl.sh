@@ -73,6 +73,7 @@ function service_to_docker_name() {
 EXE=""
 
 function start() {
+  check_ipv6_iptables_if_need
   ${EXE} up -d
 }
 
