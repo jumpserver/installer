@@ -117,11 +117,13 @@ function set_volume_dir() {
   echo_yellow "\n6. 配置持久化目录 "
   echo "修改日志录像等持久化的目录，可以找个最大的磁盘，并创建目录，如 /opt/jumpserver"
   echo "注意: 安装完后不能再更改, 否则数据库可能丢失"
+  echo
   df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
   volume_dir=$(get_config VOLUME_DIR)
   if [[ -z "${volume_dir}" ]]; then
     volume_dir="/opt/jumpserver"
   fi
+  echo
   read_from_input volume_dir "设置持久化卷存储目录" "" "${volume_dir}"
 
   if [[ ! -d "${volume_dir}" ]]; then
