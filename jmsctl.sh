@@ -151,7 +151,7 @@ function main() {
     ;;
   down)
     if [[ -z "${target}" ]]; then
-      ${EXE} down
+      ${EXE} down -v
     else
       ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     fi
