@@ -77,3 +77,39 @@ $ vim /opt/jumpserver/config/config.txt
 USE_IPV6=1
 ...
 ```
+
+## 配置文件说明
+
+配置文件将会放在 /opt/jumpserver/config 中
+
+```
+[root@jumpserver-qa config]# tree .
+.
+├── config.txt      # 主配置文件
+├── core
+│   └── config.yml  # core yml 格式配置文件，可以留空，使用 config.txt 设置
+├── koko
+│   └── config.yml  # koko yml 格式配置文件，可以留空，使用 config.txt 设置
+├── mysql
+│   └── my.cnf      # mysql 配置文件
+├── nginx           # nginx 配置文件
+│   ├── cert
+│   │   ├── server.crt
+│   │   └── server.key
+│   ├── lb_http_server.conf
+│   └── lb_ssh_server.conf
+├── README.md
+└── redis           
+    └── redis.conf  # redis 配置文件
+
+6 directories, 11 files
+```
+
+### config.txt 说明
+
+config.txt 文件是环境变量式配置文件，会挂在到各个容器中，这样可以不必为 koko，core，guacamole 单独设置配置文件
+
+config-example.txt 有说明，可以参考
+
+
+
