@@ -20,7 +20,7 @@ $ reboot  # 重启服务器
 ## 安装
 
 ```bash
-# 安装
+# 安装，版本是在 static.env 指定的
 $ ./jmsctl.sh install
 
 # 启动
@@ -40,6 +40,12 @@ $ ./jmsctl.sh backup_db
 
 # 查看日志
 $ ./jmsctl.sh tail
+
+# 检查更新
+$ ./jmsctl.sh check_update
+
+# 升级
+$ ./jmsctl.sh upgrade v2.6.1
 
 # 添加IPV6 转发规则
 $ ip6tables -t nat -A POSTROUTING -s 2001:db8:1::/64 -j MASQUERADE
