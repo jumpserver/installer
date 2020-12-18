@@ -13,3 +13,4 @@ cofnig.link
 .env
 .bak
 config.link
+release/*
