@@ -34,10 +34,10 @@ $ ./jmsctl.sh install
 # 检查更新
 $ ./jmsctl.sh check_update
 
-# 升级到 static.env 中指定版本
+# 升级到 static.env 中的版本
 $ ./jmsctl.sh upgrade 
 
-# 升级到知道版本
+# 升级到指定版本
 $ ./jmsctl.sh upgrade v2.6.1
 ```
 
