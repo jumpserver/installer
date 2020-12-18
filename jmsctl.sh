@@ -108,11 +108,7 @@ function check_update() {
   echo "最新版本是: ${latest_version}"
   echo "当前版本是: ${current_version}"
   echo
-  confirm="n"
-  read_from_input confirm "要更新到这个版本吗?" "y/n" "${confirm}"
-  if [[ "${confirm}" == "y" ]];then
-     bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
-  fi
+  bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
 }
 
 function main() {

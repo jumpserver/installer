@@ -22,10 +22,10 @@ function set_external_mysql() {
   mysql_pass=""
   read_from_input mysql_pass "请输入mysql的密码" "" "${mysql_pass}"
 
-  test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
-  if [[ "$?" != "0" ]]; then
-    echo "测试连接数据库失败, 可以 Ctrl-C 退出程序重新设置，或者继续"
-  fi
+#  test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
+#  if [[ "$?" != "0" ]]; then
+#    echo "测试连接数据库失败, 可以 Ctrl-C 退出程序重新设置，或者继续"
+#  fi
   set_config DB_HOST ${mysql_host}
   set_config DB_PORT ${mysql_port}
   set_config DB_USER ${mysql_user}
@@ -68,10 +68,10 @@ function set_external_redis() {
   redis_password=""
   read_from_input redis_password "请输入redis的密码" "" "${redis_password}"
 
-  test_redis_connect ${redis_host} ${redis_port} ${redis_password}
-  if [[ "$?" != "0" ]]; then
-    echo "测试连接Redis失败, 可以 Ctrl-C 退出程序重新设置，或者继续"
-  fi
+#  test_redis_connect ${redis_host} ${redis_port} ${redis_password}
+#  if [[ "$?" != "0" ]]; then
+#    echo "测试连接Redis失败, 可以 Ctrl-C 退出程序重新设置，或者继续"
+#  fi
   set_config REDIS_HOST ${redis_host}
   set_config REDIS_PORT ${redis_port}
   set_config REDIS_PASSWORD ${redis_password}

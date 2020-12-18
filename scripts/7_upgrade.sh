@@ -126,6 +126,5 @@ function main() {
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
-  echo_logo
   main
 fi
