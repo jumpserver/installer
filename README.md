@@ -41,6 +41,16 @@ $ ./jmsctl.sh upgrade
 $ ./jmsctl.sh upgrade v2.6.1
 ```
 
+## 离线安装
+```bash
+# 生成离线包
+$ cd scripts && bash 0_prepare.sh
+
+# 完成以后将这个包压缩，复制到想安装的机器，直接安装即可
+$ ./jmsctl.sh install 
+```
+
+
 ## 管理
 
 ```
