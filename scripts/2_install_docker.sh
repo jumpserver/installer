@@ -8,8 +8,6 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 . "${BASE_DIR}/0_prepare.sh"
 
 DOCKER_CONFIG="/etc/docker/daemon.json"
-docker_exist=0
-docker_version_match=1
 docker_config_change=0
 docker_copy_failed=0
 
@@ -34,11 +32,14 @@ function install_docker() {
     echo_red "Error: Docker 程序不存在"
     exit
   fi
+
+  docker_exist=1
+  docker_version_match=1
   old_docker_md5=$(get_file_md5 /usr/bin/dockerd)
   new_docker_md5=$(get_file_md5 ./docker/dockerd)
 
-  if [[ -f "/usr/bin/dockerd" ]]; then
-    docker_exist=1
+  if [[ ! -f "/usr/bin/dockerd" ]]; then
+    docker_exist=0
   elif [[ "${old_docker_md5}" != "${new_docker_md5}" ]]; then
     docker_version_match=0
   fi
@@ -46,9 +47,11 @@ function install_docker() {
   if [[ "${docker_exist}" != "1" ]]; then
     copy_docker
   elif [[ "${docker_version_match}" != "1" ]]; then
-    confirm="y"
-    echo_yellow "已有 Docker 与 本Release包版本不一致, 开始更新"
-    copy_docker
+    confirm="n"
+    read_from_input confirm "已安装 Docker版本 与 本安装包测试的版本(${DOCKER_VERSION}) 不一致, 是否更新?" "y/n" "${confirm}"
+    if [[ "${confirm}" == "y" ]]; then
+      copy_docker
+    fi
   fi
 
   if [[ "${docker_copy_failed}" != "0" ]]; then
