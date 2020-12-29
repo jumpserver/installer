@@ -48,14 +48,14 @@ function install_docker() {
     copy_docker
   elif [[ "${docker_version_match}" != "1" ]]; then
     confirm="n"
-    read_from_input confirm "已安装 Docker版本 与 本安装包测试的版本(${DOCKER_VERSION}) 不一致, 是否更新?" "y/n" "${confirm}"
+    read_from_input confirm "已安装 Docker 版本 与 本安装包测试的版本(${DOCKER_VERSION}) 不一致, 是否更新?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       copy_docker
     fi
   fi
 
   if [[ "${docker_copy_failed}" != "0" ]]; then
-    echo_red "Docker 复制失败，可能是已有docker运行，请停止运行的docker重新执行"
+    echo_red "Docker 复制失败，可能是已有 Docker 运行，请停止运行的 Docker 重新执行"
     echo_red "systemctl stop docker"
     exit 1
   fi
@@ -102,13 +102,11 @@ function config_docker() {
   if [[ -f '/etc/docker/daemon.json' ]]; then
     cp /etc/docker/daemon.json /etc/docker/daemon.json.bak
   fi
-  echo "修改Docker镜像容器的默认存储目录，可以找个最大的磁盘, 并创建目录，如 /opt/docker"
-  df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
-
-  docker_storage_path='/opt/docker'
-  echo ""
-  read_from_input docker_storage_path "Docker存储目录" '' "${docker_storage_path}"
-
+  docker_storage_path=$(get_config DOCKER_DIR)
+  if [[ -z "${docker_storage_path}" ]]; then
+    read_from_input docker_storage_path "Docker 存储目录" '' "${docker_storage_path}"
+  fi
+  echo "Docker 镜像存储目录 ${docker_storage_path}"
   if [[ ! -d "${docker_storage_path}" ]]; then
     mkdir -p ${docker_storage_path}
   fi
@@ -125,25 +123,19 @@ function config_docker() {
 function start_docker() {
   systemctl daemon-reload
   docker_is_running=$(is_running dockerd)
-
-  ret_code='1'
   if [[ "${docker_is_running}" && "${docker_version_match}" != "1" || "${docker_config_change}" == "1" ]]; then
-    confirm="y"
-    read_from_input confirm "Docker 版本发生改变 或 docker配置文件发生变化，是否要重启" "y/n" "${confirm}"
-    if [[ "${confirm}" != "n" ]]; then
-      systemctl restart docker
-      ret_code="$?"
-    fi
+    systemctl restart docker || {
+      echo_failed
+      exit 1
+    }
   else
-    systemctl start docker
-    ret_code="$?"
+    systemctl start docker || {
+      echo_failed
+      exit 1
+    }
   fi
   systemctl enable docker &>/dev/null
-  if [[ "$ret_code" == "0" ]];then
-    echo_done
-  else
-    echo_failed
-  fi
+  echo_done
 }
 
 function main() {
@@ -151,11 +143,19 @@ function main() {
     echo "MacOS skip install docker"
     return
   fi
-  echo_yellow "1. 安装Docker"
-  install_docker
-  echo_yellow "\n2. 配置Docker"
-  config_docker
-  echo_yellow "\n3. 启动Docker"
+  echo_yellow "1. 安装 Docker"
+  command -v docker &>/dev/null && command -v docker-compose &>/dev/null && echo_done || {
+    install_docker
+  }
+
+  echo_yellow "\n2. 配置 Docker"
+  if [[ ! -f "/etc/docker/daemon.json" ]]; then
+    config_docker
+  else
+    echo_done
+  fi
+
+  echo_yellow "\n3. 启动 Docker"
   start_docker
 }
 

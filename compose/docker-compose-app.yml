@@ -9,7 +9,7 @@ services:
       - ${HTTP_PORT}:80
       - ${HTTPS_PORT}:443
     volumes:
-      - ./config_static/http_server.conf:/etc/nginx/conf.d/default.conf
+      - ${CONFIG_DIR}/nginx/http_server.conf:/etc/nginx/conf.d/default.conf
       - ${CONFIG_DIR}/nginx/cert:/etc/nginx/cert
       - ${VOLUME_DIR}/core/data:/data
       - ${VOLUME_DIR}/nginx/log:/var/log/nginx
@@ -86,7 +86,7 @@ services:
       retries: 3
     networks:
       - net
-  
+
   lina:
     image: jumpserver/lina:${VERSION}
     container_name: jms_lina

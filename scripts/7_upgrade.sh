@@ -57,7 +57,7 @@ function migrate_config_v2_5_v2_6() {
     cp "${PROJECT_DIR}"/config_init/nginx/*.conf "${CONFIG_DIR}"/nginx
   fi
 
-  if [[ ! -d "${CONFIG_DIR}/nginx/cert" ]];then
+  if [[ ! -d "${CONFIG_DIR}/nginx/cert" ]]; then
     cp -R "${PROJECT_DIR}"/config_init/nginx/cert "${CONFIG_DIR}"/nginx
   fi
 }
@@ -113,7 +113,7 @@ function main() {
   echo_yellow "\n3. 升级镜像文件"
   bash "${SCRIPT_DIR}/3_load_images.sh" && echo_done || (echo_failed; exit  5)
 
-  echo_yellow "4. 备份数据库"
+  echo_yellow "\n4. 备份数据库"
   backup_db || exit 2
 
   echo_yellow "\n5. 进行数据库变更"

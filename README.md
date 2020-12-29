@@ -35,7 +35,7 @@ $ ./jmsctl.sh install
 $ ./jmsctl.sh check_update
 
 # 升级到 static.env 中的版本
-$ ./jmsctl.sh upgrade 
+$ ./jmsctl.sh upgrade
 
 # 升级到指定版本
 $ ./jmsctl.sh upgrade v2.6.1
@@ -47,7 +47,7 @@ $ ./jmsctl.sh upgrade v2.6.1
 $ cd scripts && bash 0_prepare.sh
 
 # 完成以后将这个包压缩，复制到想安装的机器，直接安装即可
-$ ./jmsctl.sh install 
+$ ./jmsctl.sh install
 ```
 
 
@@ -77,15 +77,17 @@ $ ./jmsctl.sh tail
 ## IPV6 支持
 
 ```
-# 添加IPV6 转发规则
+# 添加 IPV6 NAT 规则
 $ ip6tables -t nat -A POSTROUTING -s 2001:db8:1::/64 -j MASQUERADE
-$ firewall-cmd --permanent --zone=public --add-masquerade
 
 # 修改配置文件支持 IPv6
 $ vim /opt/jumpserver/config/config.txt
 ...
 USE_IPV6=1
 ...
+
+# 如果 IPV6 依旧无法使用, 关闭 Firewalld 即可
+$ systemctl stop firewalld
 ```
 
 ## 配置文件说明
@@ -106,6 +108,7 @@ USE_IPV6=1
 │   ├── cert
 │   │   ├── server.crt
 │   │   └── server.key
+|   ├── http_server.conf
 │   ├── lb_http_server.conf
 │   └── lb_ssh_server.conf
 ├── README.md
@@ -120,6 +123,3 @@ USE_IPV6=1
 config.txt 文件是环境变量式配置文件，会挂在到各个容器中，这样可以不必为 koko，core，guacamole 单独设置配置文件
 
 config-example.txt 有说明，可以参考
-
-
-

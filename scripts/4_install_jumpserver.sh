@@ -27,11 +27,12 @@ function post_install() {
   echo "./jmsctl.sh restart"
   echo "./jmsctl.sh backup"
   echo "./jmsctl.sh upgrade"
-  echo "更多还有一些命令，你可以 ./jmsctl.sh --help来了解"
+  echo "更多还有一些命令，你可以 ./jmsctl.sh --help 来了解"
 
   echo_yellow "\n3. 访问 Web 后台页面"
   echo "http://${HOST}:${HTTP_PORT}"
   echo "https://${HOST}:${HTTPS_PORT}"
+  echo "默认用户: admin  默认密码: admin"
 
   echo_yellow "\n4. ssh/sftp 访问"
   echo "ssh admin@${HOST} -p${SSH_PORT}"
@@ -46,9 +47,9 @@ function post_install() {
 function main() {
   echo_logo
   pre_install
-  echo_green "\n>>> 一、配置JumpServer"
+  echo_green "\n>>> 一、配置 JumpServer"
   (bash "${BASE_DIR}/1_config_jumpserver.sh")
-  echo_green "\n>>> 二、安装配置Docker"
+  echo_green "\n>>> 二、安装配置 Docker"
   (bash "${BASE_DIR}/2_install_docker.sh")
   echo_green "\n>>> 三、加载镜像"
   (bash "${BASE_DIR}/3_load_images.sh")
