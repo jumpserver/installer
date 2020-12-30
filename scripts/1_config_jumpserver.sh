@@ -55,8 +55,8 @@ function set_internal_mysql() {
 function set_mysql() {
   sleep 0.1
   echo_yellow "\n6. 配置 MySQL"
-  use_external_mysql=$(get_config DB_HOST)
-  if [[ "${use_external_mysql}" == "mysql" ]]; then
+  db_host=$(get_config DB_HOST)
+  if [[ "${db_host}" == "mysql" ]]; then
     set_internal_mysql
   else
     set_external_mysql
@@ -100,8 +100,8 @@ function set_internal_redis() {
 
 function set_redis() {
   echo_yellow "\n7. 配置 Redis"
-  use_external_redis=$(get_config REDIS_HOST)
-  if [[ "${use_external_redis}" == "redis" ]]; then
+  redis_host=$(get_config REDIS_HOST)
+  if [[ "${redis_host}" == "redis" ]]; then
     set_internal_redis
   else
     set_external_redis

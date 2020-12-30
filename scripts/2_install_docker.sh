@@ -14,6 +14,7 @@ docker_copy_failed=0
 cd "${BASE_DIR}" || exit
 
 function copy_docker() {
+
   cp ./docker/* /usr/bin/ \
   && cp ./docker.service /etc/systemd/system/ \
   && chmod +x /usr/bin/docker* \
@@ -104,6 +105,7 @@ function config_docker() {
   fi
   docker_storage_path=$(get_config DOCKER_DIR)
   if [[ -z "${docker_storage_path}" ]]; then
+    echo "修改 Docker 镜像容器的默认存储目录，可以找个最大的磁盘, 并创建目录，如 /var/lib/docker"
     read_from_input docker_storage_path "Docker 存储目录" '' "${docker_storage_path}"
   fi
   echo "Docker 镜像存储目录 ${docker_storage_path}"
@@ -124,6 +126,7 @@ function start_docker() {
   systemctl daemon-reload
   docker_is_running=$(is_running dockerd)
   if [[ "${docker_is_running}" && "${docker_version_match}" != "1" || "${docker_config_change}" == "1" ]]; then
+    echo "Docker 版本发生改变 或 docker配置文件发生变化, 正在重启 Docker"
     systemctl restart docker || {
       echo_failed
       exit 1
