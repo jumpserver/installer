@@ -6,7 +6,7 @@ VOLUME_DIR=/opt/jumpserver
 DOCKER_DIR=/var/lib/docker
 SECRET_KEY=
 BOOTSTRAP_TOKEN=
-LOG_LEVEL=INFO
+LOG_LEVEL=ERROR
 
 ## 使用外置 MySQL 配置
 DB_HOST=mysql

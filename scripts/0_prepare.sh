@@ -20,7 +20,7 @@ function prepare_docker_bin() {
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker.tar.gz
     echo "开始下载 Docker 程序 ..."
-    wget "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz
+    wget "${DOCKER_BIN_URL}" -qO /tmp/docker.tar.gz
   else
     echo "使用 Docker 缓存文件: /tmp/docker.tar.gz"
   fi
@@ -29,7 +29,7 @@ function prepare_docker_bin() {
   md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
   if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
     echo "开始下载 Docker compose 程序 ..."
-    wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
+    wget "${DOCKER_COMPOSE_BIN_URL}" -qO /tmp/docker-compose
   else
     echo "使用 Docker compose 缓存文件: /tmp/docker-compose"
   fi

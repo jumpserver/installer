@@ -14,7 +14,6 @@ docker_copy_failed=0
 cd "${BASE_DIR}" || exit
 
 function copy_docker() {
-
   cp ./docker/* /usr/bin/ \
   && cp ./docker.service /etc/systemd/system/ \
   && chmod +x /usr/bin/docker* \
@@ -70,6 +69,12 @@ function install_docker() {
   echo_done
 }
 
+function check_docker_install() {
+  command -v docker &>/dev/null && command -v docker-compose &>/dev/null && echo_done || {
+    install_docker
+  }
+}
+
 function set_docker_config() {
   key=$1
   value=$2
@@ -122,11 +127,19 @@ function config_docker() {
   echo_done
 }
 
+function check_docker_config() {
+  if [[ ! -f "/etc/docker/daemon.json" ]]; then
+    config_docker
+  else
+    echo_done
+  fi
+}
+
 function start_docker() {
   systemctl daemon-reload
   docker_is_running=$(is_running dockerd)
   if [[ "${docker_is_running}" && "${docker_version_match}" != "1" || "${docker_config_change}" == "1" ]]; then
-    echo "Docker 版本发生改变 或 docker配置文件发生变化, 正在重启 Docker"
+    echo "Docker 版本发生改变 或 Docker 配置文件发生变化, 正在重启 Docker"
     systemctl restart docker || {
       echo_failed
       exit 1
@@ -141,25 +154,28 @@ function start_docker() {
   echo_done
 }
 
+function check_docker_start() {
+  docker ps > /dev/null 2>&1
+  if [[ "$?" != "0" ]]; then
+    start_docker
+  else
+    echo_done
+  fi
+}
+
 function main() {
   if [[ "${OS}" == 'Darwin' ]]; then
     echo "MacOS skip install docker"
     return
   fi
-  echo_yellow "1. 安装 Docker"
-  command -v docker &>/dev/null && command -v docker-compose &>/dev/null && echo_done || {
-    install_docker
-  }
+  echo_yellow "\n1. 安装 Docker"
+  check_docker_install
 
   echo_yellow "\n2. 配置 Docker"
-  if [[ ! -f "/etc/docker/daemon.json" ]]; then
-    config_docker
-  else
-    echo_done
-  fi
+  check_docker_config
 
   echo_yellow "\n3. 启动 Docker"
-  start_docker
+  check_docker_start
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then

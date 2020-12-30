@@ -256,8 +256,39 @@ function get_docker_compose_cmd_line() {
 }
 
 function prepare_online_install_required_pkg() {
-  command -v wget &>/dev/null || yum -y install wget
-  command -v zip &>/dev/null || yum -y install zip
+  command -v wget &>/dev/null || {
+    if [[ -f "/etc/redhat-release" ]]; then
+      yum -q -y install wget
+    elif [[ -f "/etc/lsb-release" ]]; then
+      apt-get -qqy update
+      apt-get -qqy install wget
+    else
+      echo -ne "请先安装 wget "
+      echo_failed
+    fi
+  }
+  command -v zip &>/dev/null || {
+    if [[ -f "/etc/redhat-release" ]]; then
+      yum -q -y install zip
+    elif [[ -f "/etc/lsb-release" ]]; then
+      apt-get -qqy update
+      apt-get -qqy install wget
+    else
+      echo -ne "请先安装 zip "
+      echo_failed
+    fi
+  }
+  command -v python &>/dev/null || {
+    if [[ -f "/etc/redhat-release" ]]; then
+      yum -q -y install python
+    elif [[ -f "/etc/lsb-release" ]]; then
+      apt-get -qqy update
+      apt-get -qqy install python
+    else
+      echo -ne "请先安装 python "
+      echo_failed
+    fi
+  }
 }
 
 function echo_logo() {

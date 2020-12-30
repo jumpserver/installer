@@ -19,7 +19,7 @@ function post_install() {
   HTTPS_PORT=$(get_config HTTPS_PORT)
   SSH_PORT=$(get_config SSH_PORT)
 
-  echo_yellow "1. 可以使用如下命令启动, 然后访问"
+  echo_yellow "\n1. 可以使用如下命令启动, 然后访问"
   echo "./jmsctl.sh start"
 
   echo_yellow "\n2. 其它一些管理命令"

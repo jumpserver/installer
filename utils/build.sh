@@ -14,7 +14,17 @@ to_dir="${release_dir}/jumpserver-installer"
 mkdir -p "${to_dir}"
 
 if [[ -d '.git' ]];then
-  command -v git || yum -y install git
+  command -v git &>/dev/null || {
+    if [[ -f "/etc/redhat-release" ]]; then
+      yum -q -y install git
+    elif [[ -f /etc/lsb-release ]]; then
+      apt-get -qqy update
+      apt-get -qqy install git
+    else
+      echo -ne "请先安装 wget "
+      echo_failed
+    fi
+  }
   git archive --format tar HEAD | tar x -C "${to_dir}"
 else
   cp -R . /tmp/jumpserver
@@ -31,4 +41,3 @@ fi
 if [[ -n ${VERSION} ]]; then
   sedi "s@VERSION=.*@VERSION=\"${VERSION}\"@g" "${to_dir}/static.env"
 fi
-

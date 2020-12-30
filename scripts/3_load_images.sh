@@ -43,12 +43,11 @@ function load_image_files() {
 
 function pull_image() {
   images=$(get_images public)
-  i=1
   for image in ${images}; do
-    echo "[${image}]"
-    docker pull "${image}"
-    echo ""
-    ((i++)) || true
+    if [[ ! "$(docker images | grep $(echo ${image%:*}) | grep $(echo ${image#*:}) )" ]]; then
+      docker pull "${image}"
+      echo ""
+    fi
   done
 }
 
