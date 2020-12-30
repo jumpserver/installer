@@ -205,12 +205,12 @@ function get_docker_compose_services() {
   if [[ "${use_task}" != "0" ]]; then
     services+=" celery"
   fi
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  if [[ "${use_external_mysql}" != "1" && "${ignore_db}" != "ignore_db" ]]; then
+  db_host=$(get_config DB_HOST)
+  if [[ "${db_host}" == "mysql" && "${ignore_db}" != "ignore_db" ]]; then
     services+=" mysql"
   fi
-  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
-  if [[ "${use_external_redis}" != "1" && "${ignore_db}" != "ignore_db" ]]; then
+  redis_host=$(get_config REDIS_HOST)
+  if [[ "${redis_host}" == "redis" && "${ignore_db}" != "ignore_db" ]]; then
     services+=" redis"
   fi
   use_lb=$(get_config USE_LB)
