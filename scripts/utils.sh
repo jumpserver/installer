@@ -120,9 +120,9 @@ function read_from_input() {
     msg="${msg} (${choices}) "
   fi
   if [[ -z "${default}" ]]; then
-    msg="${msg} (无默认值)"
+    msg="${msg} ($(gettext -s 'no default'))"
   else
-    msg="${msg} (默认为${default})"
+    msg="${msg} ($(gettext -s 'default') ${default})"
   fi
   echo -n "${msg}: "
   read input
@@ -179,11 +179,12 @@ function echo_yellow() {
 
 function echo_done() {
   sleep 0.5
-  echo "完成"
+  echo "$(gettext -s 'complete')"
 }
 
 function echo_failed() {
-  echo_red "失败"
+  sleep 0.5
+  echo_red "$(gettext -s 'fail')"
 }
 
 function log_success() {
@@ -263,8 +264,8 @@ function prepare_online_install_required_pkg() {
       apt-get -qqy update
       apt-get -qqy install wget
     else
-      echo -ne "请先安装 wget "
-      echo_failed
+      echo -e "$(gettext -s 'Please install it first') wget "
+      exit 1
     fi
   }
   command -v zip &>/dev/null || {
@@ -274,8 +275,8 @@ function prepare_online_install_required_pkg() {
       apt-get -qqy update
       apt-get -qqy install wget
     else
-      echo -ne "请先安装 zip "
-      echo_failed
+      echo -e "$(gettext -s 'Please install it first') zip "
+      exit 1
     fi
   }
   command -v python &>/dev/null || {
@@ -285,8 +286,8 @@ function prepare_online_install_required_pkg() {
       apt-get -qqy update
       apt-get -qqy install python
     else
-      echo -ne "请先安装 python "
-      echo_failed
+      echo -e "$(gettext -s 'Please install it first') python "
+      exit 1
     fi
   }
 }

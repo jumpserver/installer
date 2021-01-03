@@ -29,7 +29,7 @@ function install_docker() {
     prepare_docker_bin
   fi
   if [[ ! -f ./docker/dockerd ]]; then
-    echo_red "Error: Docker 程序不存在"
+    echo_red "Error: $(gettext -s 'Docker program does not exist')"
     exit
   fi
 
@@ -48,14 +48,14 @@ function install_docker() {
     copy_docker
   elif [[ "${docker_version_match}" != "1" ]]; then
     confirm="n"
-    read_from_input confirm "已安装 Docker 版本 与 本安装包测试的版本(${DOCKER_VERSION}) 不一致, 是否更新?" "y/n" "${confirm}"
+    read_from_input confirm "$(gettext -s 'The docker version is updated. Do you want to update it'):" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       copy_docker
     fi
   fi
 
   if [[ "${docker_copy_failed}" != "0" ]]; then
-    echo_red "Docker 复制失败，可能是已有 Docker 运行，请停止运行的 Docker 重新执行"
+    echo_red "$(gettext -s 'Docker replication failed. It may be that an existing docker is running. Please stop the running docker and re execute it')"
     echo_red "systemctl stop docker"
     exit 1
   fi
@@ -110,10 +110,10 @@ function config_docker() {
   fi
   docker_storage_path=$(get_config DOCKER_DIR)
   if [[ -z "${docker_storage_path}" ]]; then
-    echo "修改 Docker 镜像容器的默认存储目录，可以找个最大的磁盘, 并创建目录，如 /var/lib/docker"
-    read_from_input docker_storage_path "Docker 存储目录" '' "${docker_storage_path}"
+    echo "$(gettext -s 'Modify the default storage directory of docker image container to find the largest disk and create a directory, such as') /var/lib/docker"
+    read_from_input docker_storage_path "$(gettext -s 'Docker storage directory')" '' "${docker_storage_path}"
   fi
-  echo "Docker 镜像存储目录 ${docker_storage_path}"
+  echo "$(gettext -s 'Docker image storage directory'): ${docker_storage_path}"
   if [[ ! -d "${docker_storage_path}" ]]; then
     mkdir -p ${docker_storage_path}
   fi
@@ -139,7 +139,7 @@ function start_docker() {
   systemctl daemon-reload
   docker_is_running=$(is_running dockerd)
   if [[ "${docker_is_running}" && "${docker_version_match}" != "1" || "${docker_config_change}" == "1" ]]; then
-    echo "Docker 版本发生改变 或 Docker 配置文件发生变化, 正在重启 Docker"
+    echo "$(gettext -s 'Docker version has changed or docker configuration file has changed. Restarting docker')"
     systemctl restart docker || {
       echo_failed
       exit 1
@@ -165,16 +165,16 @@ function check_docker_start() {
 
 function main() {
   if [[ "${OS}" == 'Darwin' ]]; then
-    echo "MacOS skip install docker"
+    echo "$(gettext -s 'MacOS skip install docker')"
     return
   fi
-  echo_yellow "\n1. 安装 Docker"
+  echo_yellow "\n1. $(gettext -s 'Install Docker')"
   check_docker_install
 
-  echo_yellow "\n2. 配置 Docker"
+  echo_yellow "\n2. $(gettext -s 'Configure Docker')"
   check_docker_config
 
-  echo_yellow "\n3. 启动 Docker"
+  echo_yellow "\n3. $(gettext -s 'Start Docker')"
   check_docker_start
 }
 

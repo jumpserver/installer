@@ -19,19 +19,19 @@ function prepare_docker_bin() {
   if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker.tar.gz
-    echo "开始下载 Docker 程序 ..."
+    echo "$(gettext -s 'Start to download docker program') ..."
     wget "${DOCKER_BIN_URL}" -qO /tmp/docker.tar.gz
   else
-    echo "使用 Docker 缓存文件: /tmp/docker.tar.gz"
+    echo "$(gettext -s 'Using docker to cache files'): /tmp/docker.tar.gz"
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
 
   md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
   if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
-    echo "开始下载 Docker compose 程序 ..."
+    echo "$(gettext -s 'Start to download docker compose program') ..."
     wget "${DOCKER_COMPOSE_BIN_URL}" -qO /tmp/docker-compose
   else
-    echo "使用 Docker compose 缓存文件: /tmp/docker-compose"
+    echo "$(gettext -s 'Using docker compose to cache files'): /tmp/docker-compose"
   fi
   cp /tmp/docker-compose docker/
   chmod +x docker/*
@@ -40,7 +40,7 @@ function prepare_docker_bin() {
 
 function prepare_image_files() {
   if ! pgrep -f "docker" > /dev/null; then
-    echo "Docker 没有运行, 请安装并启动"
+    echo "$(gettext -s 'Docker is not running, please install and start it')"
     exit 1
   fi
 
@@ -75,10 +75,10 @@ function prepare_image_files() {
     if [[ ${image_id} != "${saved_id}" ]]; then
       rm -f ${IMAGE_DIR}/${component}*
       image_path="${IMAGE_DIR}/${filename}"
-      echo "保存镜像 ${image} -> ${image_path}"
+      echo "$(gettext -s 'Save image') ${image} -> ${image_path}"
       docker save -o "${image_path}" "${image}" && echo "${image_id}" >"${md5_path}"
     else
-      echo "已保存过该镜像, 跳过: ${image}"
+      echo "$(gettext -s 'The image has been saved, skipping'): ${image}"
     fi
     echo
   done
@@ -90,10 +90,10 @@ function main() {
   prepare_online_install_required_pkg
   prepare_config
 
-  echo "1. 准备 Docker 离线包"
+  echo -e "\n1. $(gettext -s 'Prepare docker offline package')"
   prepare_docker_bin
 
-  echo -e "\n2. 准备镜像离线包"
+  echo -e "\n2. $(gettext -s 'Ready to mirror offline package')"
   prepare_image_files
 
 }

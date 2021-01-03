@@ -9,31 +9,31 @@ source "${BASE_DIR}/utils.sh"
 function set_external_mysql() {
   mysql_host=$(get_config DB_HOST)
   if [[ ! "${mysql_host}" ]]; then
-    read_from_input mysql_host "请输入 mysql 的主机地址" "" "${mysql_host}"
+    read_from_input mysql_host "$(gettext -s 'Please enter the host address of MySQL')" "" "${mysql_host}"
     set_config DB_HOST ${mysql_host}
   fi
 
   mysql_port=$(get_config DB_PORT)
   if [[ ! "${mysql_port}" ]]; then
-    read_from_input mysql_port "请输入 mysql 的端口" "" "${mysql_port}"
+    read_from_input mysql_port "$(gettext -s 'Please enter the port of MySQL')" "" "${mysql_port}"
     set_config DB_PORT ${mysql_port}
   fi
 
   mysql_user=$(get_config DB_USER)
   if [[ ! "${mysql_user}" ]]; then
-    read_from_input mysql_user "请输入 mysql 的用户名" "" "${mysql_user}"
+    read_from_input mysql_user "$(gettext -s 'Please enter the user of MySQL')" "" "${mysql_user}"
     set_config DB_USER ${mysql_user}
   fi
 
   mysql_pass=$(get_config DB_PASSWORD)
   if [[ ! "${mysql_pass}" ]]; then
-    read_from_input mysql_pass "请输入 mysql 的密码" "" "${mysql_pass}"
+    read_from_input mysql_pass "$(gettext -s 'Please enter the password of MySQL')" "" "${mysql_pass}"
     set_config DB_PASSWORD ${mysql_pass}
   fi
 
   mysql_db=$(get_config DB_NAME)
   if [[ ! "${mysql_db}" ]]; then
-    read_from_input mysql_db "请输入 mysql 的数据库(事先做好授权)" "" "${mysql_db}"
+    read_from_input mysql_db "$(gettext -s 'Please input the database of MySQL')" "" "${mysql_db}"
     set_config DB_NAME ${mysql_db}
   fi
 
@@ -54,7 +54,7 @@ function set_internal_mysql() {
 
 function set_mysql() {
   sleep 0.1
-  echo_yellow "\n6. 配置 MySQL"
+  echo_yellow "\n6. $(gettext -s 'Configure MySQL')"
   db_host=$(get_config DB_HOST)
   if [[ "${db_host}" == "mysql" ]]; then
     set_internal_mysql
@@ -67,19 +67,19 @@ function set_mysql() {
 function set_external_redis() {
   redis_host=$(get_config REDIS_HOST)
   if [[ ! "${redis_host}" ]]; then
-    read_from_input redis_host "请输入redis的主机地址" "" "${redis_host}"
+    read_from_input redis_host "$(gettext -s 'Please enter the host address of Redis')" "" "${redis_host}"
     set_config REDIS_HOST ${redis_host}
   fi
 
   redis_port=$(get_config REDIS_PORT)
   if [[ ! "${redis_port}" ]]; then
-    read_from_input redis_port "请输入redis的端口" "" "${redis_port}"
+    read_from_input redis_port "$(gettext -s 'Please enter the port of Redis')" "" "${redis_port}"
     set_config REDIS_PORT ${redis_port}
   fi
 
   redis_password=$(get_config REDIS_PASSWORD)
   if [[ ! "${redis_password}" ]]; then
-    read_from_input redis_password "请输入redis的密码" "" "${redis_password}"
+    read_from_input redis_password "$(gettext -s 'Please enter the password of Redis')" "" "${redis_password}"
     set_config REDIS_PASSWORD ${redis_password}
   fi
 
@@ -98,7 +98,7 @@ function set_internal_redis() {
 }
 
 function set_redis() {
-  echo_yellow "\n7. 配置 Redis"
+  echo_yellow "\n7. $(gettext -s 'Configure Redis')"
   redis_host=$(get_config REDIS_HOST)
   if [[ "${redis_host}" == "redis" ]]; then
     set_internal_redis
@@ -109,28 +109,28 @@ function set_redis() {
 }
 
 function set_secret_key() {
-  echo_yellow "\n4. 配置加密密钥"
+  echo_yellow "\n4. $(gettext -s 'Configure Encryption Key')"
   # 生成随机的 SECRET_KEY 和 BOOTSTRAP_KEY
   if [[ -z "$(get_config SECRET_KEY)" ]]; then
     SECRETE_KEY=$(random_str 49)
-    echo "自动生成 SECRETE_KEY     ${SECRETE_KEY}"
+    echo "$(gettext -s 'Automatic generation') SECRETE_KEY:     ${SECRETE_KEY}"
     set_config SECRET_KEY ${SECRETE_KEY}
   fi
   if [[ -z "$(get_config BOOTSTRAP_TOKEN)" ]]; then
     BOOTSTRAP_TOKEN=$(random_str 16)
-    echo "自动生成 BOOTSTRAP_TOKEN ${BOOTSTRAP_TOKEN}"
+    echo "$(gettext -s 'Automatic generation') BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN}"
     set_config BOOTSTRAP_TOKEN ${BOOTSTRAP_TOKEN}
   fi
   echo_done
 }
 
 function set_volume_dir() {
-  echo_yellow "\n5. 配置持久化目录 "
+  echo_yellow "\n5. $(gettext -s 'Configure Persistent Directory')"
   volume_dir=$(get_config VOLUME_DIR)
   if [[ -z "${volume_dir}" ]]; then
-    read_from_input volume_dir "设置持久化存储目录" "" "${volume_dir}"
+    read_from_input volume_dir "$(gettext -s 'Set persistent storage directory')" "" "${volume_dir}"
   fi
-  echo "持久化存储目录 ${volume_dir}"
+  echo "$(gettext -s 'Persistent storage directory'): ${volume_dir}"
   if [[ ! -d "${volume_dir}" ]]; then
     mkdir -p ${volume_dir}
   fi
@@ -143,8 +143,8 @@ function prepare_config() {
   cd "${PROJECT_DIR}" || exit
 
   config_dir=$(dirname "${CONFIG_FILE}")
-  echo_yellow "\n1. 检查配置文件"
-  echo "配置文件位置 ${CONFIG_FILE}"
+  echo_yellow "\n1. $(gettext -s 'Check Configuration File')"
+  echo "$(gettext -s 'Profile location'): ${CONFIG_FILE}"
   if [[ ! -d ${config_dir} ]]; then
     config_dir_parent=$(dirname "${config_dir}")
     mkdir -p "${config_dir_parent}"
@@ -161,8 +161,8 @@ function prepare_config() {
 
   nginx_conf_dir="${config_dir}/nginx"
   nginx_cert_dir="${config_dir}/nginx/cert"
-  echo_yellow "\n2. 配置 Nginx"
-  echo "配置文件 ${nginx_conf_dir}"
+  echo_yellow "\n2. $(gettext -s 'Configure Nginx')"
+  echo "$(gettext -s 'configuration file'): ${nginx_conf_dir}"
   # 迁移 nginx.conf
   if [[ ! -d ${nginx_conf_dir} ]]; then
     mkdir -p ${nginx_cert_dir}
@@ -176,7 +176,7 @@ function prepare_config() {
   if [[ ! -f "${nginx_conf_dir}/lb_ssh_server.conf" ]]; then
     cp "${PROJECT_DIR}/config_init/nginx/lb_ssh_server.conf" "${nginx_conf_dir}"
   fi
-  echo "证书位置 ${nginx_cert_dir}"
+  echo "$(gettext -s 'Certificate location certificate'): ${nginx_cert_dir}"
   # 迁移 nginx 的证书
   if [[ ! -f ${nginx_cert_dir}/server.crt ]]; then
     cp "${PROJECT_DIR}/config_init/nginx/cert/server.crt" "${nginx_cert_dir}"
@@ -190,9 +190,9 @@ function prepare_config() {
   mkdir -p "${backup_dir}"
   now=$(date +'%Y-%m-%d_%H-%M-%S')
   backup_config_file="${backup_dir}/config.txt.${now}"
-  echo_yellow "\n3. 备份配置文件"
+  echo_yellow "\n3. $(gettext -s 'Backup Configuration File')"
   cp "${CONFIG_FILE}" "${backup_config_file}"
-  echo "备份至 ${backup_config_file}"
+  echo "$(gettext -s 'Back up to'): ${backup_config_file}"
   echo_done
 
   cd "${cwd}" || exit

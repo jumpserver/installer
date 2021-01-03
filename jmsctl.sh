@@ -10,15 +10,15 @@ args=("$@")
 
 function check_config_file() {
   if [[ ! -f "${CONFIG_FILE}" ]]; then
-    echo "配置文件没有发现: ${CONFIG_FILE}"
-    echo "如果你是从 v1.5.x 升级的, 请 copy 之前目录中的 config.txt 到 ${CONFIG_FILE}"
+    echo "$(gettext -s 'Configuration file not found'): ${CONFIG_FILE}"
+    echo "$(gettext -s 'If you are upgrading from v1.5.x, please copy the config.txt To') ${CONFIG_FILE}"
     return 3
   fi
   if [[ -f .env ]]; then
     ls -l .env | grep "${CONFIG_FILE}" &>/dev/null
     code="$?"
     if [[ "$code" != "0" ]]; then
-      echo ".env 软连接存在问题, 重新更新"
+      echo ".env $(gettext -s 'There is a problem with the soft connection, Please update it again')"
       rm -f .env
     fi
   fi
@@ -33,32 +33,32 @@ function pre_check() {
 }
 
 function usage() {
-  echo "JumpServer 部署管理脚本"
+  echo "$(gettext -s 'JumpServer Deployment Management Script')"
   echo
   echo "Usage: "
   echo "  ./jmsctl.sh [COMMAND] [ARGS...]"
   echo "  ./jmsctl.sh --help"
   echo
   echo "Installation Commands: "
-  echo "  install           安装 JumpServer"
-  echo "  upgrade [version] 升级 JumpServer"
-  echo "  check_update      检查更新 JumpServer"
-  echo "  reconfig          重新配置 JumpServer"
+  echo "  install           $(gettext -s 'Install JumpServer')"
+  echo "  upgrade [version] $(gettext -s 'Upgrade JumpServer')"
+  echo "  reconfig          $(gettext -s 'Reconfiguration JumpServer')"
+  echo "  check_update      $(gettext -s 'Check for updates JumpServer')"
   echo
   echo "Management Commands: "
-  echo "  start             启动 JumpServer"
-  echo "  stop              停止 JumpServer (不停数据库)"
-  echo "  restart           重启 JumpServer"
-  echo "  status            检查 JumpServer"
-  echo "  down              下线 JumpServer (会停数据库)"
+  echo "  start             $(gettext -s 'Start   JumpServer')"
+  echo "  stop              $(gettext -s 'Stop    JumpServer')"
+  echo "  restart           $(gettext -s 'Restart JumpServer')"
+  echo "  status            $(gettext -s 'Check   JumpServer')"
+  echo "  down              $(gettext -s 'Offline JumpServer')"
   echo
   echo "More Commands: "
-  echo "  load_image        加载 docker 镜像"
-  echo "  python            运行 python manage.py shell"
-  echo "  backup_db         备份数据库"
-  echo "  restore_db [file] 通过数据库备份文件恢复数据"
-  echo "  raw               执行原始 docker-compose 命令"
-  echo "  tail [service]    查看日志"
+  echo "  load_image        $(gettext -s 'Loading docker image')"
+  echo "  python            $(gettext -s 'Run python manage.py shell')"
+  echo "  backup_db         $(gettext -s 'Backup database')"
+  echo "  restore_db [file] $(gettext -s 'Data recovery through database backup file')"
+  echo "  raw               $(gettext -s 'Execute the original docker-compose command')"
+  echo "  tail [service]    $(gettext -s 'View log')"
 
 }
 
@@ -102,11 +102,11 @@ function check_update() {
   current_version="${VERSION}"
   latest_version=$(get_latest_version)
   if [[ "${current_version}" == "${latest_version}" ]];then
-    echo "当前版本已是最新"
+    echo "$(gettext -s 'The current version is up to date')"
     return
   fi
-  echo "最新版本是: ${latest_version}"
-  echo "当前版本是: ${current_version}"
+  echo "$(gettext -s 'The latest version is'): ${latest_version}"
+  echo "$(gettext -s 'The current version is'): ${current_version}"
   echo
   bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
 }
