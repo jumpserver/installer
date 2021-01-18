@@ -99,9 +99,9 @@ function main() {
     exit 3
   fi
 
-  if [[ -n "${target}" && ${target} != "${VERSION}" ]];then
-    sed -i "s@VERSION=${VERSION}@VERSION=${target}@g" "${PROJECT_DIR}/static.env"
-    export VERSION=${target}
+  if [[ "${to_version}" && "${to_version}" != "${VERSION}" ]];then
+    sed -i "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
+    export VERSION=${to_version}
   fi
 
   echo_yellow "\n1. 检查配置变更"
