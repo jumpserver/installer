@@ -100,7 +100,7 @@ function main() {
   fi
 
   if [[ "${to_version}" && "${to_version}" != "${VERSION}" ]];then
-    sed "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
+    sed -i "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
     export VERSION=${to_version}
   fi
 
