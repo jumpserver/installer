@@ -14,7 +14,7 @@ to_dir="${release_dir}/jumpserver-installer"
 mkdir -p "${to_dir}"
 
 if [[ -d '.git' ]];then
-  command -v git || yum -y install git
+  command -v git || yum -q -y install git
   git archive --format tar HEAD | tar x -C "${to_dir}"
 else
   cp -R . /tmp/jumpserver
@@ -31,4 +31,3 @@ fi
 if [[ -n ${VERSION} ]]; then
   sedi "s@VERSION=.*@VERSION=\"${VERSION}\"@g" "${to_dir}/static.env"
 fi
-

@@ -16,11 +16,11 @@ DATABASE=$(get_config DB_NAME)
 DB_FILE="$1"
 
 function main() {
-  echo "开始还原数据库: $DB_FILE"
+  echo "$(gettext -s 'Start restoring database'): $DB_FILE"
   restore_cmd="mysql --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
 
   if [[ ! -f "${DB_FILE}" ]]; then
-    echo "文件不存在: ${DB_FILE}"
+    echo "$(gettext -s 'file does not exist'): ${DB_FILE}"
     exit 2
   fi
 
@@ -31,20 +31,20 @@ function main() {
   fi
   code="x$?"
   if [[ "$code" != "x0" ]]; then
-    echo -e "\033[31m 数据库恢复失败,请检查数据库文件是否完整，或尝试手动恢复！\033[0m"
+    log_error "$(gettext -s 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
     exit 1
   else
-    echo -e "\033[32m 数据库恢复成功！ \033[0m"
+    log_success "$(gettext -s 'Database recovered successfully')!"
   fi
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
   if [[ -z "$1" ]]; then
-    echo "格式错误！Usage './jmsctl.sh restore_db DB_Backup_file '"
+    log_error "$(gettext -s 'Format error')！Usage './jmsctl.sh restore_db DB_Backup_file '"
     exit 1
   fi
   if [[ ! -f $1 ]];then
-    echo "备份文件不存在: $1"
+    echo "$(gettext -s 'The backup file does not exist'): $1"
     exit 2
   fi
   main
