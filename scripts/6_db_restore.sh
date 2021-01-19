@@ -39,9 +39,13 @@ function main() {
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
-  if [[ -z "$1" ]] || [[ ! -f $1 ]]; then
+  if [[ -z "$1" ]]; then
     echo "格式错误！Usage './jmsctl.sh restore_db DB_Backup_file '"
     exit 1
+  fi
+  if [[ ! -f $1 ]];then
+    echo "备份文件不存在: $1"
+    exit 2
   fi
   main
 fi

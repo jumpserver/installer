@@ -102,7 +102,7 @@ function check_update() {
   current_version="${VERSION}"
   latest_version=$(get_latest_version)
   if [[ "${current_version}" == "${latest_version}" ]];then
-    echo "当前版本已是最新"
+    echo "当前版本已是最新: ${latest_version}"
     return
   fi
   echo "最新版本是: ${latest_version}"
