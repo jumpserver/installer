@@ -48,6 +48,7 @@ function usage() {
   echo "Management Commands: "
   echo "  start             启动 JumpServer"
   echo "  stop              停止 JumpServer (不停数据库)"
+  echo "  close             关闭 JumpServer (开机后会自动启动)"
   echo "  restart           重启 JumpServer"
   echo "  status            检查 JumpServer"
   echo "  down              下线 JumpServer (会停数据库)"
@@ -92,6 +93,17 @@ function stop() {
   docker volume rm jms_share-volume &>/dev/null
 }
 
+function close() {
+  if [[ -n "${target}" ]]; then
+    ${EXE} stop "${target}"
+    return
+  fi
+  services=$(get_docker_compose_services ignore_db)
+  for i in ${services}; do
+    ${EXE} stop "${i}"
+  done
+}
+
 function restart() {
   stop
   echo -e "\n"
@@ -102,7 +114,7 @@ function check_update() {
   current_version="${VERSION}"
   latest_version=$(get_latest_version)
   if [[ "${current_version}" == "${latest_version}" ]];then
-    echo "当前版本已是最新"
+    echo "当前版本已是最新: ${latest_version}"
     return
   fi
   echo "最新版本是: ${latest_version}"
@@ -141,6 +153,9 @@ function main() {
     ;;
   stop)
     stop
+    ;;
+  close)
+    close
     ;;
   status)
     ${EXE} ps
