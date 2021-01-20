@@ -187,8 +187,8 @@ msgstr "备份配置文件"
 msgid "Backup to"
 msgstr "备份至"
 
-msgid "Backup Network"
-msgstr "备份网络"
+msgid "Configure Network"
+msgstr "配置网络"
 
 msgid "Do you want to support IPv6"
 msgstr "是否需要支持 IPv6"
@@ -196,7 +196,7 @@ msgstr "是否需要支持 IPv6"
 msgid "Docker program does not exist"
 msgstr "Docker 程序不存在"
 
-msgid "There ar updates available currently. Do you want to update"
+msgid "There are updates available currently. Do you want to update"
 msgstr "检测到 Docker 版本有更新, 是否更新"
 
 msgid "File copy failed. May be that docker service is already running. Please stop the running Docker and re-execute it"

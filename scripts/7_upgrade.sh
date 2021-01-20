@@ -77,13 +77,13 @@ function backup_db() {
   if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
     if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
       confirm="n"
-      read_from_input confirm "$(gettext -s 'Failed to back up the database. Continue to upgrade')?" "y/n" "${confirm}"
+      read_from_input confirm "$(gettext -s 'Failed to backup the database. Continue to upgrade')?" "y/n" "${confirm}"
       if [[ "${confirm}" == "n" ]]; then
         exit 1
       fi
     fi
   else
-    echo "SKIP_BACKUP_DB=${SKIP_BACKUP_DB}, $(gettext -s 'Skip backup database')"
+    echo "SKIP_BACKUP_DB=${SKIP_BACKUP_DB}, $(gettext -s 'Skip database backup')"
   fi
 }
 
@@ -94,7 +94,7 @@ function main() {
     to_version="${target}"
   fi
 
-  read_from_input confirm "$(gettext -s 'Are you sure you want to update the version to') ${to_version} ?" "y/n" "${confirm}"
+  read_from_input confirm "$(gettext -s 'Are you sure you want to update the current version to') ${to_version} ?" "y/n" "${confirm}"
   if [[ "${confirm}" != "y" || -z "${to_version}" ]];then
     exit 3
   fi
@@ -107,20 +107,20 @@ function main() {
   echo_yellow "\n1. $(gettext -s 'Check configuration changes')"
   update_config_if_need && echo_done || (echo_failed; exit  3)
 
-  echo_yellow "\n2. $(gettext -s 'Change of inspection procedure documents')"
+  echo_yellow "\n2. $(gettext -s 'Check program file changes')"
   update_proc_if_need || (echo_failed; exit  4)
 
-  echo_yellow "\n3. $(gettext -s 'Upgrade Docker image file')"
+  echo_yellow "\n3. $(gettext -s 'Upgrade Docker image')"
   bash "${SCRIPT_DIR}/3_load_images.sh" && echo_done || (echo_failed; exit  5)
 
   echo_yellow "4. $(gettext -s 'Backup database')"
   backup_db || exit 2
 
-  echo_yellow "\n5. $(gettext -s 'Make database changes')"
-  echo "$(gettext -s 'Table structure change may take a while, please wait patiently')"
+  echo_yellow "\n5. $(gettext -s 'Apply database changes')"
+  echo "$(gettext -s 'Changing database schema may take a while, please wait patiently')"
   perform_db_migrations && echo_done || (echo_failed; exit 6)
 
-  echo_yellow "\n6. $(gettext -s 'Upgrade successful, you can restart the program')"
+  echo_yellow "\n6. $(gettext -s 'Upgrade successfully. You can now restart the program')"
   echo "./jmsctl.sh restart"
   echo -e "\n\n"
 }

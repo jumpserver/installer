@@ -48,7 +48,7 @@ function install_docker() {
     copy_docker
   elif [[ "${docker_version_match}" != "1" ]]; then
     confirm="n"
-    read_from_input confirm "$(gettext -s 'The current version of Docker is outdated. Do you want to update it')?" "y/n" "${confirm}"
+    read_from_input confirm "$(gettext -s 'There are updates available currently. Do you want to update')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       copy_docker
     fi
