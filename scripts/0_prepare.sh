@@ -19,19 +19,19 @@ function prepare_docker_bin() {
   if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker.tar.gz
-    echo "$(gettext -s 'Start to download Docker program') ..."
+    echo "$(gettext -s 'Starting to download Docker engine') ..."
     wget "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz
   else
-    echo "$(gettext -s 'Using Docker to cache files'): /tmp/docker.tar.gz"
+    echo "$(gettext -s 'Using Docker cache'): /tmp/docker.tar.gz"
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
 
   md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
   if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
-    echo "$(gettext -s 'Start to download Docker Compose program') ..."
+    echo "$(gettext -s 'Starting to download Docker Compose binary') ..."
     wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
   else
-    echo "$(gettext -s 'Using Docker Compose to cache files'): /tmp/docker-compose"
+    echo "$(gettext -s 'Using Docker Compose cache'): /tmp/docker-compose"
   fi
   cp /tmp/docker-compose docker/
   chmod +x docker/*
@@ -40,7 +40,7 @@ function prepare_docker_bin() {
 
 function prepare_image_files() {
   if ! pgrep -f "docker" > /dev/null; then
-    echo "$(gettext -s 'Docker is not running, please install and start it')"
+    echo "$(gettext -s 'Docker is not running, please install and start')"
     exit 1
   fi
 
@@ -90,10 +90,10 @@ function main() {
   prepare_online_install_required_pkg
   prepare_config
 
-  echo "1. $(gettext -s 'Prepare Docker offline package')"
+  echo "1. $(gettext -s 'Preparing Docker offline package')"
   prepare_docker_bin
 
-  echo -e "\n2. $(gettext -s 'Ready to image offline package')"
+  echo -e "\n2. $(gettext -s 'Preparing image offline package')"
   prepare_image_files
 
 }
