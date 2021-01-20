@@ -196,7 +196,7 @@ msgstr "是否需要支持 IPv6"
 msgid "Docker program does not exist"
 msgstr "Docker 程序不存在"
 
-msgid "The current version of Docker is outdated. Do you want to update it?"
+msgid "The current version of Docker is outdated. Do you want to update it"
 msgstr "检测到 Docker 版本有更新, 是否更新"
 
 msgid "File copy failed. May be that docker service is already running. Please stop the running Docker and re-execute it"
@@ -298,7 +298,7 @@ msgstr "数据库恢复成功"
 msgid "Format error"
 msgstr "格式错误"
 
-msgid "Failed to backup the database. Continue to upgrade?"
+msgid "Failed to backup the database. Continue to upgrade"
 msgstr "备份数据库失败, 继续升级吗"
 
 msgid "The backup file does not exist"
