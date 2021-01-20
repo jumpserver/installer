@@ -19,7 +19,7 @@ function post_install() {
   HTTPS_PORT=$(get_config HTTPS_PORT)
   SSH_PORT=$(get_config SSH_PORT)
 
-  echo_yellow "1. $(gettext -s 'You can use the following command to start, and then access')"
+  echo_yellow "1. $(gettext -s 'You can use the following command to start, and then visit')"
   echo "./jmsctl.sh start"
 
   echo_yellow "\n2. $(gettext -s 'Other management commands')"
@@ -27,20 +27,20 @@ function post_install() {
   echo "./jmsctl.sh restart"
   echo "./jmsctl.sh backup"
   echo "./jmsctl.sh upgrade"
-  echo "$(gettext -s 'There are more orders, you can ./jmsctl.sh --help to understand')"
+  echo "$(gettext -s 'For more commands, you can enter ./jmsctl.sh --help to understand')"
 
   echo_yellow "\n3. $(gettext -s 'Web access')"
   echo "http://${HOST}:${HTTP_PORT}"
   echo "https://${HOST}:${HTTPS_PORT}"
-  echo "$(gettext -s 'Default user'): admin  $(gettext -s 'Default password'): admin"
+  echo "$(gettext -s 'Default username'): admin  $(gettext -s 'Default password'): admin"
 
   echo_yellow "\n4. SSH/SFTP $(gettext -s 'access')"
   echo "ssh admin@${HOST} -p${SSH_PORT}"
   echo "sftp -P${SSH_PORT} admin@${HOST}"
 
   echo_yellow "\n5. $(gettext -s 'More information')"
-  echo "$(gettext -s 'Our website'): https://www.jumpserver.org/"
-  echo "$(gettext -s 'Our documents'): https://docs.jumpserver.org/"
+  echo "$(gettext -s 'Offical Website'): https://www.jumpserver.org/"
+  echo "$(gettext -s 'Documentation'): https://docs.jumpserver.org/"
   echo -e "\n\n"
 }
 
