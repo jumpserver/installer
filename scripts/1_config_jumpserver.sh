@@ -8,19 +8,19 @@ source "${BASE_DIR}/utils.sh"
 
 function set_external_mysql() {
   mysql_host=""
-  read_from_input mysql_host "$(gettext -s 'Please enter the host address of MySQL')" "" "${mysql_host}"
+  read_from_input mysql_host "$(gettext -s 'Please enter MySQL server IP')" "" "${mysql_host}"
 
   mysql_port="3306"
-  read_from_input mysql_port "$(gettext -s 'Please enter the port of MySQL')" "" "${mysql_port}"
+  read_from_input mysql_port "$(gettext -s 'Please enter MySQL server port')" "" "${mysql_port}"
 
   mysql_db="jumpserver"
-  read_from_input mysql_db "$(gettext -s 'Please input the database of MySQL')" "" "${mysql_db}"
+  read_from_input mysql_db "$(gettext -s 'Please enter MySQL database name')" "" "${mysql_db}"
 
   mysql_user=""
-  read_from_input mysql_user "$(gettext -s 'Please enter the user of MySQL')" "" "${mysql_user}"
+  read_from_input mysql_user "$(gettext -s 'Please enter MySQL username')" "" "${mysql_user}"
 
   mysql_pass=""
-  read_from_input mysql_pass "$(gettext -s 'Please enter the password of MySQL')" "" "${mysql_pass}"
+  read_from_input mysql_pass "$(gettext -s 'Please enter MySQL password')" "" "${mysql_pass}"
 
 #  test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
 #  if [[ "$?" != "0" ]]; then
@@ -60,13 +60,13 @@ function set_mysql() {
 
 function set_external_redis() {
   redis_host=""
-  read_from_input redis_host "$(gettext -s 'Please enter the host address of Redis')" "" "${redis_host}"
+  read_from_input redis_host "$(gettext -s 'Please enter Redis server IP')" "" "${redis_host}"
 
   redis_port=6379
-  read_from_input redis_port "$(gettext -s 'Please enter the port of Redis')" "" "${redis_port}"
+  read_from_input redis_port "$(gettext -s 'Please enter Redis server port')" "" "${redis_port}"
 
   redis_password=""
-  read_from_input redis_password "$(gettext -s 'Please enter the password of Redis')" "" "${redis_password}"
+  read_from_input redis_password "$(gettext -s 'Please enter Redis password')" "" "${redis_password}"
 
 #  test_redis_connect ${redis_host} ${redis_port} ${redis_password}
 #  if [[ "$?" != "0" ]]; then
@@ -100,16 +100,16 @@ function set_redis() {
 }
 
 function set_secret_key() {
-  echo_yellow "\n5. $(gettext -s 'Configure Encryption Key')"
+  echo_yellow "\n5. $(gettext -s 'Configure Private Key')"
   # 生成随机的 SECRET_KEY 和 BOOTSTRAP_KEY
   if [[ -z "$(get_config SECRET_KEY)" ]]; then
     SECRETE_KEY=$(random_str 49)
-    echo "$(gettext -s 'Automatic generation') SECRETE_KEY:     ${SECRETE_KEY}"
+    echo "$(gettext -s 'Auto-Generate') SECRETE_KEY:     ${SECRETE_KEY}"
     set_config SECRET_KEY ${SECRETE_KEY}
   fi
   if [[ -z "$(get_config BOOTSTRAP_TOKEN)" ]]; then
     BOOTSTRAP_TOKEN=$(random_str 16)
-    echo "$(gettext -s 'Automatic generation') BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN}"
+    echo "$(gettext -s 'Auto-Generate') BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN}"
     set_config BOOTSTRAP_TOKEN ${BOOTSTRAP_TOKEN}
   fi
   echo_done
@@ -117,7 +117,7 @@ function set_secret_key() {
 
 function set_volume_dir() {
   echo_yellow "\n6. $(gettext -s 'Configure Persistent Directory')"
-  echo "$(gettext -s 'To modify the persistent directory such as log video, you can find the largest disk and create a directory, such as') /opt/jumpserver"
+  echo "$(gettext -s 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /opt/jumpserver"
   echo "$(gettext -s 'Note: you can not change it after installation, otherwise the database may be lost')"
   echo
   df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
@@ -141,7 +141,7 @@ function prepare_config() {
 
   config_dir=$(dirname "${CONFIG_FILE}")
   echo_yellow "1. $(gettext -s 'Check Configuration File')"
-  echo "$(gettext -s 'Profile location'): ${CONFIG_FILE}"
+  echo "$(gettext -s 'Path to Configuration file'): ${CONFIG_FILE}"
   if [[ ! -d ${config_dir} ]]; then
     config_dir_parent=$(dirname "${config_dir}")
     mkdir -p "${config_dir_parent}"
@@ -177,7 +177,7 @@ function prepare_config() {
   # IPv6 支持
   echo_yellow "\n4. $(gettext -s 'Configure Network')"
   confirm="n"
-  read_from_input confirm "$(gettext -s 'Need to support IPv6')?" "y/n" "${confirm}"
+  read_from_input confirm "$(gettext -s 'Do you want to support IPv6')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]];then
     set_config USE_IPV6 1
   fi
