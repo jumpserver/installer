@@ -16,25 +16,25 @@ msgstr "默认为"
 msgid "Configuration file not found"
 msgstr "配置文件没有发现"
 
-msgid "If you are upgrading from v1.5.x, please copy the config.txt To"
+msgid "If you are upgrading from v1.5.x, please copy the config.txt to"
 msgstr "如果你是从 v1.5.x 升级的, 请 copy 之前目录中的 config.txt 到"
 
-msgid "There is a problem with the soft connection, Please update it again"
+msgid "There is a problem with the soft link, Please update it again"
 msgstr "软连接存在问题, 重新更新"
 
 msgid "JumpServer Deployment Management Script"
 msgstr "JumpServer 部署管理脚本"
 
-msgid "Install JumpServer"
+msgid "Install   JumpServer"
 msgstr "安装 JumpServer"
 
-msgid "Upgrade JumpServer"
+msgid "Upgrade   JumpServer"
 msgstr "升级 JumpServer"
 
-msgid "Reconfiguration JumpServer"
+msgid "Re-config JumpServer"
 msgstr "重新配置 JumpServer"
 
-msgid "Check for updates JumpServer"
+msgid "Check for JumpServer updates"
 msgstr "检查更新 JumpServer"
 
 msgid "Start   JumpServer"
@@ -64,16 +64,16 @@ msgstr "运行 python manage.py shell"
 msgid "Backup database"
 msgstr "备份数据库"
 
-msgid "Data recovery through database backup file"
+msgid "Recover data from database backup file"
 msgstr "通过数据库备份文件恢复数据"
 
 msgid "Execute the original docker-compose command"
 msgstr "执行原始 docker-compose 命令"
 
-msgid "View log"
+msgid "View logs"
 msgstr "查看日志"
 
-msgid "The current version is up to date"
+msgid "The current version is up-to-date"
 msgstr "当前版本已是最新"
 
 msgid "The latest version is"
@@ -82,19 +82,19 @@ msgstr "最新版本是"
 msgid "The current version is"
 msgstr "当前版本是"
 
-msgid "Start to download Docker program"
+msgid "Starting to download Docker engine"
 msgstr "开始下载 Docker 程序"
 
-msgid "Using Docker to cache files"
+msgid "Using Docker cache"
 msgstr "使用 Docker 缓存文件"
 
-msgid "Start to download Docker Compose program"
+msgid "Starting to download Docker Compose binary"
 msgstr "开始下载 Docker Compose 程序"
 
-msgid "Using Docker Compose to cache files"
+msgid "Using Docker Compose cache"
 msgstr "使用 Docker Compose 缓存文件"
 
-msgid "Docker is not running, please install and start it"
+msgid "Docker is not running, please install and start"
 msgstr "Docker 没有运行, 请安装并启动"
 
 msgid "Save image"
@@ -103,25 +103,25 @@ msgstr "保存镜像"
 msgid "The image has been saved, skipping"
 msgstr "已保存过该镜像, 跳过"
 
-msgid "Prepare Docker offline package"
+msgid "Preparing Docker offline package"
 msgstr "准备 Docker 离线包"
 
-msgid "Ready to mirror offline package"
+msgid "Preparing image offline package"
 msgstr "准备镜像离线包"
 
-msgid "Please enter the host address of MySQL"
+msgid "Please enter MySQL server IP"
 msgstr "请输入 mysql 的主机地址"
 
-msgid "Please enter the port of MySQL"
+msgid "Please enter MySQL server port"
 msgstr "请输入 mysql 的端口"
 
-msgid "Please enter the user of MySQL"
+msgid "Please enter MySQL username"
 msgstr "请输入 mysql 的用户名"
 
-msgid "Please enter the password of MySQL"
+msgid "Please enter MySQL password"
 msgstr "请输入 mysql 的密码"
 
-msgid "Please input the database of MySQL"
+msgid "Please enter MySQL database name"
 msgstr "请输入 mysql 的数据库"
 
 msgid "Configure MySQL"
@@ -130,13 +130,13 @@ msgstr "配置 MySQL"
 msgid "Do you want to use external MySQL"
 msgstr "是否使用外部 MySQL"
 
-msgid "Please enter the host address of Redis"
+msgid "Please enter Redis server IP"
 msgstr "请输入 Redis 的主机地址"
 
-msgid "Please enter the port of Redis"
+msgid "Please enter Redis server port"
 msgstr "请输入 Redis 的端口"
 
-msgid "Please enter the password of Redis"
+msgid "Please enter Redis password"
 msgstr "请输入 Redis 的密码"
 
 msgid "Configure Redis"
@@ -145,19 +145,19 @@ msgstr "配置 Redis"
 msgid "Do you want to use external Redis"
 msgstr "是否使用外部 Redis"
 
-msgid "Configure Encryption Key"
+msgid "Configure Private Key"
 msgstr "配置加密密钥"
 
-msgid "Automatic generation"
+msgid "Auto-Generate"
 msgstr "自动生成"
 
 msgid "Configure Persistent Directory"
 msgstr "配置持久化目录"
 
-msgid "Set persistent storage directory"
+msgid "Configure persistent storage directory"
 msgstr "设置持久化存储目录"
 
-msgid "To modify the persistent directory such as log video, you can find the largest disk and create a directory, such as"
+msgid "To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as"
 msgstr "修改日志录像等持久化的目录，可以找个最大的磁盘，并创建目录，如"
 
 msgid "Note: you can not change it after installation, otherwise the database may be lost"
@@ -169,7 +169,7 @@ msgstr "持久化存储目录"
 msgid "Check Configuration File"
 msgstr "检查配置文件"
 
-msgid "Profile location"
+msgid "Path to Configuration file"
 msgstr "配置文件位置"
 
 msgid "Configure Nginx"
@@ -178,31 +178,31 @@ msgstr "配置 Nginx"
 msgid "configuration file"
 msgstr "配置文件"
 
-msgid "Certificate location certificate"
+msgid "Path to certificate file"
 msgstr "证书位置"
 
 msgid "Backup Configuration File"
 msgstr "备份配置文件"
 
-msgid "Back up to"
+msgid "Backup to"
 msgstr "备份至"
 
-msgid "Configure Network"
+msgid "Backup Network"
 msgstr "备份网络"
 
-msgid "Need to support IPv6"
+msgid "Do you want to support IPv6"
 msgstr "是否需要支持 IPv6"
 
 msgid "Docker program does not exist"
 msgstr "Docker 程序不存在"
 
-msgid "The Docker version is updated. Do you want to update it"
+msgid "The current version of Docker is outdated. Do you want to update it"
 msgstr "检测到 Docker 版本有更新, 是否更新"
 
-msgid "Docker replication failed. It may be that an existing Docker is running. Please stop the running Docker and re execute it"
+msgid "File copy failed. May be that docker service is already running. Please stop the running Docker and re-execute it"
 msgstr "Docker 复制失败, 可能是已有 Docker 运行, 请停止运行的 Docker 重新执行"
 
-msgid "Modify the default storage directory of Docker image container to find the largest disk and create a directory, such as"
+msgid "Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as"
 msgstr "修改 Docker 镜像容器的默认存储目录, 可以找个最大的磁盘, 并创建目录, 如"
 
 msgid "Docker storage directory"
@@ -211,10 +211,10 @@ msgstr "Docker 存储目录"
 msgid "Docker image storage directory"
 msgstr "Docker 镜像存储目录"
 
-msgid "Docker version changes or the Docker configuration file changes, do you want to restart"
+msgid "Docker version has changed or the Docker configuration file has been changed, do you want to restart"
 msgstr "Docker 版本发生改变 或 Docker 配置文件发生变化，是否要重启"
 
-msgid "MacOS skip install Docker"
+msgid "Skip docker installation on MacOS"
 msgstr "MacOS 跳过安装 Docker"
 
 msgid "Install Docker"
@@ -226,28 +226,28 @@ msgstr "配置 Docker"
 msgid "Start Docker"
 msgstr "启动 Docker"
 
-msgid "Image file not found"
+msgid "Docker image not found"
 msgstr "镜像文件没有发现"
 
-msgid "Mirror loaded, skipping"
+msgid "Docker image loaded, skipping"
 msgstr "镜像已加载, 跳过"
 
 msgid "The Installation is Complete"
 msgstr "安装完成了"
 
-msgid "You can use the following command to start, and then access"
+msgid "You can use the following command to start, and then visit"
 msgstr "可以使用如下命令启动, 然后访问"
 
 msgid "Other management commands"
 msgstr "其它一些管理命令"
 
-msgid "There are more orders, you can ./jmsctl.sh --help to understand"
+msgid "For more commands, you can enter ./jmsctl.sh --help to understand"
 msgstr "更多还有一些命令, 你可以 ./jmsctl.sh --help 来了解"
 
 msgid "Web access"
 msgstr "Web 访问"
 
-msgid "Default user"
+msgid "Default username"
 msgstr "默认用户"
 
 msgid "Default password"
@@ -259,10 +259,10 @@ msgstr "访问"
 msgid "More information"
 msgstr "更多信息"
 
-msgid "Our documents"
+msgid "Documentation"
 msgstr "我们的文档"
 
-msgid "Our website"
+msgid "Offical Website"
 msgstr "我们的官网"
 
 msgid "Install and Configure JumpServer"
@@ -283,47 +283,47 @@ msgstr "备份失败"
 msgid "Backup succeeded! The backup file has been saved to"
 msgstr "备份成功! 备份文件已存放至"
 
-msgid "Start restoring database"
+msgid "Restoring database"
 msgstr "开始还原数据库"
 
-msgid "file does not exist"
+msgid "file not exists"
 msgstr "文件不存在"
 
-msgid "Database recovery failed. Please check whether the database file is complete or try to recover manually"
+msgid "Database recovery failed. Please check whether the database file is complete or try to recover it manually"
 msgstr "数据库恢复失败. 请检查数据库文件是否完整, 或尝试手动恢复"
 
-msgid "Database recovered successfully"
+msgid "Database restored successfully"
 msgstr "数据库恢复成功"
 
 msgid "Format error"
 msgstr "格式错误"
 
-msgid "Failed to back up the database. Continue to upgrade"
+msgid "Failed to backup the database. Continue to upgrade"
 msgstr "备份数据库失败, 继续升级吗"
 
 msgid "The backup file does not exist"
 msgstr "备份文件不存在"
 
-msgid "Skip backup database"
+msgid "Skip database backup"
 msgstr "跳过备份数据库"
 
-msgid "Are you sure you want to update the version to"
+msgid "Are you sure you want to update the current version to"
 msgstr "是否将版本更新至"
 
 msgid "Check configuration changes"
 msgstr "检查配置变更"
 
-msgid "Change of inspection procedure documents"
+msgid "Check program file changes"
 msgstr "检查程序文件变更"
 
-msgid "Upgrade Docker image file"
+msgid "Upgrade Docker image"
 msgstr "升级镜像文件"
 
-msgid "Make database changes"
+msgid "Apply database changes"
 msgstr "进行数据库变更"
 
-msgid "Table structure change may take a while, please wait patiently"
+msgid "Changing database schema may take a while, please wait patiently"
 msgstr "表结构变更可能需要一段时间, 请耐心等待"
 
-msgid "Upgrade successful, you can restart the program"
+msgid "Upgrade successfully. You can now restart the program"
 msgstr "升级成功, 可以重启程序了"
