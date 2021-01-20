@@ -48,14 +48,14 @@ function install_docker() {
     copy_docker
   elif [[ "${docker_version_match}" != "1" ]]; then
     confirm="n"
-    read_from_input confirm "$(gettext -s 'The Docker version is updated. Do you want to update it')?" "y/n" "${confirm}"
+    read_from_input confirm "$(gettext -s 'The current version of Docker is outdated. Do you want to update it')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       copy_docker
     fi
   fi
 
   if [[ "${docker_copy_failed}" != "0" ]]; then
-    echo_red "Docker $(gettext -s 'Docker replication failed. It may be that an existing docker is running. Please stop the running docker and re execute it')"
+    echo_red "Docker $(gettext -s 'File copy failed. May be that docker service is already running. Please stop the running docker and re-execute it')"
     echo_red "systemctl stop docker"
     exit 1
   fi
@@ -102,7 +102,7 @@ function config_docker() {
   if [[ -f '/etc/docker/daemon.json' ]]; then
     cp /etc/docker/daemon.json /etc/docker/daemon.json.bak
   fi
-  echo "$(gettext -s 'Modify the default storage directory of Docker image container to find the largest disk and create a directory, such as') /opt/docker"
+  echo "$(gettext -s 'Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as') /opt/docker"
   df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
 
   docker_storage_path='/opt/docker'
@@ -129,7 +129,7 @@ function start_docker() {
   ret_code='1'
   if [[ "${docker_is_running}" && "${docker_version_match}" != "1" || "${docker_config_change}" == "1" ]]; then
     confirm="y"
-    read_from_input confirm "$(gettext -s 'Docker version changes or Docker configuration file changes, do you want to restart')?" "y/n" "${confirm}"
+    read_from_input confirm "$(gettext -s 'Docker version has changed or Docker configuration file has been changed, do you want to restart')?" "y/n" "${confirm}"
     if [[ "${confirm}" != "n" ]]; then
       systemctl restart docker
       ret_code="$?"
@@ -148,7 +148,7 @@ function start_docker() {
 
 function main() {
   if [[ "${OS}" == 'Darwin' ]]; then
-    echo "$(gettext -s 'MacOS skip install Docker')"
+    echo "$(gettext -s 'Skip docker installation on MacOS')"
     return
   fi
   echo_yellow "1. $(gettext -s 'Install Docker')"
