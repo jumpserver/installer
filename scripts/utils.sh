@@ -120,9 +120,9 @@ function read_from_input() {
     msg="${msg} (${choices}) "
   fi
   if [[ -z "${default}" ]]; then
-    msg="${msg} ($(gettext -s 'no default'))"
+    msg="${msg} ($(gettext 'no default'))"
   else
-    msg="${msg} ($(gettext -s 'default') ${default})"
+    msg="${msg} ($(gettext 'default') ${default})"
   fi
   echo -n "${msg}: "
   read input
@@ -179,11 +179,11 @@ function echo_yellow() {
 
 function echo_done() {
   sleep 0.5
-  echo "$(gettext -s 'complete')"
+  echo "$(gettext 'complete')"
 }
 
 function echo_failed() {
-  echo_red "$(gettext -s 'fail')"
+  echo_red "$(gettext 'fail')"
 }
 
 function log_success() {
