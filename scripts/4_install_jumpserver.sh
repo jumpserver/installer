@@ -60,7 +60,8 @@ function set_lang() {
     LANG='en_US.UTF-8'
   fi
   echo "export LANG=${LANG}" >> ~/.bashrc
-  echo "export LANG=${LANG}" >> ${PROJECT_DIR}/static.env
+  # 之所以这么设置，是因为设置完 ~/.bashrc，就不会再询问，然而 LANG 环境变量，在用户当前 bash 进程中不生效
+  echo "export LANG=${LANG}" >> "${PROJECT_DIR}"/static.env
   export LANG
 }
 
