@@ -10,7 +10,7 @@ function pre_install() {
 }
 
 function post_install() {
-  echo_green "\n>>> 四、安装完成了"
+  echo_green "\n>>> $(gettext -s 'The Installation is Complete')"
   HOST=$(ip addr | grep 'state UP' -A2 | grep inet | egrep -v '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
   if [ ! "$HOST" ]; then
       HOST=$(hostname -I | cut -d ' ' -f1)
@@ -19,38 +19,39 @@ function post_install() {
   HTTPS_PORT=$(get_config HTTPS_PORT)
   SSH_PORT=$(get_config SSH_PORT)
 
-  echo_yellow "1. 可以使用如下命令启动, 然后访问"
+  echo_yellow "1. $(gettext -s 'You can use the following command to start, and then visit')"
   echo "./jmsctl.sh start"
 
-  echo_yellow "\n2. 其它一些管理命令"
+  echo_yellow "\n2. $(gettext -s 'Other management commands')"
   echo "./jmsctl.sh stop"
   echo "./jmsctl.sh restart"
   echo "./jmsctl.sh backup"
   echo "./jmsctl.sh upgrade"
-  echo "更多还有一些命令，你可以 ./jmsctl.sh --help来了解"
+  echo "$(gettext -s 'For more commands, you can enter ./jmsctl.sh --help to understand')"
 
-  echo_yellow "\n3. 访问 Web 后台页面"
+  echo_yellow "\n3. $(gettext -s 'Web access')"
   echo "http://${HOST}:${HTTP_PORT}"
   echo "https://${HOST}:${HTTPS_PORT}"
+  echo "$(gettext -s 'Default username'): admin  $(gettext -s 'Default password'): admin"
 
-  echo_yellow "\n4. ssh/sftp 访问"
+  echo_yellow "\n4. SSH/SFTP $(gettext -s 'access')"
   echo "ssh admin@${HOST} -p${SSH_PORT}"
   echo "sftp -P${SSH_PORT} admin@${HOST}"
 
-  echo_yellow "\n5. 更多信息"
-  echo "我们的文档: https://docs.jumpserver.org/"
-  echo "我们的官网: https://www.jumpserver.org/"
+  echo_yellow "\n5. $(gettext -s 'More information')"
+  echo "$(gettext -s 'Offical Website'): https://www.jumpserver.org/"
+  echo "$(gettext -s 'Documentation'): https://docs.jumpserver.org/"
   echo -e "\n\n"
 }
 
 function main() {
   echo_logo
   pre_install
-  echo_green "\n>>> 一、配置JumpServer"
+  echo_green "\n>>> $(gettext -s 'Install and Configure JumpServer')"
   (bash "${BASE_DIR}/1_config_jumpserver.sh")
-  echo_green "\n>>> 二、安装配置Docker"
+  echo_green "\n>>> $(gettext -s 'Install and Configure Docker')"
   (bash "${BASE_DIR}/2_install_docker.sh")
-  echo_green "\n>>> 三、加载镜像"
+  echo_green "\n>>> $(gettext -s 'Loading Docker Image')"
   (bash "${BASE_DIR}/3_load_images.sh")
   post_install
 }

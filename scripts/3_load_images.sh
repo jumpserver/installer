@@ -18,7 +18,7 @@ function load_image_files() {
     fi
     if [[ ! -f ${IMAGE_DIR}/${filename} ]]; then
       if [[ ! ${filename} =~ xpack* && ! ${filename} =~ omnidb* ]]; then
-        echo_red "镜像文件没有发现: ${IMAGE_DIR}/${filename}"
+        echo_red "$(gettext -s 'Docker image not found'): ${IMAGE_DIR}/${filename}"
       fi
       continue
     fi
@@ -36,7 +36,7 @@ function load_image_files() {
       echo
       docker load <"${IMAGE_DIR}/${filename}"
     else
-      echo "镜像已加载，跳过"
+      echo "$(gettext -s 'Docker image loaded, skipping')"
     fi
   done
 }

@@ -8,19 +8,19 @@ source "${BASE_DIR}/utils.sh"
 
 function set_external_mysql() {
   mysql_host=""
-  read_from_input mysql_host "请输入mysql的主机地址" "" "${mysql_host}"
+  read_from_input mysql_host "$(gettext -s 'Please enter MySQL server IP')" "" "${mysql_host}"
 
   mysql_port="3306"
-  read_from_input mysql_port "请输入mysql的端口" "" "${mysql_port}"
+  read_from_input mysql_port "$(gettext -s 'Please enter MySQL server port')" "" "${mysql_port}"
 
   mysql_db="jumpserver"
-  read_from_input mysql_db "请输入mysql的数据库(事先做好授权)" "" "${mysql_db}"
+  read_from_input mysql_db "$(gettext -s 'Please enter MySQL database name')" "" "${mysql_db}"
 
   mysql_user=""
-  read_from_input mysql_user "请输入mysql的用户名" "" "${mysql_user}"
+  read_from_input mysql_user "$(gettext -s 'Please enter MySQL username')" "" "${mysql_user}"
 
   mysql_pass=""
-  read_from_input mysql_pass "请输入mysql的密码" "" "${mysql_pass}"
+  read_from_input mysql_pass "$(gettext -s 'Please enter MySQL password')" "" "${mysql_pass}"
 
 #  test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
 #  if [[ "$?" != "0" ]]; then
@@ -46,9 +46,9 @@ function set_internal_mysql() {
 
 function set_mysql() {
   sleep 0.1
-  echo_yellow "\n7. 配置MySQL"
+  echo_yellow "\n7. $(gettext -s 'Configure MySQL')"
   use_external_mysql="n"
-  read_from_input use_external_mysql "是否使用外部mysql" "y/n" "${use_external_mysql}"
+  read_from_input use_external_mysql "$(gettext -s 'Do you want to use external MySQL')?" "y/n" "${use_external_mysql}"
 
   if [[ "${use_external_mysql}" == "y" ]]; then
     set_external_mysql
@@ -60,13 +60,13 @@ function set_mysql() {
 
 function set_external_redis() {
   redis_host=""
-  read_from_input redis_host "请输入redis的主机地址" "" "${redis_host}"
+  read_from_input redis_host "$(gettext -s 'Please enter Redis server IP')" "" "${redis_host}"
 
   redis_port=6379
-  read_from_input redis_port "请输入redis的端口" "" "${redis_port}"
+  read_from_input redis_port "$(gettext -s 'Please enter Redis server port')" "" "${redis_port}"
 
   redis_password=""
-  read_from_input redis_password "请输入redis的密码" "" "${redis_password}"
+  read_from_input redis_password "$(gettext -s 'Please enter Redis password')" "" "${redis_password}"
 
 #  test_redis_connect ${redis_host} ${redis_port} ${redis_password}
 #  if [[ "$?" != "0" ]]; then
@@ -88,9 +88,9 @@ function set_internal_redis() {
 }
 
 function set_redis() {
-  echo_yellow "\n8. 配置Redis"
+  echo_yellow "\n8. $(gettext -s 'Configure Redis')"
   use_external_redis="n"
-  read_from_input use_external_redis "是否使用外部redis " "y/n" "${use_external_redis}"
+  read_from_input use_external_redis "$(gettext -s 'Do you want to use external Redis')?" "y/n" "${use_external_redis}"
   if [[ "${use_external_redis}" == "y" ]]; then
     set_external_redis
   else
@@ -100,23 +100,25 @@ function set_redis() {
 }
 
 function set_secret_key() {
-  echo_yellow "\n5. 自动生成加密密钥"
+  echo_yellow "\n5. $(gettext -s 'Configure Private Key')"
   # 生成随机的 SECRET_KEY 和 BOOTSTRAP_KEY
   if [[ -z "$(get_config SECRET_KEY)" ]]; then
     SECRETE_KEY=$(random_str 49)
+    echo "$(gettext -s 'Auto-Generate') SECRETE_KEY:     ${SECRETE_KEY}"
     set_config SECRET_KEY ${SECRETE_KEY}
   fi
   if [[ -z "$(get_config BOOTSTRAP_TOKEN)" ]]; then
     BOOTSTRAP_TOKEN=$(random_str 16)
+    echo "$(gettext -s 'Auto-Generate') BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN}"
     set_config BOOTSTRAP_TOKEN ${BOOTSTRAP_TOKEN}
   fi
   echo_done
 }
 
 function set_volume_dir() {
-  echo_yellow "\n6. 配置持久化目录 "
-  echo "修改日志录像等持久化的目录，可以找个最大的磁盘，并创建目录，如 /opt/jumpserver"
-  echo "注意: 安装完后不能再更改, 否则数据库可能丢失"
+  echo_yellow "\n6. $(gettext -s 'Configure Persistent Directory')"
+  echo "$(gettext -s 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /opt/jumpserver"
+  echo "$(gettext -s 'Note: you can not change it after installation, otherwise the database may be lost')"
   echo
   df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
   volume_dir=$(get_config VOLUME_DIR)
@@ -124,7 +126,7 @@ function set_volume_dir() {
     volume_dir="/opt/jumpserver"
   fi
   echo
-  read_from_input volume_dir "设置持久化卷存储目录" "" "${volume_dir}"
+  read_from_input volume_dir "$(gettext -s 'Persistent storage directory')" "" "${volume_dir}"
 
   if [[ ! -d "${volume_dir}" ]]; then
     mkdir -p ${volume_dir}
@@ -138,9 +140,8 @@ function prepare_config() {
   cd "${PROJECT_DIR}" || exit
 
   config_dir=$(dirname "${CONFIG_FILE}")
-  echo_yellow "1. 检查配置文件"
-  echo "各组件使用环境变量式配置文件，而不是 yaml 格式, 配置名称与之前保持一致"
-  echo "配置文件位置: ${CONFIG_FILE}"
+  echo_yellow "1. $(gettext -s 'Check Configuration File')"
+  echo "$(gettext -s 'Path to Configuration file'): ${CONFIG_FILE}"
   if [[ ! -d ${config_dir} ]]; then
     config_dir_parent=$(dirname "${config_dir}")
     mkdir -p "${config_dir_parent}"
@@ -156,8 +157,8 @@ function prepare_config() {
   echo_done
 
   nginx_cert_dir="${config_dir}/nginx/cert"
-  echo_yellow "\n2. 配置 Nginx 证书"
-  echo "证书位置在: ${nginx_cert_dir}"
+  echo_yellow "\n2. $(gettext -s 'Configure Nginx')"
+  echo "$(gettext -s 'configuration file'): ${nginx_cert_dir}"
   # 迁移 nginx 的证书
   if [[ ! -d ${nginx_cert_dir} ]]; then
     cp -R "${PROJECT_DIR}/config_init/nginx/cert" "${nginx_cert_dir}"
@@ -168,15 +169,15 @@ function prepare_config() {
   mkdir -p "${backup_dir}"
   now=$(date +'%Y-%m-%d_%H-%M-%S')
   backup_config_file="${backup_dir}/config.txt.${now}"
-  echo_yellow "\n3. 备份配置文件"
+  echo_yellow "\n3. $(gettext -s 'Backup Configuration File')"
   cp "${CONFIG_FILE}" "${backup_config_file}"
-  echo "备份至 ${backup_config_file}"
+  echo "$(gettext -s 'Back up to') ${backup_config_file}"
   echo_done
 
   # IPv6 支持
-  echo_yellow "\n4. 配置网络"
+  echo_yellow "\n4. $(gettext -s 'Configure Network')"
   confirm="n"
-  read_from_input confirm "需要支持 IPv6 吗?" "y/n" "${confirm}"
+  read_from_input confirm "$(gettext -s 'Do you want to support IPv6')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]];then
     set_config USE_IPV6 1
   fi

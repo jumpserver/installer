@@ -120,9 +120,9 @@ function read_from_input() {
     msg="${msg} (${choices}) "
   fi
   if [[ -z "${default}" ]]; then
-    msg="${msg} (无默认值)"
+    msg="${msg} ($(gettext -s 'no default'))"
   else
-    msg="${msg} (默认为${default})"
+    msg="${msg} ($(gettext -s 'default') ${default})"
   fi
   echo -n "${msg}: "
   read input
@@ -179,11 +179,11 @@ function echo_yellow() {
 
 function echo_done() {
   sleep 0.5
-  echo "完成"
+  echo "$(gettext -s 'complete')"
 }
 
 function echo_failed() {
-  echo_red "失败"
+  echo_red "$(gettext -s 'fail')"
 }
 
 function log_success() {
@@ -256,8 +256,8 @@ function get_docker_compose_cmd_line() {
 }
 
 function prepare_online_install_required_pkg() {
-  command -v wget &>/dev/null || yum -y install wget
-  command -v zip &>/dev/null || yum -y install zip
+  command -v wget &>/dev/null || yum -q -y install wget
+  command -v zip &>/dev/null || yum -q -y install zip
 }
 
 function echo_logo() {
