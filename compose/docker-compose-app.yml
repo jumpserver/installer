@@ -80,7 +80,7 @@ services:
       core:
         condition: service_healthy
     healthcheck:
-      test: "wget http://localhost/luna/ -O -"
+      test: "curl -L http://localhost/luna/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
@@ -97,7 +97,7 @@ services:
       core:
         condition: service_healthy
     healthcheck:
-      test: "wget http://localhost/ -O -"
+      test: "curl -L http://localhost/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
