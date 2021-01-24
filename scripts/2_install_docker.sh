@@ -1,6 +1,7 @@
 #!/bin/bash
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+PROJECT_DIR=$(dirname ${BASE_DIR})
 # shellcheck source=./util.sh
 . "${BASE_DIR}/utils.sh"
 
@@ -14,8 +15,8 @@ docker_copy_failed=0
 cd "${BASE_DIR}" || exit
 
 function copy_docker() {
-  cp ./docker/* /usr/bin/ \
-  && cp ./docker.service /etc/systemd/system/ \
+  \cp -f ./docker/* /usr/bin/ \
+  && \cp -f ./docker.service /etc/systemd/system/ \
   && chmod +x /usr/bin/docker* \
   && chmod 754 /etc/systemd/system/docker.service
   if [[ "$?" != "0" ]]; then
@@ -24,13 +25,17 @@ function copy_docker() {
 }
 
 function install_docker() {
-  if [[ ! -f ./docker/dockerd || ! -f ./docker/docker-compose ]]; then
-    rm -rf ./docker
-    prepare_docker_bin
-  fi
   if [[ ! -f ./docker/dockerd ]]; then
-    echo_red "Error: $(gettext -s 'Docker program does not exist')"
-    exit
+    # 官方 get-docker.sh 脚本
+    VERSION=''
+    bash "${BASE_DIR}/get-docker.sh" --mirror Aliyun 1>/dev/null
+  fi
+  if command -v docker > /dev/null; then
+    echo_done
+    return
+  else
+    # 如果官方未适配, 则使用二进制文件部署
+    prepare_docker_bin
   fi
 
   docker_exist=1
@@ -59,7 +64,13 @@ function install_docker() {
     echo_red "systemctl stop docker"
     exit 1
   fi
+  echo_done
+}
 
+function install_compose() {
+  if [[ ! -f ./docker/docker-compose ]]; then
+    prepare_compose_bin
+  fi
   old_docker_compose_md5=$(get_file_md5 /usr/bin/docker-compose)
   new_docker_compose_md5=$(get_file_md5 ./docker/docker-compose)
   if [[ ! -f "/usr/bin/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
@@ -67,6 +78,18 @@ function install_docker() {
     chmod +x /usr/bin/docker-compose
   fi
   echo_done
+}
+
+function check_docker_install() {
+  command -v docker > /dev/null || {
+    install_docker
+  }
+}
+
+function check_compose_install() {
+  command -v docker-compose > /dev/null && echo_done || {
+    install_compose
+  }
 }
 
 function set_docker_config() {
@@ -105,13 +128,16 @@ function config_docker() {
   echo "$(gettext -s 'Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as') /opt/docker"
   df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
 
-  docker_storage_path='/opt/docker'
+  docker_storage_path=$(get_config DOCKER_DIR)
   echo ""
   read_from_input docker_storage_path "$(gettext -s 'Docker image storage directory')" '' "${docker_storage_path}"
+  set_config DOCKER_DIR ${docker_storage_path}
 
   if [[ ! -d "${docker_storage_path}" ]]; then
     mkdir -p ${docker_storage_path}
   fi
+  set_docker_config registry-mirrors '["https://hub-mirror.c.163.com", "http://f1361db2.m.daocloud.io"]'
+  set_docker_config live-restore "true"
   set_docker_config data-root "${docker_storage_path}"
   set_docker_config log-driver "json-file"
   set_docker_config log-opts '{"max-size": "10m", "max-file": "3"}'
@@ -120,6 +146,18 @@ function config_docker() {
     docker_config_change=1
   fi
   echo_done
+}
+
+function check_docker_config() {
+  if [[ ! -d ${CONFIG_DIR} ]]; then
+    mkdir -p "${CONFIG_DIR}"
+    cp ${PROJECT_DIR}/config-example.txt "${CONFIG_FILE}"
+  fi
+  if [[ ! -f "/etc/docker/daemon.json" ]]; then
+    config_docker
+  else
+    echo_done
+  fi
 }
 
 function start_docker() {
@@ -146,17 +184,27 @@ function start_docker() {
   fi
 }
 
+function check_docker_start() {
+  docker ps > /dev/null 2>&1
+  if [[ "$?" != "0" ]]; then
+    start_docker
+  else
+    echo_done
+  fi
+}
+
 function main() {
   if [[ "${OS}" == 'Darwin' ]]; then
     echo "$(gettext -s 'Skip docker installation on MacOS')"
     return
   fi
   echo_yellow "1. $(gettext -s 'Install Docker')"
-  install_docker
+  check_docker_install
+  check_compose_install
   echo_yellow "\n2. $(gettext -s 'Configure Docker')"
-  config_docker
+  check_docker_config
   echo_yellow "\n3. $(gettext -s 'Start Docker')"
-  start_docker
+  check_docker_start
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then

@@ -3,7 +3,7 @@ set -ue
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
-source "${BASE_DIR}/utils.sh"
+. "${BASE_DIR}/utils.sh"
 
 function pre_install() {
   echo
@@ -69,12 +69,12 @@ function main() {
   echo_logo
   set_lang
   pre_install
-  echo_green "\n>>> $(gettext -s 'Install and Configure JumpServer')"
-  (bash "${BASE_DIR}/1_config_jumpserver.sh")
   echo_green "\n>>> $(gettext -s 'Install and Configure Docker')"
   (bash "${BASE_DIR}/2_install_docker.sh")
   echo_green "\n>>> $(gettext -s 'Loading Docker Image')"
   (bash "${BASE_DIR}/3_load_images.sh")
+  echo_green "\n>>> $(gettext -s 'Install and Configure JumpServer')"
+  (bash "${BASE_DIR}/1_config_jumpserver.sh")
   post_install
 }
 

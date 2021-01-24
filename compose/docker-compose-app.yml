@@ -7,7 +7,6 @@ services:
     restart: always
     ports:
       - ${HTTP_PORT}:80
-      - ${HTTPS_PORT}:443
     volumes:
       - ./config_static/http_server.conf:/etc/nginx/conf.d/default.conf
       - ${CONFIG_DIR}/nginx/cert:/etc/nginx/cert
@@ -74,8 +73,6 @@ services:
     image: jumpserver/luna:${VERSION}
     container_name: jms_luna
     restart: always
-    env_file:
-      - ${CONFIG_FILE}
     depends_on:
       core:
         condition: service_healthy
@@ -86,13 +83,11 @@ services:
       retries: 3
     networks:
       - net
-  
+
   lina:
     image: jumpserver/lina:${VERSION}
     container_name: jms_lina
     restart: always
-    env_file:
-      - ${CONFIG_FILE}
     depends_on:
       core:
         condition: service_healthy
