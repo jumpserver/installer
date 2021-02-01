@@ -2,7 +2,7 @@
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=scripts/utils.sh
-source "${PROJECT_DIR}/scripts/utils.sh"
+. "${PROJECT_DIR}/scripts/utils.sh"
 
 action=${1-}
 target=${2-}
@@ -166,6 +166,9 @@ function main() {
     else
       ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     fi
+    ;;
+  uninstall)
+    bash "${SCRIPT_DIR}/8_uninstall.sh"
     ;;
   backup_db)
     bash "${SCRIPT_DIR}/5_db_backup.sh"
