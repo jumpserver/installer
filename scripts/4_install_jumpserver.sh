@@ -3,7 +3,7 @@ set -ue
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
-source "${BASE_DIR}/utils.sh"
+. "${BASE_DIR}/utils.sh"
 
 function pre_install() {
   echo
@@ -44,8 +44,30 @@ function post_install() {
   echo -e "\n\n"
 }
 
+function set_lang() {
+  # 安装默认不会为中文，所以直接用中文
+  if [[ "${LANG-''}" == "zh_CN.UTF-8" ]];then
+    return
+  fi
+  # 设置过就不用改了
+  if grep "export LANG=" ~/.bashrc &> /dev/null;then
+    return
+  fi
+  lang="cn"
+  read_from_input lang "语言 Language " "cn/en" "${lang}"
+  LANG='zh_CN.UTF-8'
+  if [[ "${lang}" == "en" ]];then
+    LANG='en_US.UTF-8'
+  fi
+  echo "export LANG=${LANG}" >> ~/.bashrc
+  # 之所以这么设置，是因为设置完 ~/.bashrc，就不会再询问，然而 LANG 环境变量，在用户当前 bash 进程中不生效
+  echo "export LANG=${LANG}" >> "${PROJECT_DIR}"/static.env
+  export LANG
+}
+
 function main() {
   echo_logo
+  set_lang
   pre_install
   echo_green "\n>>> $(gettext 'Install and Configure JumpServer')"
   (bash "${BASE_DIR}/1_config_jumpserver.sh")

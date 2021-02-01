@@ -20,18 +20,33 @@ function prepare_docker_bin() {
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker.tar.gz
     echo "$(gettext 'Starting to download Docker engine') ..."
-    wget "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz
+    wget -q "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz || {
+      log_error "下载 docker 失败, 请检查网络是否正常"
+      exit 1
+    }
   else
     echo "$(gettext 'Using Docker cache'): /tmp/docker.tar.gz"
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
+  chmod +x docker/*
+}
 
+function prepare_compose_bin() {
   md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
   if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
     echo "$(gettext 'Starting to download Docker Compose binary') ..."
     wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
+    prepare_online_install_required_pkg
+    echo "$(gettext -s 'Starting to download Docker Compose binary') ..."
+    wget -q "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose || {
+      log_error "下载 docker-compose 失败, 请检查网络是否正常"
+      exit 1
+    }
   else
     echo "$(gettext 'Using Docker Compose cache'): /tmp/docker-compose"
+  fi
+  if [[ ! -d "$BASE_DIR/docker" ]]; then
+    mkdir -p ${BASE_DIR}/docker
   fi
   cp /tmp/docker-compose docker/
   chmod +x docker/*
@@ -92,6 +107,7 @@ function main() {
 
   echo "1. $(gettext 'Preparing Docker offline package')"
   prepare_docker_bin
+  prepare_compose_bin
 
   echo -e "\n2. $(gettext 'Preparing image offline package')"
   prepare_image_files

@@ -5,8 +5,6 @@ services:
     image: jumpserver/nginx:alpine2
     container_name: jms_lb
     restart: always
-    env_file:
-      - ${CONFIG_FILE}
     ports:
       - ${LB_HTTP_PORT}:80
       - ${LB_HTTPS_PORT}:443

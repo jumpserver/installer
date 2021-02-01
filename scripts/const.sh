@@ -14,7 +14,7 @@ export CONFIG_FILE=$CONFIG_DIR/config.txt
 
 STATIC_ENV=${PROJECT_DIR}/static.env
 # shellcheck source=../static.env
-source "${STATIC_ENV}"
+. "${STATIC_ENV}"
 
 export OS=$(uname -s)
 export DOCKER_VERSION=18.06.2-ce

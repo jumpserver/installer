@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
-source "${BASE_DIR}/utils.sh"
+. "${BASE_DIR}/utils.sh"
 # shellcheck source=./2_install_docker.sh
-source "${BASE_DIR}/2_install_docker.sh"
+. "${BASE_DIR}/2_install_docker.sh"
 
 target=$1
 

@@ -2,7 +2,7 @@
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
-source "${BASE_DIR}/utils.sh"
+. "${BASE_DIR}/utils.sh"
 IMAGE_DIR=images
 
 cd "${BASE_DIR}" || return
@@ -46,7 +46,9 @@ function pull_image() {
   i=1
   for image in ${images}; do
     echo "[${image}]"
-    docker pull "${image}"
+    if [[ ! "$(docker images | grep $(echo ${image%:*}) | grep $(echo ${image#*:}))" ]]; then
+      docker pull "${image}"
+    fi
     echo ""
     ((i++)) || true
   done

@@ -1,8 +1,28 @@
-# 说明
-#### 这是项目总的配置文件, 会作为环境变量加载到各个容器中
-#### 格式必须是 KEY=VALUE 不能有空格等
+# 以下设置默认情况下不需要修改, 系统会自动生成随机字符串填入
+## 迁移请修改 SECRET_KEY 和 BOOTSTRAP_TOKEN 为原来的设置
 
-# Compose项目设置
+## 安装配置
+VOLUME_DIR=/opt/jumpserver
+DOCKER_DIR=/var/lib/docker
+SECRET_KEY=
+BOOTSTRAP_TOKEN=
+LOG_LEVEL=ERROR
+
+## 使用外置 MySQL 配置
+USE_EXTERNAL_MYSQL=0
+DB_HOST=mysql
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=jumpserver
+
+## 使用外置 Redis 配置
+USE_EXTERNAL_REDIS=0
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+## Compose 项目设置
 COMPOSE_PROJECT_NAME=jms
 COMPOSE_HTTP_TIMEOUT=3600
 DOCKER_CLIENT_TIMEOUT=3600
@@ -12,16 +32,8 @@ DOCKER_SUBNET=192.168.250.0/24
 DOCKER_SUBNET_IPV6=2001:db8:10::/64
 USE_IPV6=0
 
-### 持久化目录, 安装启动后不能再修改, 除非移动原来的持久化到新的位置
-VOLUME_DIR=/opt/jumpserver
-
-## 是否使用外部MYSQL和REDIS
-USE_EXTERNAL_MYSQL=0
-USE_EXTERNAL_REDIS=0
-
 ## Nginx 配置，这个Nginx是用来分发路径到不同的服务
-HTTP_PORT=8080
-HTTPS_PORT=8443
+HTTP_PORT=80
 SSH_PORT=2222
 
 ## LB 配置, 这个Nginx是HA时可以启动负载均衡到不同的主机

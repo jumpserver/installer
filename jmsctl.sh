@@ -2,7 +2,7 @@
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=scripts/utils.sh
-source "${PROJECT_DIR}/scripts/utils.sh"
+. "${PROJECT_DIR}/scripts/utils.sh"
 
 action=${1-}
 target=${2-}
@@ -42,8 +42,8 @@ function usage() {
   echo "Installation Commands: "
   echo "  install           $(gettext 'Install JumpServer')"
   echo "  upgrade [version] $(gettext 'Upgrade JumpServer')"
-  echo "  check_update      $(gettext 'Reconfiguration JumpServer')"
-  echo "  reconfig          $(gettext 'Check for updates JumpServer')"
+  echo "  check_update      $(gettext 'Check for updates JumpServer')"
+  echo "  reconfig          $(gettext 'Reconfiguration JumpServer')"
   echo
   echo "Management Commands: "
   echo "  start             $(gettext 'Start   JumpServer')"
@@ -167,6 +167,9 @@ function main() {
       ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     fi
     ;;
+  uninstall)
+    bash "${SCRIPT_DIR}/8_uninstall.sh"
+    ;;
   backup_db)
     bash "${SCRIPT_DIR}/5_db_backup.sh"
     ;;
@@ -220,7 +223,3 @@ function main() {
 }
 
 main "$@"
-
-
-
-echo "$(gettext 'The current version is'): ${current_version}"
