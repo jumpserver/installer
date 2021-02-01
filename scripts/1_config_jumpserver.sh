@@ -8,27 +8,24 @@ PROJECT_DIR=$(dirname ${BASE_DIR})
 
 function set_external_mysql() {
   mysql_host=$(get_config DB_HOST)
-  read_from_input mysql_host "$(gettext -s 'Please enter MySQL server IP')" "" "${mysql_host}"
+  read_from_input mysql_host "$(gettext 'Please enter MySQL server IP')" "" "${mysql_host}"
 
   mysql_port=$(get_config DB_PORT)
-  read_from_input mysql_port "$(gettext -s 'Please enter MySQL server port')" "" "${mysql_port}"
+  read_from_input mysql_port "$(gettext 'Please enter MySQL server port')" "" "${mysql_port}"
 
   mysql_db=$(get_config DB_NAME)
-  read_from_input mysql_db "$(gettext -s 'Please enter MySQL database name')" "" "${mysql_db}"
+  read_from_input mysql_db "$(gettext 'Please enter MySQL database name')" "" "${mysql_db}"
 
   mysql_user=$(get_config DB_USER)
-  read_from_input mysql_user "$(gettext -s 'Please enter MySQL username')" "" "${mysql_user}"
+  read_from_input mysql_user "$(gettext 'Please enter MySQL username')" "" "${mysql_user}"
 
   mysql_pass=$(get_config DB_PASSWORD)
-  read_from_input mysql_pass "$(gettext -s 'Please enter MySQL password')" "" "${mysql_pass}"
+  read_from_input mysql_pass "$(gettext 'Please enter MySQL password')" "" "${mysql_pass}"
 
-  test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
-  if [[ "$?" != "0" ]]; then
-    echo_red "测试连接数据库失败, 请重新设置"
-    echo
-    set_mysql
-  fi
-
+#  test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
+#  if [[ "$?" != "0" ]]; then
+#    echo "测试连接数据库失败, 可以 Ctrl-C 退出程序重新设置，或者继续"
+#  fi
   set_config DB_HOST ${mysql_host}
   set_config DB_PORT ${mysql_port}
   set_config DB_USER ${mysql_user}
@@ -49,16 +46,11 @@ function set_internal_mysql() {
 
 function set_mysql() {
   sleep 0.1
-  echo_yellow "\n7. $(gettext -s 'Configure MySQL')"
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  if [[ "$use_external_mysql" == "1" ]]; then
-    confirm="y"
-  else
-    confirm="n"
-  fi
-  read_from_input confirm "$(gettext -s 'Do you want to use external MySQL')?" "y/n" "${confirm}"
+  echo_yellow "\n7. $(gettext 'Configure MySQL')"
+  use_external_mysql="n"
+  read_from_input use_external_mysql "$(gettext 'Do you want to use external MySQL')?" "y/n" "${use_external_mysql}"
 
-  if [[ "${confirm}" == "y" ]]; then
+  if [[ "${use_external_mysql}" == "y" ]]; then
     set_external_mysql
   else
     set_internal_mysql
@@ -68,21 +60,18 @@ function set_mysql() {
 
 function set_external_redis() {
   redis_host=$(get_config REDIS_HOST)
-  read_from_input redis_host "$(gettext -s 'Please enter Redis server IP')" "" "${redis_host}"
+  read_from_input redis_host "$(gettext 'Please enter Redis server IP')" "" "${redis_host}"
 
   redis_port=$(get_config REDIS_PORT)
-  read_from_input redis_port "$(gettext -s 'Please enter Redis server port')" "" "${redis_port}"
+  read_from_input redis_port "$(gettext 'Please enter Redis server port')" "" "${redis_port}"
 
   redis_password=$(get_config REDIS_PASSWORD)
-  read_from_input redis_password "$(gettext -s 'Please enter Redis password')" "" "${redis_password}"
+  read_from_input redis_password "$(gettext 'Please enter Redis password')" "" "${redis_password}"
 
-  test_redis_connect ${redis_host} ${redis_port} ${redis_password}
-  if [[ "$?" != "0" ]]; then
-    echo_red "测试连接 Redis 失败, 请重新设置"
-    echo
-    set_redis
-  fi
-
+#  test_redis_connect ${redis_host} ${redis_port} ${redis_password}
+#  if [[ "$?" != "0" ]]; then
+#    echo "测试连接Redis失败, 可以 Ctrl-C 退出程序重新设置，或者继续"
+#  fi
   set_config REDIS_HOST ${redis_host}
   set_config REDIS_PORT ${redis_port}
   set_config REDIS_PASSWORD ${redis_password}
@@ -99,15 +88,10 @@ function set_internal_redis() {
 }
 
 function set_redis() {
-  echo_yellow "\n8. $(gettext -s 'Configure Redis')"
-  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
-  if [[ "$use_external_redis" == "1" ]]; then
-    confirm="y"
-  else
-    confirm="n"
-  fi
-  read_from_input confirm "$(gettext -s 'Do you want to use external Redis')?" "y/n" "${confirm}"
-  if [[ "${confirm}" == "y" ]]; then
+  echo_yellow "\n8. $(gettext 'Configure Redis')"
+  use_external_redis="n"
+  read_from_input use_external_redis "$(gettext 'Do you want to use external Redis')?" "y/n" "${use_external_redis}"
+  if [[ "${use_external_redis}" == "y" ]]; then
     set_external_redis
   else
     set_internal_redis
@@ -116,7 +100,7 @@ function set_redis() {
 }
 
 function set_secret_key() {
-  echo_yellow "\n5. $(gettext -s 'Configure Private Key')"
+  echo_yellow "\n5. $(gettext 'Configure Private Key')"
   # 生成随机的 SECRET_KEY 和 BOOTSTRAP_KEY
   secret_key=$(get_config SECRET_KEY)
   if [[ -z "${secret_key}" ]]; then
@@ -135,9 +119,9 @@ function set_secret_key() {
 }
 
 function set_volume_dir() {
-  echo_yellow "\n6. $(gettext -s 'Configure Persistent Directory')"
-  echo "$(gettext -s 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /opt/jumpserver"
-  echo "$(gettext -s 'Note: you can not change it after installation, otherwise the database may be lost')"
+  echo_yellow "\n6. $(gettext 'Configure Persistent Directory')"
+  echo "$(gettext 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /opt/jumpserver"
+  echo "$(gettext 'Note: you can not change it after installation, otherwise the database may be lost')"
   echo
   df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
   volume_dir=$(get_config VOLUME_DIR)
@@ -145,7 +129,7 @@ function set_volume_dir() {
     volume_dir="/opt/jumpserver"
   fi
   echo
-  read_from_input volume_dir "$(gettext -s 'Persistent storage directory')" "" "${volume_dir}"
+  read_from_input volume_dir "$(gettext 'Persistent storage directory')" "" "${volume_dir}"
 
   if [[ ! -d "${volume_dir}" ]]; then
     mkdir -p ${volume_dir}
@@ -159,8 +143,8 @@ function prepare_config() {
   cd "${PROJECT_DIR}" || exit
 
   config_dir=$(dirname "${CONFIG_FILE}")
-  echo_yellow "1. $(gettext -s 'Check Configuration File')"
-  echo "$(gettext -s 'Path to Configuration file'): ${CONFIG_FILE}"
+  echo_yellow "1. $(gettext 'Check Configuration File')"
+  echo "$(gettext 'Path to Configuration file'): ${CONFIG_FILE}"
   if [[ ! -d ${config_dir} ]]; then
     config_dir_parent=$(dirname "${config_dir}")
     mkdir -p "${config_dir_parent}"
@@ -181,8 +165,8 @@ function prepare_config() {
   echo_done
 
   nginx_cert_dir="${config_dir}/nginx/cert"
-  echo_yellow "\n2. $(gettext -s 'Configure Nginx')"
-  echo "$(gettext -s 'configuration file'): ${nginx_cert_dir}"
+  echo_yellow "\n2. $(gettext 'Configure Nginx')"
+  echo "$(gettext 'configuration file'): ${nginx_cert_dir}"
   # 迁移 nginx 的证书
   if [[ ! -d ${nginx_cert_dir} ]]; then
     mkdir -p ${nginx_cert_dir}
@@ -194,20 +178,19 @@ function prepare_config() {
   mkdir -p "${backup_dir}"
   now=$(date +'%Y-%m-%d_%H-%M-%S')
   backup_config_file="${backup_dir}/config.txt.${now}"
-  echo_yellow "\n3. $(gettext -s 'Backup Configuration File')"
+  echo_yellow "\n3. $(gettext 'Backup Configuration File')"
   cp "${CONFIG_FILE}" "${backup_config_file}"
-  echo "$(gettext -s 'Back up to') ${backup_config_file}"
+  echo "$(gettext 'Back up to') ${backup_config_file}"
   echo_done
 
   # IPv6 支持
-  echo_yellow "\n4. $(gettext -s 'Configure Network')"
+  echo_yellow "\n4. $(gettext 'Configure Network')"
   use_ipv6=$(get_config USE_IPV6)
+  confirm="n"
   if [[ "$use_ipv6" == "1" ]]; then
     confirm="y"
-  else
-    confirm="n"
   fi
-  read_from_input confirm "$(gettext -s 'Do you want to support IPv6')?" "y/n" "${confirm}"
+  read_from_input confirm "$(gettext 'Do you want to support IPv6')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]];then
     set_config USE_IPV6 1
   fi

@@ -10,15 +10,15 @@ args=("$@")
 
 function check_config_file() {
   if [[ ! -f "${CONFIG_FILE}" ]]; then
-    echo "$(gettext -s 'Configuration file not found'): ${CONFIG_FILE}"
-    echo "$(gettext -s 'If you are upgrading from v1.5.x, please copy the config.txt To') ${CONFIG_FILE}"
+    echo "$(gettext 'Configuration file not found'): ${CONFIG_FILE}"
+    echo "$(gettext 'If you are upgrading from v1.5.x, please copy the config.txt To') ${CONFIG_FILE}"
     return 3
   fi
   if [[ -f .env ]]; then
     ls -l .env | grep "${CONFIG_FILE}" &>/dev/null
     code="$?"
     if [[ "$code" != "0" ]]; then
-      echo ".env $(gettext -s 'There is a problem with the soft connection, Please update it again')"
+      echo ".env $(gettext 'There is a problem with the soft connection, Please update it again')"
       rm -f .env
     fi
   fi
@@ -33,33 +33,33 @@ function pre_check() {
 }
 
 function usage() {
-  echo "$(gettext -s 'JumpServer Deployment Management Script')"
+  echo "$(gettext 'JumpServer Deployment Management Script')"
   echo
   echo "Usage: "
   echo "  ./jmsctl.sh [COMMAND] [ARGS...]"
   echo "  ./jmsctl.sh --help"
   echo
   echo "Installation Commands: "
-  echo "  install           $(gettext -s 'Install JumpServer')"
-  echo "  upgrade [version] $(gettext -s 'Upgrade JumpServer')"
-  echo "  check_update      $(gettext -s 'Check for updates JumpServer')"
-  echo "  reconfig          $(gettext -s 'Reconfiguration JumpServer')"
+  echo "  install           $(gettext 'Install JumpServer')"
+  echo "  upgrade [version] $(gettext 'Upgrade JumpServer')"
+  echo "  check_update      $(gettext 'Check for updates JumpServer')"
+  echo "  reconfig          $(gettext 'Reconfiguration JumpServer')"
   echo
   echo "Management Commands: "
-  echo "  start             $(gettext -s 'Start   JumpServer')"
-  echo "  stop              $(gettext -s 'Stop    JumpServer')"
-  echo "  close             $(gettext -s 'Close   JumpServer')"
-  echo "  restart           $(gettext -s 'Restart JumpServer')"
-  echo "  status            $(gettext -s 'Check   JumpServer')"
-  echo "  down              $(gettext -s 'Offline JumpServer')"
+  echo "  start             $(gettext 'Start   JumpServer')"
+  echo "  stop              $(gettext 'Stop    JumpServer')"
+  echo "  close             $(gettext 'Close   JumpServer')"
+  echo "  restart           $(gettext 'Restart JumpServer')"
+  echo "  status            $(gettext 'Check   JumpServer')"
+  echo "  down              $(gettext 'Offline JumpServer')"
   echo
   echo "More Commands: "
-  echo "  load_image        $(gettext -s 'Loading docker image')"
-  echo "  python            $(gettext -s 'Run python manage.py shell')"
-  echo "  backup_db         $(gettext -s 'Backup database')"
-  echo "  restore_db [file] $(gettext -s 'Data recovery through database backup file')"
-  echo "  raw               $(gettext -s 'Execute the original docker-compose command')"
-  echo "  tail [service]    $(gettext -s 'View log')"
+  echo "  load_image        $(gettext 'Loading docker image')"
+  echo "  python            $(gettext 'Run python manage.py shell')"
+  echo "  backup_db         $(gettext 'Backup database')"
+  echo "  restore_db [file] $(gettext 'Data recovery through database backup file')"
+  echo "  raw               $(gettext 'Execute the original docker-compose command')"
+  echo "  tail [service]    $(gettext 'View log')"
 
 }
 
@@ -114,11 +114,11 @@ function check_update() {
   current_version="${VERSION}"
   latest_version=$(get_latest_version)
   if [[ "${current_version}" == "${latest_version}" ]];then
-    echo "$(gettext -s 'The current version is up to date')"
+    echo "$(gettext 'The current version is up to date')"
     return
   fi
-  echo "$(gettext -s 'The latest version is'): ${latest_version}"
-  echo "$(gettext -s 'The current version is'): ${current_version}"
+  echo "$(gettext 'The latest version is'): ${latest_version}"
+  echo "$(gettext 'The current version is'): ${current_version}"
   echo
   bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
 }
