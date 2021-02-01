@@ -42,8 +42,8 @@ function usage() {
   echo "Installation Commands: "
   echo "  install           $(gettext -s 'Install JumpServer')"
   echo "  upgrade [version] $(gettext -s 'Upgrade JumpServer')"
-  echo "  check_update      $(gettext -s 'Reconfiguration JumpServer')"
-  echo "  reconfig          $(gettext -s 'Check for updates JumpServer')"
+  echo "  check_update      $(gettext -s 'Check for updates JumpServer')"
+  echo "  reconfig          $(gettext -s 'Reconfiguration JumpServer')"
   echo
   echo "Management Commands: "
   echo "  start             $(gettext -s 'Start   JumpServer')"
