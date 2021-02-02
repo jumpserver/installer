@@ -69,12 +69,12 @@ function main() {
   echo_logo
   set_lang
   pre_install
-  echo_green "\n>>> $(gettext 'Install and Configure JumpServer')"
-  (bash "${BASE_DIR}/1_config_jumpserver.sh")
   echo_green "\n>>> $(gettext 'Install and Configure Docker')"
   (bash "${BASE_DIR}/2_install_docker.sh")
   echo_green "\n>>> $(gettext 'Loading Docker Image')"
   (bash "${BASE_DIR}/3_load_images.sh")
+  echo_green "\n>>> $(gettext 'Install and Configure JumpServer')"
+  (bash "${BASE_DIR}/1_config_jumpserver.sh")
   post_install
 }
 

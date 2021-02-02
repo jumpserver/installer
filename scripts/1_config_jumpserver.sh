@@ -22,10 +22,13 @@ function set_external_mysql() {
   mysql_pass=$(get_config DB_PASSWORD)
   read_from_input mysql_pass "$(gettext 'Please enter MySQL password')" "" "${mysql_pass}"
 
-#  test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
-#  if [[ "$?" != "0" ]]; then
-#    echo "测试连接数据库失败, 可以 Ctrl-C 退出程序重新设置，或者继续"
-#  fi
+  test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
+  if [[ "$?" != "0" ]]; then
+    echo_red "测试连接数据库失败, 请重新设置"
+    echo
+    set_mysql
+  fi
+
   set_config DB_HOST ${mysql_host}
   set_config DB_PORT ${mysql_port}
   set_config DB_USER ${mysql_user}
@@ -45,12 +48,15 @@ function set_internal_mysql() {
 }
 
 function set_mysql() {
-  sleep 0.1
   echo_yellow "\n7. $(gettext 'Configure MySQL')"
-  use_external_mysql="n"
-  read_from_input use_external_mysql "$(gettext 'Do you want to use external MySQL')?" "y/n" "${use_external_mysql}"
+  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  confirm="n"
+  if [[ "${use_external_mysql}" == "1" ]]; then
+    confirm="y"
+  fi
+  read_from_input confirm "$(gettext 'Do you want to use external MySQL')?" "y/n" "${confirm}"
 
-  if [[ "${use_external_mysql}" == "y" ]]; then
+  if [[ "${confirm}" == "y" ]]; then
     set_external_mysql
   else
     set_internal_mysql
@@ -68,10 +74,13 @@ function set_external_redis() {
   redis_password=$(get_config REDIS_PASSWORD)
   read_from_input redis_password "$(gettext 'Please enter Redis password')" "" "${redis_password}"
 
-#  test_redis_connect ${redis_host} ${redis_port} ${redis_password}
-#  if [[ "$?" != "0" ]]; then
-#    echo "测试连接Redis失败, 可以 Ctrl-C 退出程序重新设置，或者继续"
-#  fi
+  test_redis_connect ${redis_host} ${redis_port} ${redis_password}
+  if [[ "$?" != "0" ]]; then
+    echo_red "测试连接 Redis 失败, 请重新设置"
+    echo
+    set_redis
+  fi
+
   set_config REDIS_HOST ${redis_host}
   set_config REDIS_PORT ${redis_port}
   set_config REDIS_PASSWORD ${redis_password}
@@ -89,9 +98,13 @@ function set_internal_redis() {
 
 function set_redis() {
   echo_yellow "\n8. $(gettext 'Configure Redis')"
-  use_external_redis="n"
-  read_from_input use_external_redis "$(gettext 'Do you want to use external Redis')?" "y/n" "${use_external_redis}"
-  if [[ "${use_external_redis}" == "y" ]]; then
+  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
+  confirm="n"
+  if [[ "${use_external_redis}" == "1" ]]; then
+    confirm="y"
+  fi
+  read_from_input confirm "$(gettext 'Do you want to use external Redis')?" "y/n" "${confirm}"
+  if [[ "${confirm}" == "y" ]]; then
     set_external_redis
   else
     set_internal_redis
@@ -170,7 +183,7 @@ function prepare_config() {
   # 迁移 nginx 的证书
   if [[ ! -d ${nginx_cert_dir} ]]; then
     mkdir -p "${nginx_cert_dir}"
-    cp "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
+    \cp -rf "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
   fi
   echo_done
 
@@ -187,7 +200,7 @@ function prepare_config() {
   echo_yellow "\n4. $(gettext 'Configure Network')"
   use_ipv6=$(get_config USE_IPV6)
   confirm="n"
-  if [[ "$use_ipv6" == "1" ]]; then
+  if [[ "${use_ipv6}" == "1" ]]; then
     confirm="y"
   fi
   read_from_input confirm "$(gettext 'Do you want to support IPv6')?" "y/n" "${confirm}"

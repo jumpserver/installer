@@ -52,6 +52,7 @@ function usage() {
   echo "  restart           $(gettext 'Restart JumpServer')"
   echo "  status            $(gettext 'Check   JumpServer')"
   echo "  down              $(gettext 'Offline JumpServer')"
+  echo "  uninstall         卸载 JumpServer"
   echo
   echo "More Commands: "
   echo "  load_image        $(gettext 'Loading docker image')"

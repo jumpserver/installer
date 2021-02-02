@@ -70,7 +70,19 @@ function update_config_if_need() {
 }
 
 function update_proc_if_need() {
-  install_docker
+  if [[ ! -f ./docker/dockerd ]]; then
+    confirm="n"
+    read_from_input confirm "是否需要更新 Docker ?" "y/n" "${confirm}"
+    if [[ "${confirm}" == "y" ]]; then
+      install_docker
+      install_compose
+    fi
+    echo_done
+  else
+    # 针对离线包不做判断，直接更新
+    install_docker
+    install_compose
+  fi
 }
 
 function backup_db() {
@@ -84,6 +96,20 @@ function backup_db() {
     fi
   else
     echo "SKIP_BACKUP_DB=${SKIP_BACKUP_DB}, $(gettext 'Skip database backup')"
+  fi
+}
+
+function db_migrations() {
+  perform_db_migrations
+  if [[ "$?" != "0" ]]; then
+    log_error "表结构变更失败!"
+    confirm="n"
+    read_from_input confirm "数据库表结构变更失败, 继续升级吗?" "y/n" "${confirm}"
+    if [[ "${confirm}" != "y" ]];then
+      exit 1
+    fi
+  else
+    echo_done
   fi
 }
 
@@ -113,12 +139,12 @@ function main() {
   echo_yellow "\n3. $(gettext 'Upgrade Docker image')"
   bash "${SCRIPT_DIR}/3_load_images.sh" && echo_done || (echo_failed; exit  5)
 
-  echo_yellow "4. $(gettext 'Backup database')"
+  echo_yellow "\n4. $(gettext 'Backup database')"
   backup_db || exit 2
 
   echo_yellow "\n5. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
-  perform_db_migrations && echo_done || (echo_failed; exit 6)
+  db_migrations || exit 2
 
   echo_yellow "\n6. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "./jmsctl.sh restart"

@@ -26,6 +26,15 @@ function copy_docker() {
 
 function install_docker() {
   if [[ ! -f ./docker/dockerd ]]; then
+    # 官方 get-docker.sh 脚本
+    VERSION=''
+    bash "${BASE_DIR}/get-docker.sh" --mirror Aliyun 1>/dev/null
+  fi
+  if command -v docker > /dev/null; then
+    echo_done
+    return
+  else
+    # 如果官方未适配, 则使用二进制文件部署
     prepare_docker_bin
   fi
   if [[ ! -f ./docker/dockerd ]]; then
