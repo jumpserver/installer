@@ -169,8 +169,8 @@ function prepare_config() {
   echo "$(gettext 'configuration file'): ${nginx_cert_dir}"
   # 迁移 nginx 的证书
   if [[ ! -d ${nginx_cert_dir} ]]; then
-    mkdir -p ${nginx_cert_dir}
-    cp -R "${PROJECT_DIR}/config_init/nginx/cert" "${nginx_cert_dir}"
+    mkdir -p "${nginx_cert_dir}"
+    cp "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
   fi
   echo_done
 

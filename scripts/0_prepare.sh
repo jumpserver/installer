@@ -37,7 +37,7 @@ function prepare_compose_bin() {
     echo "$(gettext 'Starting to download Docker Compose binary') ..."
     wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
     prepare_online_install_required_pkg
-    echo "$(gettext -s 'Starting to download Docker Compose binary') ..."
+    echo "$(gettext 'Starting to download Docker Compose binary') ..."
     wget -q "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose || {
       log_error "下载 docker-compose 失败, 请检查网络是否正常"
       exit 1
