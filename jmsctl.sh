@@ -105,6 +105,14 @@ function close() {
   done
 }
 
+function pull() {
+   if [[ -n "${target}" ]]; then
+    ${EXE} pull "${target}"
+    return
+  fi
+  ${EXE} pull
+}
+
 function restart() {
   stop
   echo -e "\n"
@@ -154,6 +162,9 @@ function main() {
     ;;
   stop)
     stop
+    ;;
+  pull)
+    pull
     ;;
   close)
     close
