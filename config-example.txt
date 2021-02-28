@@ -2,6 +2,7 @@
 ## 迁移请修改 SECRET_KEY 和 BOOTSTRAP_TOKEN 为原来的设置
 
 ## 安装配置
+DOCKER_IMAGE_PREFIX=swr.cn-south-1.myhuaweicloud.com
 VOLUME_DIR=/opt/jumpserver
 DOCKER_DIR=/var/lib/docker
 SECRET_KEY=

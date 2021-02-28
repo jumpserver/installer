@@ -133,17 +133,21 @@ function set_secret_key() {
 
 function set_volume_dir() {
   echo_yellow "\n6. $(gettext 'Configure Persistent Directory')"
-  echo "$(gettext 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /opt/jumpserver"
-  echo "$(gettext 'Note: you can not change it after installation, otherwise the database may be lost')"
-  echo
-  df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
   volume_dir=$(get_config VOLUME_DIR)
   if [[ -z "${volume_dir}" ]]; then
     volume_dir="/opt/jumpserver"
   fi
-  echo
-  read_from_input volume_dir "$(gettext 'Persistent storage directory')" "" "${volume_dir}"
-
+  confirm="n"
+  read_from_input confirm "是否需要自定义持久化存储, 默认将使用 ${volume_dir} 目录?" "y/n" "${confirm}"
+  if [[ "${confirm}" == "y" ]]; then
+    echo
+    echo "$(gettext 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /opt/jumpserver"
+    echo "$(gettext 'Note: you can not change it after installation, otherwise the database may be lost')"
+    echo
+    df -h | egrep -v "map|devfs|tmpfs|overlay|shm"
+    echo
+    read_from_input volume_dir "$(gettext 'Persistent storage directory')" "" "${volume_dir}"
+  fi
   if [[ ! -d "${volume_dir}" ]]; then
     mkdir -p ${volume_dir}
   fi

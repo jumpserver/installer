@@ -126,20 +126,26 @@ f.close()
 }
 
 function config_docker() {
-  if [[ -f '/etc/docker/daemon.json' ]]; then
-    cp /etc/docker/daemon.json /etc/docker/daemon.json.bak
-  fi
-  echo "$(gettext 'Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as') /opt/docker"
-  df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
-
   docker_storage_path=$(get_config DOCKER_DIR)
-  echo ""
-  read_from_input docker_storage_path "$(gettext 'Docker image storage directory')" '' "${docker_storage_path}"
-  set_config DOCKER_DIR "${docker_storage_path}"
+  if [[ -z "${docker_storage_path}" ]]; then
+    docker_storage_path="/var/lib/docker"
+  fi
+  confirm="n"
+  read_from_input confirm "是否需要自定义 Docker 数据目录, 默认将使用 ${docker_storage_path} 目录?" "y/n" "${confirm}"
+
+  if [[ "${confirm}" == "y" ]]; then
+    echo
+    echo "$(gettext 'Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as') /opt/docker"
+    df -h | egrep -v "map|devfs|tmpfs|overlay|shm"
+    echo
+    read_from_input docker_storage_path "$(gettext 'Docker image storage directory')" '' "${docker_storage_path}"
+  fi
 
   if [[ ! -d "${docker_storage_path}" ]]; then
     mkdir -p "${docker_storage_path}"
   fi
+  set_config DOCKER_DIR "${docker_storage_path}"
+
   set_docker_config registry-mirrors '["https://hub-mirror.c.163.com", "http://f1361db2.m.daocloud.io"]'
   set_docker_config live-restore "true"
   set_docker_config data-root "${docker_storage_path}"

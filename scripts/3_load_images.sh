@@ -43,11 +43,18 @@ function load_image_files() {
 
 function pull_image() {
   images=$(get_images public)
+  DOCKER_IMAGE_PREFIX=$(get_config DOCKER_IMAGE_PREFIX)
   i=1
   for image in ${images}; do
     echo "[${image}]"
     if [[ ! "$(docker images | grep $(echo ${image%:*}) | grep $(echo ${image#*:}))" ]]; then
-      docker pull "${image}"
+      if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
+        docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
+        docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
+        docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
+      else
+        docker pull "${image}"
+      fi
     fi
     echo ""
     ((i++)) || true
