@@ -38,26 +38,26 @@ function migrate_config_v2_5_v2_6() {
   # 迁移配置文件过去
   configs=("nginx" "core" "koko" "mysql" "redis")
   for c in "${configs[@]}";do
-    if [[ ! -e ${CONFIG_DIR}/$c ]];then
+    if [[ ! -e ${CONFIG_DIR}/$c ]]; then
       cp -R "${PROJECT_DIR}/config_init/$c" "${CONFIG_DIR}"
     fi
   done
 
   # 处理之前版本没有 USE_XPACK 的问题
   image_files=""
-  if [[ -d "$BASE_DIR/images" ]];then
+  if [[ -d "$BASE_DIR/images" ]]; then
     image_files=$(ls "$BASE_DIR"/images)
   fi
-  if [[ "${image_files}" =~ xpack ]];then
+  if [[ "${image_files}" =~ xpack ]]; then
     set_config "USE_XPACK" 1
   fi
 
   # 处理一下之前 lb_http_server 配置文件没有迁移的问题
-  if [[ ! -f "${CONFIG_DIR}/nginx/lb_http_server.conf" ]];then
+  if [[ ! -f "${CONFIG_DIR}/nginx/lb_http_server.conf" ]]; then
     cp "${PROJECT_DIR}"/config_init/nginx/*.conf "${CONFIG_DIR}"/nginx
   fi
 
-  if [[ ! -d "${CONFIG_DIR}/nginx/cert" ]];then
+  if [[ ! -d "${CONFIG_DIR}/nginx/cert" ]]; then
     cp -R "${PROJECT_DIR}"/config_init/nginx/cert "${CONFIG_DIR}"/nginx
   fi
 }
@@ -105,7 +105,7 @@ function db_migrations() {
     log_error "表结构变更失败!"
     confirm="n"
     read_from_input confirm "数据库表结构变更失败, 继续升级吗?" "y/n" "${confirm}"
-    if [[ "${confirm}" != "y" ]];then
+    if [[ "${confirm}" != "y" ]]; then
       exit 1
     fi
   else
@@ -116,16 +116,16 @@ function db_migrations() {
 function main() {
   confirm="n"
   to_version="${VERSION}"
-  if [[ -n "${target}" ]];then
+  if [[ -n "${target}" ]]; then
     to_version="${target}"
   fi
 
   read_from_input confirm "$(gettext 'Are you sure you want to update the current version to') ${to_version} ?" "y/n" "${confirm}"
-  if [[ "${confirm}" != "y" || -z "${to_version}" ]];then
+  if [[ "${confirm}" != "y" || -z "${to_version}" ]]; then
     exit 3
   fi
 
-  if [[ "${to_version}" && "${to_version}" != "${VERSION}" ]];then
+  if [[ "${to_version}" && "${to_version}" != "${VERSION}" ]]; then
     sed -i "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
     export VERSION=${to_version}
   fi

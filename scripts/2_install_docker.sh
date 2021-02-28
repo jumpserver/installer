@@ -187,7 +187,7 @@ function start_docker() {
     ret_code="$?"
   fi
   systemctl enable docker &>/dev/null
-  if [[ "$ret_code" == "0" ]];then
+  if [[ "$ret_code" == "0" ]]; then
     echo_done
   else
     echo_failed

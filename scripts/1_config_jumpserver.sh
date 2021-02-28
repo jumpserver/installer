@@ -208,7 +208,7 @@ function prepare_config() {
     confirm="y"
   fi
   read_from_input confirm "$(gettext 'Do you want to support IPv6')?" "y/n" "${confirm}"
-  if [[ "${confirm}" == "y" ]];then
+  if [[ "${confirm}" == "y" ]]; then
     set_config USE_IPV6 1
   fi
   echo_done

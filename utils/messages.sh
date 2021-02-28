@@ -30,7 +30,7 @@ function compile_message() {
 }
 
 action=$1
-if [ -z "$action" ];then
+if [ -z "$action" ]; then
     action="make"
 fi
 

@@ -122,7 +122,7 @@ function restart() {
 function check_update() {
   current_version="${VERSION}"
   latest_version=$(get_latest_version)
-  if [[ "${current_version}" == "${latest_version}" ]];then
+  if [[ "${current_version}" == "${latest_version}" ]]; then
     echo "$(gettext 'The current version is up to date')"
     return
   fi

@@ -43,7 +43,7 @@ if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
     log_error "$(gettext 'Format error')！Usage './jmsctl.sh restore_db DB_Backup_file '"
     exit 1
   fi
-  if [[ ! -f $1 ]];then
+  if [[ ! -f $1 ]]; then
     echo "$(gettext 'The backup file does not exist'): $1"
     exit 2
   fi

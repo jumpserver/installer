@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -ue
+#
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
@@ -46,17 +46,17 @@ function post_install() {
 
 function set_lang() {
   # 安装默认不会为中文，所以直接用中文
-  if [[ "${LANG-''}" == "zh_CN.UTF-8" ]];then
+  if [[ "${LANG-''}" == "zh_CN.UTF-8" ]]; then
     return
   fi
   # 设置过就不用改了
-  if grep "export LANG=" ~/.bashrc &> /dev/null;then
+  if grep "export LANG=" ~/.bashrc &> /dev/null; then
     return
   fi
   lang="cn"
   read_from_input lang "语言 Language " "cn/en" "${lang}"
   LANG='zh_CN.UTF-8'
-  if [[ "${lang}" == "en" ]];then
+  if [[ "${lang}" == "en" ]]; then
     LANG='en_US.UTF-8'
   fi
   echo "export LANG=${LANG}" >> ~/.bashrc
