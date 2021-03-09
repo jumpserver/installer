@@ -244,7 +244,9 @@ function get_docker_compose_cmd_line() {
     cmd="${cmd} -f ./compose/docker-compose-redis.yml"
   fi
   if [[ "${services}" =~ lb ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-lb.yml"
+    cmd="${cmd} -f ./compose/docker-compose-internal.yml -f ./compose/docker-compose-lb.yml"
+  else
+    cmd="${cmd} -f ./compose/docker-compose-external.yml"
   fi
   if [[ "${services}" =~ xpack ]]; then
     cmd="${cmd} -f ./compose/docker-compose-xpack.yml"

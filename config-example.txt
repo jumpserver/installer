@@ -33,16 +33,16 @@ DOCKER_SUBNET=192.168.250.0/24
 DOCKER_SUBNET_IPV6=2001:db8:10::/64
 USE_IPV6=0
 
-## Nginx 配置，这个Nginx是用来分发路径到不同的服务
+## Nginx 配置，这个 Nginx 是用来分发路径到不同的服务
 HTTP_PORT=8080
 HTTPS_PORT=8443
 SSH_PORT=2222
 
-## LB 配置, 这个Nginx是HA时可以启动负载均衡到不同的主机
+## LB 配置, 这个 Nginx 是 HA 时可以启动负载均衡到不同的主机
 USE_LB=0
 LB_HTTP_PORT=80
 LB_HTTPS_PORT=443
-LB_SSH_PORT=2223
+LB_SSH_PORT=2222
 
 ## Task 配置
 USE_TASK=1
@@ -50,9 +50,9 @@ USE_TASK=1
 ## XPack
 USE_XPACK=0
 
-# Koko配置
-CORE_HOST=http://core:8080
-ENABLE_PROXY_PROTOCOL=true
+# Mysql 容器配置
+MYSQL_ROOT_PASSWORD=
+MYSQL_DATABASE=jumpserver
 
 # Core 配置
 # SESSION_COOKIE_AGE=86400
@@ -68,6 +68,10 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE=true
 ### AUTH_OPENID_SHARE_SESSION=true
 ### AUTH_OPENID_IGNORE_SSL_VERIFICATION=true
 
+# Koko 配置
+CORE_HOST=http://core:8080
+ENABLE_PROXY_PROTOCOL=true
+
 # Guacamole 配置
 JUMPSERVER_SERVER=http://core:8080
 JUMPSERVER_KEY_DIR=/config/guacamole/data/key/
@@ -76,7 +80,3 @@ JUMPSERVER_DRIVE_PATH=/config/guacamole/data/drive/
 JUMPSERVER_ENABLE_DRIVE=true
 JUMPSERVER_CLEAR_DRIVE_SESSION=true
 JUMPSERVER_CLEAR_DRIVE_SCHEDULE=24
-
-# Mysql 容器配置
-MYSQL_ROOT_PASSWORD=
-MYSQL_DATABASE=jumpserver
