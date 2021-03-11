@@ -161,7 +161,7 @@ function prepare_config() {
 
   config_dir=$(dirname "${CONFIG_FILE}")
   echo_yellow "1. $(gettext 'Check Configuration File')"
-  echo "$(gettext 'Path to Configuration file'): ${CONFIG_FILE}"
+  echo "$(gettext 'Path to Configuration file'): ${config_dir}"
   if [[ ! -d ${config_dir} ]]; then
     config_dir_parent=$(dirname "${config_dir}")
     mkdir -p "${config_dir_parent}"
@@ -169,16 +169,22 @@ function prepare_config() {
   fi
   if [[ ! -f ${CONFIG_FILE} ]]; then
     cp config-example.txt "${CONFIG_FILE}"
+  else
+    echo -e "${CONFIG_FILE}  [\033[32m √ \033[0m]"
   fi
   if [[ ! -f .env ]]; then
     ln -s "${CONFIG_FILE}" .env
   fi
-  for d in $(ls config_init | grep -v README.md); do
-    if [ ! -d "${config_dir}/${d}" ]; then
-      \cp -rf config_init/${d} ${config_dir}
-    fi
+  configs=("nginx" "core" "koko" "mysql" "redis")
+  for d in "${configs[@]}"; do
+    for f in $(ls ${PROJECT_DIR}/config_init/${d} | grep -v cert); do
+      if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
+        \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
+      else
+        echo -e "${CONFIG_DIR}/${d}/${f}  [\033[32m √ \033[0m]"
+      fi
+    done
   done
-
   echo_done
 
   nginx_cert_dir="${config_dir}/nginx/cert"
@@ -187,8 +193,16 @@ function prepare_config() {
   # 迁移 nginx 的证书
   if [[ ! -d ${nginx_cert_dir} ]]; then
     mkdir -p "${nginx_cert_dir}"
-    \cp -rf "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
+    \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
   fi
+
+  for f in $(ls ${PROJECT_DIR}/config_init/nginx/cert); do
+    if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
+      \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/${f} "${nginx_cert_dir}"
+    else
+      echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
+    fi
+  done
   echo_done
 
   backup_dir="${config_dir}/backup"

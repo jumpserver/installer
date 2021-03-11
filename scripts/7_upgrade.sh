@@ -37,10 +37,14 @@ function migrate_config_v1_5_to_v2_0() {
 function migrate_config_v2_5_v2_6() {
   # 迁移配置文件过去
   configs=("nginx" "core" "koko" "mysql" "redis")
-  for c in "${configs[@]}";do
-    if [[ ! -e ${CONFIG_DIR}/$c ]]; then
-      cp -R "${PROJECT_DIR}/config_init/$c" "${CONFIG_DIR}"
-    fi
+  for d in "${configs[@]}"; do
+    for f in $(ls ${PROJECT_DIR}/config_init/${d} | grep -v cert); do
+      if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
+        \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
+      else
+        echo -e "${CONFIG_DIR}/${d}/${f}  [\033[32m √ \033[0m]"
+      fi
+    done
   done
 
   # 处理之前版本没有 USE_XPACK 的问题
@@ -52,14 +56,19 @@ function migrate_config_v2_5_v2_6() {
     set_config "USE_XPACK" 1
   fi
 
-  # 处理一下之前 lb_http_server 配置文件没有迁移的问题
-  if [[ ! -f "${CONFIG_DIR}/nginx/lb_http_server.conf" ]]; then
-    cp "${PROJECT_DIR}"/config_init/nginx/*.conf "${CONFIG_DIR}"/nginx
+  nginx_cert_dir="${config_dir}/nginx/cert"
+  if [[ ! -d ${nginx_cert_dir} ]]; then
+    mkdir -p "${nginx_cert_dir}"
+    \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
   fi
 
-  if [[ ! -d "${CONFIG_DIR}/nginx/cert" ]]; then
-    cp -R "${PROJECT_DIR}"/config_init/nginx/cert "${CONFIG_DIR}"/nginx
-  fi
+  for f in $(ls ${PROJECT_DIR}/config_init/nginx/cert); do
+    if [[ -f "${nginx_cert_dir}/${f}" ]]; then
+      \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/${f} "${nginx_cert_dir}"
+    else
+      echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
+    fi
+  done
 }
 
 

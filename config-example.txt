@@ -70,7 +70,6 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE=true
 
 # Koko 配置
 CORE_HOST=http://core:8080
-ENABLE_PROXY_PROTOCOL=true
 
 # Guacamole 配置
 JUMPSERVER_SERVER=http://core:8080
