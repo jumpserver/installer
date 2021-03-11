@@ -81,7 +81,7 @@ function update_config_if_need() {
 function update_proc_if_need() {
   if [[ ! -f ./docker/dockerd ]]; then
     confirm="n"
-    read_from_input confirm "$(gettext 'Do you need to update Docker')?" "y/n" "${confirm}"
+    read_from_input confirm "$(gettext 'Do you need to update') Docker?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       install_docker
       install_compose
