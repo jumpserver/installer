@@ -26,15 +26,6 @@ function copy_docker() {
 
 function install_docker() {
   if [[ ! -f ./docker/dockerd ]]; then
-    # 官方 get-docker.sh 脚本
-    VERSION=''
-    bash "${BASE_DIR}/get-docker.sh" --mirror Aliyun 1>/dev/null
-  fi
-  if command -v docker > /dev/null; then
-    echo_done
-    return
-  else
-    # 如果官方未适配, 则使用二进制文件部署
     prepare_docker_bin
   fi
   if [[ ! -f ./docker/dockerd ]]; then
@@ -64,7 +55,7 @@ function install_docker() {
   fi
 
   if [[ "${docker_copy_failed}" != "0" ]]; then
-    echo_red "Docker $(gettext 'File copy failed. May be that docker service is already running. Please stop the running docker and re-execute it')"
+    echo_red "$(gettext 'Docker File copy failed. May be that docker service is already running. Please stop the running docker and re-execute it')"
     echo_red "systemctl stop docker"
     exit 1
   fi
@@ -78,7 +69,7 @@ function install_compose() {
   old_docker_compose_md5=$(get_file_md5 /usr/bin/docker-compose)
   new_docker_compose_md5=$(get_file_md5 ./docker/docker-compose)
   if [[ ! -f "/usr/bin/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
-    cp ./docker/docker-compose /usr/bin/
+    \cp -f ./docker/docker-compose /usr/bin/
     chmod +x /usr/bin/docker-compose
   fi
   echo_done

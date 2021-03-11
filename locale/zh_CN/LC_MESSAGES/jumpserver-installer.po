@@ -79,9 +79,7 @@ msgid "There are updates available currently. Do you want to update"
 msgstr "检测到 Docker 版本有更新, 是否更新"
 
 #: scripts/2_install_docker.sh:58
-msgid ""
-"File copy failed. May be that docker service is already running. Please stop "
-"the running docker and re-execute it"
+msgid "Docker file copy failed. May be that Docker service is already running. Please stop the running Docker and re-execute it"
 msgstr "Docker 复制失败, 可能是已有 Docker 运行, 请停止运行的 Docker 重新执行"
 
 #: scripts/2_install_docker.sh:105

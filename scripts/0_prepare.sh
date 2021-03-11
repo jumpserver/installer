@@ -34,9 +34,8 @@ function prepare_docker_bin() {
 function prepare_compose_bin() {
   md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
   if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
-    echo "$(gettext 'Starting to download Docker Compose binary') ..."
-    wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
     prepare_online_install_required_pkg
+    get_file_md5 /tmp/docker-compose
     echo "$(gettext 'Starting to download Docker Compose binary') ..."
     wget -q "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose || {
       log_error "$(gettext 'Download docker-compose fails, check the network is normal')"
