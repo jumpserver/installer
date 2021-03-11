@@ -182,6 +182,10 @@ msgid ""
 "largest disk and create a directory in it, such as"
 msgstr ""
 
+#: scripts/1_config_jumpserver.sh:141
+msgid "Do you need custom persistent store, will use the default directory"
+msgstr ""
+
 #: scripts/1_config_jumpserver.sh:121
 msgid ""
 "Note: you can not change it after installation, otherwise the database may "
@@ -246,6 +250,14 @@ msgstr ""
 
 #: scripts/0_prepare.sh:34
 msgid "Using Docker Compose cache"
+msgstr ""
+
+#: scripts/0_prepare.sh:24
+msgid "Download docker fails, check the network is normal"
+msgstr ""
+
+#: scripts/0_prepare.sh:42
+msgid "Download docker-compose fails, check the network is normal"
 msgstr ""
 
 #: scripts/0_prepare.sh:43
@@ -344,8 +356,20 @@ msgstr ""
 msgid "Check program file changes"
 msgstr ""
 
+#: scripts/7_upgrade.sh:84
+msgid "Do you need to update"
+msgstr ""
+
 #: scripts/7_upgrade.sh:113
 msgid "Upgrade Docker image"
+msgstr ""
+
+#:  scripts/7_upgrade.sh:114
+msgid "Failed to change the table structure"
+msgstr ""
+
+#:  scripts/7_upgrade.sh:116
+msgid "Failed to change the table structure. Continue to upgrade"
 msgstr ""
 
 #: scripts/7_upgrade.sh:116 jmsctl.sh:59
@@ -362,6 +386,26 @@ msgstr ""
 
 #: scripts/7_upgrade.sh:123
 msgid "Upgrade successfully. You can now restart the program"
+msgstr ""
+
+#: scripts/8_uninstall.sh:8
+msgid "Make sure you have a backup of data, this operation is not reversible"
+msgstr ""
+
+#: scripts/8_uninstall.sh:11
+msgid "Are you clean up JumpServer files"
+msgstr ""
+
+#: scripts/8_uninstall.sh:20
+msgid "Cleaning up"
+msgstr ""
+
+#: scripts/8_uninstall.sh:27
+msgid "Do you need to clean up the Docker image"
+msgstr ""
+
+#: scripts/8_uninstall.sh:43
+msgid "Cleanup complete"
 msgstr ""
 
 #: jmsctl.sh:13
@@ -394,6 +438,10 @@ msgstr ""
 
 #: jmsctl.sh:46
 msgid "Check for updates JumpServer"
+msgstr ""
+
+#: jmsctl.sh:55
+msgid "Uninstall JumpServer"
 msgstr ""
 
 #: jmsctl.sh:49

@@ -21,7 +21,7 @@ function prepare_docker_bin() {
     get_file_md5 /tmp/docker.tar.gz
     echo "$(gettext 'Starting to download Docker engine') ..."
     wget -q "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz || {
-      log_error "下载 docker 失败, 请检查网络是否正常"
+      log_error "$(gettext 'Download docker fails, check the network is normal')"
       exit 1
     }
   else
@@ -39,7 +39,7 @@ function prepare_compose_bin() {
     prepare_online_install_required_pkg
     echo "$(gettext 'Starting to download Docker Compose binary') ..."
     wget -q "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose || {
-      log_error "下载 docker-compose 失败, 请检查网络是否正常"
+      log_error "$(gettext 'Download docker-compose fails, check the network is normal')"
       exit 1
     }
   else

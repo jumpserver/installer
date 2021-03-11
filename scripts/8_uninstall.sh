@@ -5,26 +5,26 @@ PROJECT_DIR=$(dirname ${BASE_DIR})
 . "${BASE_DIR}/utils.sh"
 
 function remove_jumpserver() {
-  echo -e "请确认已经备份好相关数据, 此操作不可逆 ! \n"
+  echo -e "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
   VOLUME_DIR=$(get_config VOLUME_DIR)
   confirm="n"
-  read_from_input confirm "确认清理 JumpServer 相关文件?" "y/n" "${confirm}"
+  read_from_input confirm "$(gettext 'Are you clean up JumpServer files')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
     if [[ -f "${CONFIG_FILE}" ]]; then
       cd "${PROJECT_DIR}"
       bash ./jmsctl.sh down
       sleep 2s
       echo
-      echo -e "正在清理 ${VOLUME_DIR}"
+      echo -e "$(gettext 'Cleaning up') ${VOLUME_DIR}"
       rm -rf ${VOLUME_DIR}
-      echo -e "正在清理 ${CONFIG_DIR}"
+      echo -e "$(gettext 'Cleaning up') ${CONFIG_DIR}"
       rm -rf ${CONFIG_DIR}
       echo_done
     fi
   fi
   echo
   confirm="n"
-  read_from_input confirm "是否清理 Docker 镜像?" "y/n" "${confirm}"
+  read_from_input confirm "$(gettext 'Do you need to clean up the Docker image')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
     images=(
       "jumpserver/redis:6-alpine"
@@ -40,11 +40,11 @@ function remove_jumpserver() {
       docker rmi ${image}
     done
   fi
-  echo_green "清理完成 !"
+  echo_green "$(gettext 'Cleanup complete')!"
 }
 
 function main() {
-  echo_yellow "\n>>> 卸载 JumpServer"
+  echo_yellow "\n>>> $(gettext 'Uninstall JumpServer')"
   remove_jumpserver
 }
 

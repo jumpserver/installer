@@ -81,7 +81,7 @@ function update_config_if_need() {
 function update_proc_if_need() {
   if [[ ! -f ./docker/dockerd ]]; then
     confirm="n"
-    read_from_input confirm "是否需要更新 Docker ?" "y/n" "${confirm}"
+    read_from_input confirm "$(gettext 'Do you need to update Docker')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       install_docker
       install_compose
@@ -111,9 +111,9 @@ function backup_db() {
 function db_migrations() {
   perform_db_migrations
   if [[ "$?" != "0" ]]; then
-    log_error "表结构变更失败!"
+    log_error "$(gettext 'Failed to change the table structure')!"
     confirm="n"
-    read_from_input confirm "数据库表结构变更失败, 继续升级吗?" "y/n" "${confirm}"
+    read_from_input confirm "$(gettext 'Failed to change the table structure. Continue to upgrade')?" "y/n" "${confirm}"
     if [[ "${confirm}" != "y" ]]; then
       exit 1
     fi

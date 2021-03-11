@@ -162,6 +162,7 @@ function check_docker_config() {
   if [[ ! -d "${CONFIG_DIR}" ]]; then
     mkdir -p "${CONFIG_DIR}"
     cp ${PROJECT_DIR}/config-example.txt "${CONFIG_FILE}"
+    \cp -rf ${PROJECT_DIR}/config_init/* "${CONFIG_DIR}"
   fi
   if [[ ! -f "/etc/docker/daemon.json" ]]; then
     config_docker

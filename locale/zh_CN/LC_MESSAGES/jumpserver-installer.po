@@ -176,6 +176,10 @@ msgstr "自动生成"
 msgid "Configure Persistent Directory"
 msgstr "配置持久化目录"
 
+#: scripts/1_config_jumpserver.sh:141
+msgid "Do you need custom persistent store, will use the default directory"
+msgstr "是否需要自定义持久化存储, 默认将使用目录"
+
 #: scripts/1_config_jumpserver.sh:120
 msgid ""
 "To modify the persistent directory such as logs video, you can select your "
@@ -239,6 +243,14 @@ msgstr "开始下载 Docker 程序"
 #: scripts/0_prepare.sh:25
 msgid "Using Docker cache"
 msgstr "使用 Docker 缓存文件"
+
+#: scripts/0_prepare.sh:24
+msgid "Download docker fails, check the network is normal"
+msgstr "下载 docker 失败, 请检查网络是否正常"
+
+#: scripts/0_prepare.sh:42
+msgid "Download docker-compose fails, check the network is normal"
+msgstr "下载 docker-compose 失败, 请检查网络是否正常"
 
 #: scripts/0_prepare.sh:31
 msgid "Starting to download Docker Compose binary"
@@ -344,9 +356,21 @@ msgstr "检查配置变更"
 msgid "Check program file changes"
 msgstr "检查程序文件变更"
 
+#: scripts/7_upgrade.sh:84
+msgid "Do you need to update"
+msgstr "是否需要更新"
+
 #: scripts/7_upgrade.sh:113
 msgid "Upgrade Docker image"
 msgstr "升级镜像文件"
+
+#:  scripts/7_upgrade.sh:114
+msgid "Failed to change the table structure"
+msgstr "表结构变更失败"
+
+#:  scripts/7_upgrade.sh:116
+msgid "Failed to change the table structure. Continue to upgrade"
+msgstr "表结构变更失败, 是否继续"
 
 #: scripts/7_upgrade.sh:116 jmsctl.sh:59
 msgid "Backup database"
@@ -363,6 +387,26 @@ msgstr "表结构变更可能需要一段时间, 请耐心等待"
 #: scripts/7_upgrade.sh:123
 msgid "Upgrade successfully. You can now restart the program"
 msgstr "升级成功, 可以重启程序了"
+
+#: scripts/8_uninstall.sh:8
+msgid "Make sure you have a backup of data, this operation is not reversible"
+msgstr "请确认已经备份好相关数据, 此操作不可逆"
+
+#: scripts/8_uninstall.sh:11
+msgid "Are you clean up JumpServer files"
+msgstr "确认清理 JumpServer 相关文件"
+
+#: scripts/8_uninstall.sh:20
+msgid "Cleaning up"
+msgstr "正在清理"
+
+#: scripts/8_uninstall.sh:27
+msgid "Do you need to clean up the Docker image"
+msgstr "是否清理 Docker 镜像"
+
+#: scripts/8_uninstall.sh:43
+msgid "Cleanup complete"
+msgstr "清理完成"
 
 #: jmsctl.sh:13
 msgid "Configuration file not found"
@@ -395,6 +439,10 @@ msgstr "重新配置 JumpServer"
 #: jmsctl.sh:46
 msgid "Check for updates JumpServer"
 msgstr "检查 JumpServer"
+
+#: jmsctl.sh:55
+msgid "Uninstall JumpServer"
+msgstr "卸载 JumpServer"
 
 #: jmsctl.sh:49
 msgid "Start   JumpServer"
