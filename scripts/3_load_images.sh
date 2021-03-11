@@ -2,7 +2,7 @@
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
-source "${BASE_DIR}/utils.sh"
+. "${BASE_DIR}/utils.sh"
 IMAGE_DIR=images
 
 cd "${BASE_DIR}" || return
@@ -18,7 +18,7 @@ function load_image_files() {
     fi
     if [[ ! -f ${IMAGE_DIR}/${filename} ]]; then
       if [[ ! ${filename} =~ xpack* && ! ${filename} =~ omnidb* ]]; then
-        echo_red "$(gettext -s 'Docker image not found'): ${IMAGE_DIR}/${filename}"
+        echo_red "$(gettext 'Docker image not found'): ${IMAGE_DIR}/${filename}"
       fi
       continue
     fi
@@ -36,17 +36,26 @@ function load_image_files() {
       echo
       docker load <"${IMAGE_DIR}/${filename}"
     else
-      echo "$(gettext -s 'Docker image loaded, skipping')"
+      echo "$(gettext 'Docker image loaded, skipping')"
     fi
   done
 }
 
 function pull_image() {
   images=$(get_images public)
+  DOCKER_IMAGE_PREFIX=$(get_config DOCKER_IMAGE_PREFIX)
   i=1
   for image in ${images}; do
     echo "[${image}]"
-    docker pull "${image}"
+    if [[ ! "$(docker images | grep $(echo ${image%:*}) | grep $(echo ${image#*:}))" ]]; then
+      if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
+        docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
+        docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
+        docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
+      else
+        docker pull "${image}"
+      fi
+    fi
     echo ""
     ((i++)) || true
   done

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # shellcheck source=./util.sh
-source "${BASE_DIR}/utils.sh"
+. "${BASE_DIR}/utils.sh"
 # shellcheck source=./2_install_docker.sh
-source "${BASE_DIR}/2_install_docker.sh"
+. "${BASE_DIR}/2_install_docker.sh"
 
 target=$1
 
@@ -37,29 +37,38 @@ function migrate_config_v1_5_to_v2_0() {
 function migrate_config_v2_5_v2_6() {
   # 迁移配置文件过去
   configs=("nginx" "core" "koko" "mysql" "redis")
-  for c in "${configs[@]}";do
-    if [[ ! -e ${CONFIG_DIR}/$c ]];then
-      cp -R "${PROJECT_DIR}/config_init/$c" "${CONFIG_DIR}"
-    fi
+  for d in "${configs[@]}"; do
+    for f in $(ls ${PROJECT_DIR}/config_init/${d} | grep -v cert); do
+      if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
+        \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
+      else
+        echo -e "${CONFIG_DIR}/${d}/${f}  [\033[32m √ \033[0m]"
+      fi
+    done
   done
 
   # 处理之前版本没有 USE_XPACK 的问题
   image_files=""
-  if [[ -d "$BASE_DIR/images" ]];then
+  if [[ -d "$BASE_DIR/images" ]]; then
     image_files=$(ls "$BASE_DIR"/images)
   fi
-  if [[ "${image_files}" =~ xpack ]];then
+  if [[ "${image_files}" =~ xpack ]]; then
     set_config "USE_XPACK" 1
   fi
 
-  # 处理一下之前 lb_http_server 配置文件没有迁移的问题
-  if [[ ! -f "${CONFIG_DIR}/nginx/lb_http_server.conf" ]];then
-    cp "${PROJECT_DIR}"/config_init/nginx/*.conf "${CONFIG_DIR}"/nginx
+  nginx_cert_dir="${config_dir}/nginx/cert"
+  if [[ ! -d ${nginx_cert_dir} ]]; then
+    mkdir -p "${nginx_cert_dir}"
+    \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
   fi
 
-  if [[ ! -d "${CONFIG_DIR}/nginx/cert" ]];then
-    cp -R "${PROJECT_DIR}"/config_init/nginx/cert "${CONFIG_DIR}"/nginx
-  fi
+  for f in $(ls ${PROJECT_DIR}/config_init/nginx/cert); do
+    if [[ -f "${nginx_cert_dir}/${f}" ]]; then
+      \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/${f} "${nginx_cert_dir}"
+    else
+      echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
+    fi
+  done
 }
 
 
@@ -70,57 +79,83 @@ function update_config_if_need() {
 }
 
 function update_proc_if_need() {
-  install_docker
+  if [[ ! -f ./docker/dockerd ]]; then
+    confirm="n"
+    read_from_input confirm "$(gettext 'Do you need to update') Docker?" "y/n" "${confirm}"
+    if [[ "${confirm}" == "y" ]]; then
+      install_docker
+      install_compose
+    fi
+    echo_done
+  else
+    # 针对离线包不做判断，直接更新
+    install_docker
+    install_compose
+  fi
 }
 
 function backup_db() {
   if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
     if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
       confirm="n"
-      read_from_input confirm "$(gettext -s 'Failed to backup the database. Continue to upgrade')?" "y/n" "${confirm}"
+      read_from_input confirm "$(gettext 'Failed to backup the database. Continue to upgrade')?" "y/n" "${confirm}"
       if [[ "${confirm}" == "n" ]]; then
         exit 1
       fi
     fi
   else
-    echo "SKIP_BACKUP_DB=${SKIP_BACKUP_DB}, $(gettext -s 'Skip database backup')"
+    echo "SKIP_BACKUP_DB=${SKIP_BACKUP_DB}, $(gettext 'Skip database backup')"
+  fi
+}
+
+function db_migrations() {
+  perform_db_migrations
+  if [[ "$?" != "0" ]]; then
+    log_error "$(gettext 'Failed to change the table structure')!"
+    confirm="n"
+    read_from_input confirm "$(gettext 'Failed to change the table structure. Continue to upgrade')?" "y/n" "${confirm}"
+    if [[ "${confirm}" != "y" ]]; then
+      exit 1
+    fi
+  else
+    echo_done
   fi
 }
 
 function main() {
   confirm="n"
   to_version="${VERSION}"
-  if [[ -n "${target}" ]];then
+  if [[ -n "${target}" ]]; then
     to_version="${target}"
   fi
 
-  read_from_input confirm "$(gettext -s 'Are you sure you want to update the current version to') ${to_version} ?" "y/n" "${confirm}"
-  if [[ "${confirm}" != "y" || -z "${to_version}" ]];then
+  read_from_input confirm "$(gettext 'Are you sure you want to update the current version to') ${to_version} ?" "y/n" "${confirm}"
+  if [[ "${confirm}" != "y" || -z "${to_version}" ]]; then
     exit 3
   fi
 
-  if [[ "${to_version}" && "${to_version}" != "${VERSION}" ]];then
+  if [[ "${to_version}" && "${to_version}" != "${VERSION}" ]]; then
     sed -i "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
     export VERSION=${to_version}
   fi
 
-  echo_yellow "\n1. $(gettext -s 'Check configuration changes')"
+  echo_yellow "\n1. $(gettext 'Check configuration changes')"
   update_config_if_need && echo_done || (echo_failed; exit  3)
 
-  echo_yellow "\n2. $(gettext -s 'Check program file changes')"
+  echo_yellow "\n2. $(gettext 'Check program file changes')"
   update_proc_if_need || (echo_failed; exit  4)
 
-  echo_yellow "\n3. $(gettext -s 'Upgrade Docker image')"
+  echo_yellow "\n3. $(gettext 'Upgrade Docker image')"
   bash "${SCRIPT_DIR}/3_load_images.sh" && echo_done || (echo_failed; exit  5)
 
-  echo_yellow "4. $(gettext -s 'Backup database')"
+  echo_yellow "\n4. $(gettext 'Backup database')"
   backup_db || exit 2
 
-  echo_yellow "\n5. $(gettext -s 'Apply database changes')"
-  echo "$(gettext -s 'Changing database schema may take a while, please wait patiently')"
-  perform_db_migrations && echo_done || (echo_failed; exit 6)
+  echo_yellow "\n5. $(gettext 'Apply database changes')"
+  echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
+  db_migrations || exit 2
 
-  echo_yellow "\n6. $(gettext -s 'Upgrade successfully. You can now restart the program')"
+  echo_yellow "\n6. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "./jmsctl.sh restart"
   echo -e "\n\n"
 }

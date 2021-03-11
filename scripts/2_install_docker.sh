@@ -1,6 +1,7 @@
 #!/bin/bash
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+PROJECT_DIR=$(dirname ${BASE_DIR})
 # shellcheck source=./util.sh
 . "${BASE_DIR}/utils.sh"
 
@@ -14,8 +15,8 @@ docker_copy_failed=0
 cd "${BASE_DIR}" || exit
 
 function copy_docker() {
-  cp ./docker/* /usr/bin/ \
-  && cp ./docker.service /etc/systemd/system/ \
+  \cp -f ./docker/* /usr/bin/ \
+  && \cp -f ./docker.service /etc/systemd/system/ \
   && chmod +x /usr/bin/docker* \
   && chmod 754 /etc/systemd/system/docker.service
   if [[ "$?" != "0" ]]; then
@@ -24,12 +25,11 @@ function copy_docker() {
 }
 
 function install_docker() {
-  if [[ ! -f ./docker/dockerd || ! -f ./docker/docker-compose ]]; then
-    rm -rf ./docker
+  if [[ ! -f ./docker/dockerd ]]; then
     prepare_docker_bin
   fi
   if [[ ! -f ./docker/dockerd ]]; then
-    echo_red "Error: $(gettext -s 'Docker program does not exist')"
+    echo_red "Error: $(gettext 'Docker program does not exist')"
     exit
   fi
 
@@ -48,25 +48,43 @@ function install_docker() {
     copy_docker
   elif [[ "${docker_version_match}" != "1" ]]; then
     confirm="n"
-    read_from_input confirm "$(gettext -s 'There are updates available currently. Do you want to update')?" "y/n" "${confirm}"
+    read_from_input confirm "$(gettext 'There are updates available currently. Do you want to update')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       copy_docker
     fi
   fi
 
   if [[ "${docker_copy_failed}" != "0" ]]; then
-    echo_red "Docker $(gettext -s 'File copy failed. May be that docker service is already running. Please stop the running docker and re-execute it')"
+    echo_red "$(gettext 'Docker File copy failed. May be that docker service is already running. Please stop the running docker and re-execute it')"
     echo_red "systemctl stop docker"
     exit 1
   fi
+  echo_done
+}
 
+function install_compose() {
+  if [[ ! -f ./docker/docker-compose ]]; then
+    prepare_compose_bin
+  fi
   old_docker_compose_md5=$(get_file_md5 /usr/bin/docker-compose)
   new_docker_compose_md5=$(get_file_md5 ./docker/docker-compose)
   if [[ ! -f "/usr/bin/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
-    cp ./docker/docker-compose /usr/bin/
+    \cp -f ./docker/docker-compose /usr/bin/
     chmod +x /usr/bin/docker-compose
   fi
   echo_done
+}
+
+function check_docker_install() {
+  command -v docker > /dev/null || {
+    install_docker
+  }
+}
+
+function check_compose_install() {
+  command -v docker-compose > /dev/null && echo_done || {
+    install_compose
+  }
 }
 
 function set_docker_config() {
@@ -99,19 +117,28 @@ f.close()
 }
 
 function config_docker() {
-  if [[ -f '/etc/docker/daemon.json' ]]; then
-    cp /etc/docker/daemon.json /etc/docker/daemon.json.bak
+  docker_storage_path=$(get_config DOCKER_DIR)
+  if [[ -z "${docker_storage_path}" ]]; then
+    docker_storage_path="/var/lib/docker"
   fi
-  echo "$(gettext -s 'Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as') /opt/docker"
-  df -h | grep -v map | grep -v devfs | grep -v tmpfs | grep -v "overlay" | grep -v "shm"
+  confirm="n"
+  read_from_input confirm "是否需要自定义 Docker 数据目录, 默认将使用 ${docker_storage_path} 目录?" "y/n" "${confirm}"
 
-  docker_storage_path='/opt/docker'
-  echo ""
-  read_from_input docker_storage_path "$(gettext -s 'Docker image storage directory')" '' "${docker_storage_path}"
+  if [[ "${confirm}" == "y" ]]; then
+    echo
+    echo "$(gettext 'Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as') /opt/docker"
+    df -h | egrep -v "map|devfs|tmpfs|overlay|shm"
+    echo
+    read_from_input docker_storage_path "$(gettext 'Docker image storage directory')" '' "${docker_storage_path}"
+  fi
 
   if [[ ! -d "${docker_storage_path}" ]]; then
-    mkdir -p ${docker_storage_path}
+    mkdir -p "${docker_storage_path}"
   fi
+  set_config DOCKER_DIR "${docker_storage_path}"
+
+  set_docker_config registry-mirrors '["https://hub-mirror.c.163.com", "http://f1361db2.m.daocloud.io"]'
+  set_docker_config live-restore "true"
   set_docker_config data-root "${docker_storage_path}"
   set_docker_config log-driver "json-file"
   set_docker_config log-opts '{"max-size": "10m", "max-file": "3"}'
@@ -122,6 +149,19 @@ function config_docker() {
   echo_done
 }
 
+function check_docker_config() {
+  if [[ ! -d "${CONFIG_DIR}" ]]; then
+    mkdir -p "${CONFIG_DIR}"
+    cp ${PROJECT_DIR}/config-example.txt "${CONFIG_FILE}"
+    \cp -rf ${PROJECT_DIR}/config_init/* "${CONFIG_DIR}"
+  fi
+  if [[ ! -f "/etc/docker/daemon.json" ]]; then
+    config_docker
+  else
+    echo_done
+  fi
+}
+
 function start_docker() {
   systemctl daemon-reload
   docker_is_running=$(is_running dockerd)
@@ -129,7 +169,7 @@ function start_docker() {
   ret_code='1'
   if [[ "${docker_is_running}" && "${docker_version_match}" != "1" || "${docker_config_change}" == "1" ]]; then
     confirm="y"
-    read_from_input confirm "$(gettext -s 'Docker version has changed or Docker configuration file has been changed, do you want to restart')?" "y/n" "${confirm}"
+    read_from_input confirm "$(gettext 'Docker version has changed or Docker configuration file has been changed, do you want to restart')?" "y/n" "${confirm}"
     if [[ "${confirm}" != "n" ]]; then
       systemctl restart docker
       ret_code="$?"
@@ -139,24 +179,34 @@ function start_docker() {
     ret_code="$?"
   fi
   systemctl enable docker &>/dev/null
-  if [[ "$ret_code" == "0" ]];then
+  if [[ "$ret_code" == "0" ]]; then
     echo_done
   else
     echo_failed
   fi
 }
 
+function check_docker_start() {
+  docker ps > /dev/null 2>&1
+  if [[ "$?" != "0" ]]; then
+    start_docker
+  else
+    echo_done
+  fi
+}
+
 function main() {
   if [[ "${OS}" == 'Darwin' ]]; then
-    echo "$(gettext -s 'Skip docker installation on MacOS')"
+    echo "$(gettext 'Skip docker installation on MacOS')"
     return
   fi
-  echo_yellow "1. $(gettext -s 'Install Docker')"
-  install_docker
-  echo_yellow "\n2. $(gettext -s 'Configure Docker')"
-  config_docker
-  echo_yellow "\n3. $(gettext -s 'Start Docker')"
-  start_docker
+  echo_yellow "1. $(gettext 'Install Docker')"
+  check_docker_install
+  check_compose_install
+  echo_yellow "\n2. $(gettext 'Configure Docker')"
+  check_docker_config
+  echo_yellow "\n3. $(gettext 'Start Docker')"
+  check_docker_start
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then

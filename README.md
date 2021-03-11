@@ -28,7 +28,7 @@ $ reboot  # 重启服务器
 $ ./jmsctl.sh install
 
 # 可以设置 国内加速源来安装
-$ export DOCKER_IMAGE_PREFIX=docker.mirrors.ustc.edu.cn
+$ export DOCKER_IMAGE_PREFIX=hub-mirror.c.163.com
 $ ./jmsctl.sh install
 
 # 检查更新

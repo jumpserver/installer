@@ -18,8 +18,8 @@ services:
     volumes:
       - share-volume:/opt/xpack
     healthcheck:
-      test: "ls /tmp/lock"
-      interval: 30s
+      test: "ls -d /opt/xpack/"
+      interval: 300s
       timeout: 20s
       retries: 3
     networks:

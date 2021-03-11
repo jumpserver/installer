@@ -13,7 +13,7 @@ rm -rf "${release_dir:?}"/*
 to_dir="${release_dir}/jumpserver-installer"
 mkdir -p "${to_dir}"
 
-if [[ -d '.git' ]];then
+if [[ -d '.git' ]]; then
   command -v git || yum -q -y install git
   git archive --format tar HEAD | tar x -C "${to_dir}"
 else
@@ -21,7 +21,7 @@ else
   mv /tmp/jumpserver/* "${to_dir}"
 fi
 
-if [[ $(uname) == 'Darwin' ]];then
+if [[ $(uname) == 'Darwin' ]]; then
   alias sedi='sed -i ""'
 else
   alias sedi='sed -i'

@@ -3,7 +3,7 @@
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 # shellcheck source=./const.sh
-source "${BASE_DIR}/const.sh"
+. "${BASE_DIR}/const.sh"
 
 function is_confirm() {
   read -r confirmed
@@ -120,9 +120,9 @@ function read_from_input() {
     msg="${msg} (${choices}) "
   fi
   if [[ -z "${default}" ]]; then
-    msg="${msg} ($(gettext -s 'no default'))"
+    msg="${msg} ($(gettext 'no default'))"
   else
-    msg="${msg} ($(gettext -s 'default') ${default})"
+    msg="${msg} ($(gettext 'default') ${default})"
   fi
   echo -n "${msg}: "
   read input
@@ -179,11 +179,11 @@ function echo_yellow() {
 
 function echo_done() {
   sleep 0.5
-  echo "$(gettext -s 'complete')"
+  echo "$(gettext 'complete')"
 }
 
 function echo_failed() {
-  echo_red "$(gettext -s 'fail')"
+  echo_red "$(gettext 'fail')"
 }
 
 function log_success() {
@@ -244,7 +244,9 @@ function get_docker_compose_cmd_line() {
     cmd="${cmd} -f ./compose/docker-compose-redis.yml"
   fi
   if [[ "${services}" =~ lb ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-lb.yml"
+    cmd="${cmd} -f ./compose/docker-compose-internal.yml -f ./compose/docker-compose-lb.yml"
+  else
+    cmd="${cmd} -f ./compose/docker-compose-external.yml"
   fi
   if [[ "${services}" =~ xpack ]]; then
     cmd="${cmd} -f ./compose/docker-compose-xpack.yml"
@@ -255,9 +257,33 @@ function get_docker_compose_cmd_line() {
   echo "${cmd}"
 }
 
+function install_required_pkg() {
+  required_pkg=$1
+  if command -v dnf > /dev/null; then
+    if [ "$required_pkg" == "python" ]; then
+      dnf -q -y install python2
+      ln -s /usr/bin/python2 /usr/bin/python
+    else
+      dnf -q -y install $required_pkg
+    fi
+  elif command -v yum > /dev/null; then
+    yum -q -y install $required_pkg
+  elif command -v apt > /dev/null; then
+    apt-get -qq -y install $required_pkg
+  elif command -v zypper > /dev/null; then
+    zypper -q -n install $required_pkg
+  elif command -v apk > /dev/null; then
+    apk add -q $required_pkg
+  else
+    echo_red "请先安装 $required_pkg "
+    exit 1
+  fi
+}
+
 function prepare_online_install_required_pkg() {
-  command -v wget &>/dev/null || yum -q -y install wget
-  command -v zip &>/dev/null || yum -q -y install zip
+  for i in curl wget zip python; do
+    command -v $i >/dev/null || install_required_pkg $i
+  done
 }
 
 function echo_logo() {

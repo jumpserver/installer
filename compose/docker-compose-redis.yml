@@ -5,6 +5,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+
   redis:
     image: jumpserver/redis:6-alpine
     container_name: jms_redis

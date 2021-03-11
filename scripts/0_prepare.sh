@@ -19,19 +19,33 @@ function prepare_docker_bin() {
   if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker.tar.gz
-    echo "$(gettext -s 'Starting to download Docker engine') ..."
-    wget "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz
+    echo "$(gettext 'Starting to download Docker engine') ..."
+    wget -q "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz || {
+      log_error "$(gettext 'Download docker fails, check the network is normal')"
+      exit 1
+    }
   else
-    echo "$(gettext -s 'Using Docker cache'): /tmp/docker.tar.gz"
+    echo "$(gettext 'Using Docker cache'): /tmp/docker.tar.gz"
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
+  chmod +x docker/*
+}
 
+function prepare_compose_bin() {
   md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
   if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
-    echo "$(gettext -s 'Starting to download Docker Compose binary') ..."
-    wget "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose
+    prepare_online_install_required_pkg
+    get_file_md5 /tmp/docker-compose
+    echo "$(gettext 'Starting to download Docker Compose binary') ..."
+    wget -q "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose || {
+      log_error "$(gettext 'Download docker-compose fails, check the network is normal')"
+      exit 1
+    }
   else
-    echo "$(gettext -s 'Using Docker Compose cache'): /tmp/docker-compose"
+    echo "$(gettext 'Using Docker Compose cache'): /tmp/docker-compose"
+  fi
+  if [[ ! -d "$BASE_DIR/docker" ]]; then
+    mkdir -p ${BASE_DIR}/docker
   fi
   cp /tmp/docker-compose docker/
   chmod +x docker/*
@@ -40,7 +54,7 @@ function prepare_docker_bin() {
 
 function prepare_image_files() {
   if ! pgrep -f "docker" > /dev/null; then
-    echo "$(gettext -s 'Docker is not running, please install and start')"
+    echo "$(gettext 'Docker is not running, please install and start')"
     exit 1
   fi
 
@@ -75,10 +89,10 @@ function prepare_image_files() {
     if [[ ${image_id} != "${saved_id}" ]]; then
       rm -f ${IMAGE_DIR}/${component}*
       image_path="${IMAGE_DIR}/${filename}"
-      echo "$(gettext -s 'Save image') ${image} -> ${image_path}"
+      echo "$(gettext 'Save image') ${image} -> ${image_path}"
       docker save -o "${image_path}" "${image}" && echo "${image_id}" >"${md5_path}"
     else
-      echo "$(gettext -s 'The image has been saved, skipping'): ${image}"
+      echo "$(gettext 'The image has been saved, skipping'): ${image}"
     fi
     echo
   done
@@ -90,10 +104,11 @@ function main() {
   prepare_online_install_required_pkg
   prepare_config
 
-  echo "1. $(gettext -s 'Preparing Docker offline package')"
+  echo "1. $(gettext 'Preparing Docker offline package')"
   prepare_docker_bin
+  prepare_compose_bin
 
-  echo -e "\n2. $(gettext -s 'Preparing image offline package')"
+  echo -e "\n2. $(gettext 'Preparing image offline package')"
   prepare_image_files
 
 }
