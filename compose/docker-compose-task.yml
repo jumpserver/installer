@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.4'
 
 services:
   celery:
@@ -19,8 +19,9 @@ services:
       - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
     healthcheck:
       test: "cd /opt/jumpserver/apps && python manage.py check_celery"
-      interval: 30s
-      timeout: 20s
+      interval: 10s
+      timeout: 5s
       retries: 3
+      start-period: 30s
     networks:
       - net

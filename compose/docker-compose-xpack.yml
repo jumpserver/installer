@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.4'
 
 services:
   core:
@@ -19,8 +19,8 @@ services:
       - share-volume:/opt/xpack
     healthcheck:
       test: "ls -d /opt/xpack/"
-      interval: 300s
-      timeout: 20s
+      interval: 10s
+      timeout: 5s
       retries: 3
     networks:
       - net

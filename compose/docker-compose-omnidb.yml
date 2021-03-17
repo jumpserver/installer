@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.4'
 
 services:
   omnidb:
@@ -17,5 +17,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      start-period: 10s
     networks:
       - net

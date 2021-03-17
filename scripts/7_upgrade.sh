@@ -109,6 +109,14 @@ function backup_db() {
 }
 
 function db_migrations() {
+  confirm="n"
+  read_from_input confirm "$(gettext 'Detected that the jms_core container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
+  if [[ "${confirm}" == "y" ]]; then
+    docker stop jms_core
+    docker rm jms_core
+  else
+    exit 1
+  fi
   perform_db_migrations
   if [[ "$?" != "0" ]]; then
     log_error "$(gettext 'Failed to change the table structure')!"

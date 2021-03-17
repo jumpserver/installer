@@ -362,6 +362,10 @@ msgstr "是否需要更新"
 msgid "Upgrade Docker image"
 msgstr "升级镜像文件"
 
+#: scripts/7_upgrade.sh:113
+msgid "Detected that the jms_core container is running. Do you want to close the container and continue to upgrade"
+msgstr "检测到 jms_core 正在运行, 是否需要关闭 jms_core 并继续升级"
+
 #:  scripts/7_upgrade.sh:114
 msgid "Failed to change the table structure"
 msgstr "表结构变更失败"
