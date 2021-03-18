@@ -18,7 +18,7 @@ services:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
     healthcheck:
-      test: "cd /opt/jumpserver/apps && python manage.py check_celery"
+      test: "cd /opt/jumpserver/apps && python manage.py check_celery &> /dev/null"
       interval: 60s
       timeout: 10s
       retries: 10
