@@ -32,7 +32,7 @@ services:
       test: "curl -L http://localhost/luna/ > /dev/null"
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 10
     networks:
       - net
 
@@ -47,7 +47,7 @@ services:
       test: "curl -L http://localhost/ > /dev/null"
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 10
     networks:
       - net
 
@@ -66,6 +66,6 @@ services:
       test: ["CMD", "curl", "http://localhost:8080"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 10
     networks:
       - net

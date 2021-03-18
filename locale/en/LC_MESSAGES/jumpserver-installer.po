@@ -362,6 +362,10 @@ msgstr ""
 msgid "Upgrade Docker image"
 msgstr ""
 
+#: scripts/7_upgrade.sh:113
+msgid "Detected that the jms_core container is running. Do you want to close the container and continue to upgrade"
+msgstr ""
+
 #:  scripts/7_upgrade.sh:114
 msgid "Failed to change the table structure"
 msgstr ""
