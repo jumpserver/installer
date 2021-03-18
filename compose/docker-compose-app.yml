@@ -1,4 +1,4 @@
-version: '2.4'
+version: '2.2'
 
 services:
   core:
@@ -17,8 +17,7 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health/"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 60s
+      retries: 10
     networks:
       - net
 
@@ -33,7 +32,7 @@ services:
       test: "curl -L http://localhost/luna/ > /dev/null"
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 10
     networks:
       - net
 
@@ -48,7 +47,7 @@ services:
       test: "curl -L http://localhost/ > /dev/null"
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 10
     networks:
       - net
 
@@ -67,7 +66,6 @@ services:
       test: ["CMD", "curl", "http://localhost:8080"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 10
     networks:
       - net

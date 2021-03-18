@@ -1,4 +1,4 @@
-version: '2.4'
+version: '2.2'
 
 services:
   omnidb:
@@ -16,7 +16,6 @@ services:
       test: "ps axu | grep 'omnidb'"
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 10
     networks:
       - net
