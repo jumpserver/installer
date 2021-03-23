@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.4'
 
 services:
   core:
@@ -21,7 +21,8 @@ services:
       test: "ls -d /opt/xpack/"
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 3
+      start_period: 10s
     networks:
       - net
 

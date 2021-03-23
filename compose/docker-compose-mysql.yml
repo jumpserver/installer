@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.4'
 
 services:
   core:
@@ -20,6 +20,7 @@ services:
       test: "mysql -uroot -h127.0.0.1 -p$$MYSQL_ROOT_PASSWORD -e 'SHOW DATABASES;'"
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 3
+      start-period: 10s
     networks:
       - net

@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.4'
 
 services:
   omnidb:
@@ -13,9 +13,10 @@ services:
       core:
         condition: service_healthy
     healthcheck:
-      test: "ps axu | grep 'omnidb'"
+      test: "ps axu | grep -v 'grep' | grep 'omnidb'"
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 3
+      start-period: 10s
     networks:
       - net
