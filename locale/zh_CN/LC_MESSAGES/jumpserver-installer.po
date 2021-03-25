@@ -44,6 +44,10 @@ msgstr "完成"
 msgid "fail"
 msgstr "失败"
 
+#: scripts/utils.sh:278
+msgid "Please install it first"
+msgstr "请先安装"
+
 #: scripts/6_db_restore.sh:19
 msgid "Start restoring database"
 msgstr "开始还原数据库"
@@ -53,9 +57,7 @@ msgid "file does not exist"
 msgstr "文件不存在"
 
 #: scripts/6_db_restore.sh:34
-msgid ""
-"Database recovery failed. Please check whether the database file is complete "
-"or try to recover manually"
+msgid "Database recovery failed. Please check whether the database file is complete or try to recover manually"
 msgstr "数据库恢复失败. 请检查数据库文件是否完整, 或尝试手动恢复"
 
 #: scripts/6_db_restore.sh:37
@@ -83,9 +85,7 @@ msgid "Docker file copy failed. May be that Docker service is already running. P
 msgstr "Docker 复制失败, 可能是已有 Docker 运行, 请停止运行的 Docker 重新执行"
 
 #: scripts/2_install_docker.sh:105
-msgid ""
-"Modify the default storage directory of Docker image, you can select your "
-"largest disk and create a directory in it, such as"
+msgid "Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as"
 msgstr "修改 Docker 镜像容器的默认存储目录, 可以找个最大的磁盘, 并创建目录, 如"
 
 #: scripts/2_install_docker.sh:110
@@ -93,9 +93,7 @@ msgid "Docker image storage directory"
 msgstr "Docker 镜像存储目录"
 
 #: scripts/2_install_docker.sh:132
-msgid ""
-"Docker version has changed or Docker configuration file has been changed, do "
-"you want to restart"
+msgid "Docker version has changed or Docker configuration file has been changed, do you want to restart"
 msgstr "Docker 版本发生改变 或 Docker 配置文件发生变化，是否要重启"
 
 #: scripts/2_install_docker.sh:151
@@ -134,6 +132,10 @@ msgstr "请输入 mysql 的用户名"
 msgid "Please enter MySQL password"
 msgstr "请输入 mysql 的密码"
 
+#: scripts/1_config_jumpserver.sh:27
+msgid "Failed to connect to database, please reset"
+msgstr "测试连接数据库失败, 请重新设置"
+
 #: scripts/1_config_jumpserver.sh:49
 msgid "Configure MySQL"
 msgstr "配置 MySQL"
@@ -153,6 +155,10 @@ msgstr "请输入 Redis 的端口"
 #: scripts/1_config_jumpserver.sh:69
 msgid "Please enter Redis password"
 msgstr "请输入 Redis 的密码"
+
+#: scripts/1_config_jumpserver.sh:79
+msgid "Failed to connect to redis, please reset"
+msgstr "测试连接 Redis 失败, 请重新设置"
 
 #: scripts/1_config_jumpserver.sh:91
 msgid "Configure Redis"
@@ -178,16 +184,16 @@ msgstr "配置持久化目录"
 msgid "Do you need custom persistent store, will use the default directory"
 msgstr "是否需要自定义持久化存储, 默认将使用目录"
 
+#: scripts/1_config_jumpserver.sh:125
+msgid "Do you need custom docker root dir, will use the default directory"
+msgstr "是否需要自定义 docker 存储目录, 默认将使用目录"
+
 #: scripts/1_config_jumpserver.sh:120
-msgid ""
-"To modify the persistent directory such as logs video, you can select your "
-"largest disk and create a directory in it, such as"
+msgid "To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as"
 msgstr "修改日志录像等持久化的目录，可以找个最大的磁盘，并创建目录，如"
 
 #: scripts/1_config_jumpserver.sh:121
-msgid ""
-"Note: you can not change it after installation, otherwise the database may "
-"be lost"
+msgid "Note: you can not change it after installation, otherwise the database may be lost"
 msgstr "注意：安装后不能更改，否则数据库可能会丢失"
 
 #: scripts/1_config_jumpserver.sh:129

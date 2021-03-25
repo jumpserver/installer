@@ -26,17 +26,8 @@ function remove_jumpserver() {
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need to clean up the Docker image')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
-    images=(
-      "jumpserver/redis:6-alpine"
-      "jumpserver/mysql:5"
-      "jumpserver/nginx:alpine2"
-      "jumpserver/luna:${VERSION}"
-      "jumpserver/core:${VERSION}"
-      "jumpserver/koko:${VERSION}"
-      "jumpserver/guacamole:${VERSION}"
-      "jumpserver/lina:${VERSION}"
-    )
-    for image in "${images[@]}"; do
+    images=$(get_images public)
+    for image in ${images}; do
       docker rmi ${image}
     done
   fi

@@ -275,7 +275,7 @@ function install_required_pkg() {
   elif command -v apk > /dev/null; then
     apk add -q $required_pkg
   else
-    echo_red "请先安装 $required_pkg "
+    echo_red "$(gettext 'Please install it first') $required_pkg"
     exit 1
   fi
 }

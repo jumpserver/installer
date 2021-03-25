@@ -44,6 +44,10 @@ msgstr ""
 msgid "fail"
 msgstr ""
 
+#: scripts/utils.sh:278
+msgid "Please install it first"
+msgstr ""
+
 #: scripts/6_db_restore.sh:19
 msgid "Start restoring database"
 msgstr ""
@@ -53,9 +57,7 @@ msgid "file does not exist"
 msgstr ""
 
 #: scripts/6_db_restore.sh:34
-msgid ""
-"Database recovery failed. Please check whether the database file is complete "
-"or try to recover manually"
+msgid "Database recovery failed. Please check whether the database file is complete or try to recover manually"
 msgstr ""
 
 #: scripts/6_db_restore.sh:37
@@ -83,9 +85,7 @@ msgid "Docker file copy failed. May be that Docker service is already running. P
 msgstr "Docker 复制失败, 可能是已有 Docker 运行, 请停止运行的 Docker 重新执行"
 
 #: scripts/2_install_docker.sh:105
-msgid ""
-"Modify the default storage directory of Docker image, you can select your "
-"largest disk and create a directory in it, such as"
+msgid "Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as"
 msgstr ""
 
 #: scripts/2_install_docker.sh:110
@@ -93,9 +93,7 @@ msgid "Docker image storage directory"
 msgstr ""
 
 #: scripts/2_install_docker.sh:132
-msgid ""
-"Docker version has changed or Docker configuration file has been changed, do "
-"you want to restart"
+msgid "Docker version has changed or Docker configuration file has been changed, do you want to restart"
 msgstr ""
 
 #: scripts/2_install_docker.sh:151
@@ -134,6 +132,10 @@ msgstr ""
 msgid "Please enter MySQL password"
 msgstr ""
 
+#: scripts/1_config_jumpserver.sh:27
+msgid "Failed to connect to database, please reset"
+msgstr ""
+
 #: scripts/1_config_jumpserver.sh:49
 msgid "Configure MySQL"
 msgstr ""
@@ -152,6 +154,10 @@ msgstr ""
 
 #: scripts/1_config_jumpserver.sh:69
 msgid "Please enter Redis password"
+msgstr ""
+
+#: scripts/1_config_jumpserver.sh:79
+msgid "Failed to connect to redis, please reset"
 msgstr ""
 
 #: scripts/1_config_jumpserver.sh:91
@@ -175,9 +181,11 @@ msgid "Configure Persistent Directory"
 msgstr ""
 
 #: scripts/1_config_jumpserver.sh:120
-msgid ""
-"To modify the persistent directory such as logs video, you can select your "
-"largest disk and create a directory in it, such as"
+msgid "To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as"
+msgstr ""
+
+#: scripts/1_config_jumpserver.sh:125
+msgid "Do you need custom docker root dir, will use the default directory"
 msgstr ""
 
 #: scripts/1_config_jumpserver.sh:141
@@ -185,9 +193,7 @@ msgid "Do you need custom persistent store, will use the default directory"
 msgstr ""
 
 #: scripts/1_config_jumpserver.sh:121
-msgid ""
-"Note: you can not change it after installation, otherwise the database may "
-"be lost"
+msgid "Note: you can not change it after installation, otherwise the database may be lost"
 msgstr ""
 
 #: scripts/1_config_jumpserver.sh:129

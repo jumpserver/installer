@@ -25,7 +25,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start-period: 10s
+      start_period: 10s
     networks:
       - net
 
@@ -50,6 +50,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start-period: 10s
+      start_period: 10s
     networks:
       - net

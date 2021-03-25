@@ -55,7 +55,7 @@ function install_docker() {
   fi
 
   if [[ "${docker_copy_failed}" != "0" ]]; then
-    echo_red "$(gettext 'Docker File copy failed. May be that docker service is already running. Please stop the running docker and re-execute it')"
+    echo_red "$(gettext 'Docker file copy failed. May be that docker service is already running. Please stop the running docker and re-execute it')"
     echo_red "systemctl stop docker"
     exit 1
   fi
@@ -122,7 +122,7 @@ function config_docker() {
     docker_storage_path="/var/lib/docker"
   fi
   confirm="n"
-  read_from_input confirm "是否需要自定义 Docker 数据目录, 默认将使用 ${docker_storage_path} 目录?" "y/n" "${confirm}"
+  read_from_input confirm "$(gettext 'Do you need custom docker root dir, will use the default directory') ${docker_storage_path}?" "y/n" "${confirm}"
 
   if [[ "${confirm}" == "y" ]]; then
     echo
@@ -154,6 +154,9 @@ function check_docker_config() {
     mkdir -p "${CONFIG_DIR}"
     cp ${PROJECT_DIR}/config-example.txt "${CONFIG_FILE}"
     \cp -rf ${PROJECT_DIR}/config_init/* "${CONFIG_DIR}"
+  fi
+  if [[ ! -f "${CONFIG_FILE}" ]]; then
+    \cp -f ${PROJECT_DIR}/config-example.txt "${CONFIG_FILE}"
   fi
   if [[ ! -f "/etc/docker/daemon.json" ]]; then
     config_docker

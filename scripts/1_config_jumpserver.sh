@@ -24,7 +24,7 @@ function set_external_mysql() {
 
   test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
   if [[ "$?" != "0" ]]; then
-    echo_red "测试连接数据库失败, 请重新设置"
+    echo_red "$(gettext 'Failed to connect to database, please reset')"
     echo
     set_mysql
   fi
@@ -76,7 +76,7 @@ function set_external_redis() {
 
   test_redis_connect ${redis_host} ${redis_port} ${redis_password}
   if [[ "$?" != "0" ]]; then
-    echo_red "测试连接 Redis 失败, 请重新设置"
+    echo_red "$(gettext 'Failed to connect to redis, please reset')"
     echo
     set_redis
   fi
