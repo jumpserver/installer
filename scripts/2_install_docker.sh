@@ -190,6 +190,7 @@ function start_docker() {
 }
 
 function check_docker_start() {
+  prepare_set_redhat_firewalld
   docker ps > /dev/null 2>&1
   if [[ "$?" != "0" ]]; then
     start_docker
