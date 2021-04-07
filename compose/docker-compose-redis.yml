@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.4'
 
 services:
   core:
@@ -17,9 +17,10 @@ services:
     env_file:
       - ${CONFIG_FILE}
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "$$REDIS_PASSWORD", "info"]
+      test: "redis-cli -h 127.0.0.1 -p $$REDIS_PORT -a $$REDIS_PASSWORD info"
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 3
+      start_period: 10s
     networks:
       - net

@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.4'
 
 networks:
   net:
@@ -7,4 +7,3 @@ networks:
       driver: default
       config:
         - subnet: ${DOCKER_SUBNET}
-

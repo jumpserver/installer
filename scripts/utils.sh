@@ -275,7 +275,7 @@ function install_required_pkg() {
   elif command -v apk > /dev/null; then
     apk add -q $required_pkg
   else
-    echo_red "请先安装 $required_pkg "
+    echo_red "$(gettext 'Please install it first') $required_pkg"
     exit 1
   fi
 }
@@ -284,6 +284,24 @@ function prepare_online_install_required_pkg() {
   for i in curl wget zip python; do
     command -v $i >/dev/null || install_required_pkg $i
   done
+}
+
+function prepare_set_redhat_firewalld() {
+  if [[ -f "/etc/redhat-release" ]]; then
+    if [[ "$(firewall-cmd --state)" == "running" ]]; then
+      docker_subnet=$(get_config DOCKER_SUBNET)
+      if [[ ! "$(firewall-cmd --list-rich-rule | grep ${docker_subnet})" ]]; then
+        firewall-cmd --permanent --zone=public --add-rich-rule="rule family=ipv4 source address=${docker_subnet} accept"
+        firewall-cmd --reload
+      fi
+      if command -v dnf > /dev/null; then
+        if [[ ! "$(firewall-cmd --list-all | grep 'masquerade: yes')" ]]; then
+          firewall-cmd --permanent --add-masquerade
+          firewall-cmd --reload
+        fi
+      fi
+    fi
+  fi
 }
 
 function echo_logo() {
