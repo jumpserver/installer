@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.4'
 
 services:
   core:
@@ -17,9 +17,10 @@ services:
       - ${CONFIG_DIR}/mysql/my.cnf:/etc/mysql/my.cnf
       - ${VOLUME_DIR}/mysql/data:/var/lib/mysql
     healthcheck:
-      test: "mysql -uroot -h127.0.0.1 -p$$MYSQL_ROOT_PASSWORD -e 'SHOW DATABASES;'"
+      test: "mysql -h127.0.0.1 -P$$DB_PORT -uroot -p$$MYSQL_ROOT_PASSWORD -e 'SHOW DATABASES;'"
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 3
+      start_period: 10s
     networks:
       - net

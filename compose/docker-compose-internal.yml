@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.4'
 
 services:
   nginx:
@@ -22,7 +22,8 @@ services:
       test: ["CMD", "test", "-f", "/var/run/nginx.pid"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 3
+      start_period: 10s
     networks:
       - net
 
@@ -41,9 +42,10 @@ services:
       - ${VOLUME_DIR}/koko/data:/opt/koko/data
     privileged: true
     healthcheck:
-      test: "ps axu | grep 'koko'"
+      test: "ps axu | grep -v 'grep' | grep 'koko'"
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 3
+      start_period: 10s
     networks:
       - net

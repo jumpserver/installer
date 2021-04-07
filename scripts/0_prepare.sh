@@ -54,7 +54,7 @@ function prepare_compose_bin() {
 
 function prepare_image_files() {
   if ! pgrep -f "docker" > /dev/null; then
-    echo "$(gettext 'Docker is not running, please install and start')"
+    echo "$(gettext 'Docker is not running, please install and start') ..."
     exit 1
   fi
 
