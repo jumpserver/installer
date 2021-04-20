@@ -10,7 +10,7 @@ PORT=$(get_config DB_PORT)
 USER=$(get_config DB_USER)
 PASSWORD=$(get_config DB_PASSWORD)
 DATABASE=$(get_config DB_NAME)
-DB_FILE=${BACKUP_DIR}/${DATABASE}-$(date +%F_%T).sql
+DB_FILE=${BACKUP_DIR}/${DATABASE}-${VERSION}-$(date +%F_%T).sql
 
 function main() {
   mkdir -p ${BACKUP_DIR}
