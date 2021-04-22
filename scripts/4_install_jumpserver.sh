@@ -69,6 +69,7 @@ function main() {
   echo_logo
   set_lang
   pre_install
+  prepare_config
   echo_green "\n>>> $(gettext 'Install and Configure Docker')"
   (bash "${BASE_DIR}/2_install_docker.sh")
   echo_green "\n>>> $(gettext 'Loading Docker Image')"
