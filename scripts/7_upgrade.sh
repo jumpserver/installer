@@ -35,17 +35,7 @@ function migrate_config_v1_5_to_v2_0() {
 }
 
 function migrate_config_v2_5_v2_6() {
-  # 迁移配置文件过去
-  configs=("nginx" "core" "koko" "mysql" "redis")
-  for d in "${configs[@]}"; do
-    for f in $(ls ${PROJECT_DIR}/config_init/${d} | grep -v cert); do
-      if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
-        \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
-      else
-        echo -e "${CONFIG_DIR}/${d}/${f}  [\033[32m √ \033[0m]"
-      fi
-    done
-  done
+  prepare_config
 
   # 处理之前版本没有 USE_XPACK 的问题
   image_files=""
@@ -55,20 +45,6 @@ function migrate_config_v2_5_v2_6() {
   if [[ "${image_files}" =~ xpack ]]; then
     set_config "USE_XPACK" 1
   fi
-
-  nginx_cert_dir="${config_dir}/nginx/cert"
-  if [[ ! -d ${nginx_cert_dir} ]]; then
-    mkdir -p "${nginx_cert_dir}"
-    \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
-  fi
-
-  for f in $(ls ${PROJECT_DIR}/config_init/nginx/cert); do
-    if [[ -f "${nginx_cert_dir}/${f}" ]]; then
-      \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/${f} "${nginx_cert_dir}"
-    else
-      echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
-    fi
-  done
 }
 
 
@@ -143,24 +119,23 @@ function main() {
     sed -i "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
     export VERSION=${to_version}
   fi
-
-  echo_yellow "\n1. $(gettext 'Check configuration changes')"
+  echo
   update_config_if_need && echo_done || (echo_failed; exit  3)
 
-  echo_yellow "\n2. $(gettext 'Check program file changes')"
+  echo_yellow "\n4. $(gettext 'Check program file changes')"
   update_proc_if_need || (echo_failed; exit  4)
 
-  echo_yellow "\n3. $(gettext 'Upgrade Docker image')"
+  echo_yellow "\n5. $(gettext 'Upgrade Docker image')"
   bash "${SCRIPT_DIR}/3_load_images.sh" && echo_done || (echo_failed; exit  5)
 
-  echo_yellow "\n4. $(gettext 'Backup database')"
+  echo_yellow "\n6. $(gettext 'Backup database')"
   backup_db || exit 2
 
-  echo_yellow "\n5. $(gettext 'Apply database changes')"
+  echo_yellow "\n7. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
   db_migrations || exit 2
 
-  echo_yellow "\n6. $(gettext 'Upgrade successfully. You can now restart the program')"
+  echo_yellow "\n8. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "./jmsctl.sh restart"
   echo -e "\n\n"
 }
