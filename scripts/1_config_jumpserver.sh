@@ -70,6 +70,9 @@ function set_mysql() {
 function set_external_redis() {
   redis_host=$(get_config REDIS_HOST)
   read_from_input redis_host "$(gettext 'Please enter Redis server IP')" "" "${redis_host}"
+  if [[ "${redis_host}" == "127.0.0.1" ]]; then
+    redis_host=$(hostname -I | cut -d ' ' -f1)
+  fi
 
   redis_port=$(get_config REDIS_PORT)
   read_from_input redis_port "$(gettext 'Please enter Redis server port')" "" "${redis_port}"
