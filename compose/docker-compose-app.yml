@@ -54,19 +54,19 @@ services:
     networks:
       - net
 
-  guacamole:
-    image: jumpserver/guacamole:${VERSION}
-    container_name: jms_guacamole
+  lion:
+    image: jumpserver/lion:${VERSION}
+    container_name: jms_lion
     env_file:
       - ${CONFIG_FILE}
     restart: always
     volumes:
-      - ${VOLUME_DIR}/guacamole/data:/config/guacamole/data
+      - ${VOLUME_DIR}/lion/data:/opt/lion/data
     depends_on:
       core:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:8080"]
+      test: ["CMD", "curl", "http://localhost:8081/lion/health/"]
       interval: 10s
       timeout: 5s
       retries: 3

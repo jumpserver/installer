@@ -71,11 +71,5 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE=true
 # Koko 配置
 CORE_HOST=http://core:8080
 
-# Guacamole 配置
-JUMPSERVER_SERVER=http://core:8080
-JUMPSERVER_KEY_DIR=/config/guacamole/data/key/
-JUMPSERVER_RECORD_PATH=/config/guacamole/data/record/
-JUMPSERVER_DRIVE_PATH=/config/guacamole/data/drive/
-JUMPSERVER_ENABLE_DRIVE=true
-JUMPSERVER_CLEAR_DRIVE_SESSION=true
-JUMPSERVER_CLEAR_DRIVE_SCHEDULE=24
+# lion 配置
+CORE_HOST=http://core:8080
