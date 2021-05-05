@@ -123,7 +123,7 @@ function set_secret_key() {
   # 生成随机的 SECRET_KEY 和 BOOTSTRAP_KEY
   secret_key=$(get_config SECRET_KEY)
   if [[ -z "${secret_key}" ]]; then
-    secret_key=$(random_str 49)
+    secret_key=$(random_str 48)
     set_config SECRET_KEY "${secret_key}"
     echo "SECRETE_KEY:     ${secret_key}"
   fi

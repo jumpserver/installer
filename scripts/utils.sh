@@ -19,13 +19,12 @@ function random_str() {
   if [[ -z ${len} ]]; then
     len=16
   fi
-  command -v ifconfig &>/dev/null
+  command -v dmidecode &>/dev/null
   if [[ "$?" == "0" ]]; then
-    cmd=ifconfig
+    dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len}; echo
   else
-    cmd="ip a"
+    cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
   fi
-  sh -c "${cmd}" | tail -10 | base64 | head -c ${len}
 }
 
 function has_config() {
