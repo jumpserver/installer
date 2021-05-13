@@ -9,6 +9,9 @@ PROJECT_DIR=$(dirname ${BASE_DIR})
 function set_external_mysql() {
   mysql_host=$(get_config DB_HOST)
   read_from_input mysql_host "$(gettext 'Please enter MySQL server IP')" "" "${mysql_host}"
+  if [[ "${mysql_host}" == "127.0.0.1" ]]; then
+    mysql_host=$(hostname -I | cut -d ' ' -f1)
+  fi
 
   mysql_port=$(get_config DB_PORT)
   read_from_input mysql_port "$(gettext 'Please enter MySQL server port')" "" "${mysql_port}"
@@ -48,7 +51,7 @@ function set_internal_mysql() {
 }
 
 function set_mysql() {
-  echo_yellow "\n7. $(gettext 'Configure MySQL')"
+  echo_yellow "\n4. $(gettext 'Configure MySQL')"
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
   confirm="n"
   if [[ "${use_external_mysql}" == "1" ]]; then
@@ -67,6 +70,9 @@ function set_mysql() {
 function set_external_redis() {
   redis_host=$(get_config REDIS_HOST)
   read_from_input redis_host "$(gettext 'Please enter Redis server IP')" "" "${redis_host}"
+  if [[ "${redis_host}" == "127.0.0.1" ]]; then
+    redis_host=$(hostname -I | cut -d ' ' -f1)
+  fi
 
   redis_port=$(get_config REDIS_PORT)
   read_from_input redis_port "$(gettext 'Please enter Redis server port')" "" "${redis_port}"
@@ -97,7 +103,7 @@ function set_internal_redis() {
 }
 
 function set_redis() {
-  echo_yellow "\n8. $(gettext 'Configure Redis')"
+  echo_yellow "\n5. $(gettext 'Configure Redis')"
   use_external_redis=$(get_config USE_EXTERNAL_REDIS)
   confirm="n"
   if [[ "${use_external_redis}" == "1" ]]; then
@@ -113,11 +119,11 @@ function set_redis() {
 }
 
 function set_secret_key() {
-  echo_yellow "\n5. $(gettext 'Configure Private Key')"
+  echo_yellow "\n2. $(gettext 'Configure Private Key')"
   # 生成随机的 SECRET_KEY 和 BOOTSTRAP_KEY
   secret_key=$(get_config SECRET_KEY)
   if [[ -z "${secret_key}" ]]; then
-    secret_key=$(random_str 49)
+    secret_key=$(random_str 48)
     set_config SECRET_KEY "${secret_key}"
     echo "SECRETE_KEY:     ${secret_key}"
   fi
@@ -132,7 +138,7 @@ function set_secret_key() {
 }
 
 function set_volume_dir() {
-  echo_yellow "\n6. $(gettext 'Configure Persistent Directory')"
+  echo_yellow "\n3. $(gettext 'Configure Persistent Directory')"
   volume_dir=$(get_config VOLUME_DIR)
   if [[ -z "${volume_dir}" ]]; then
     volume_dir="/opt/jumpserver"
@@ -155,67 +161,9 @@ function set_volume_dir() {
   echo_done
 }
 
-function prepare_config() {
-  cwd=$(pwd)
-  cd "${PROJECT_DIR}" || exit
-
-  config_dir=$(dirname "${CONFIG_FILE}")
-  echo_yellow "1. $(gettext 'Check Configuration File')"
-  echo "$(gettext 'Path to Configuration file'): ${config_dir}"
-  if [[ ! -d ${config_dir} ]]; then
-    config_dir_parent=$(dirname "${config_dir}")
-    mkdir -p "${config_dir_parent}"
-    cp config-example.txt "${CONFIG_FILE}"
-  fi
-  if [[ ! -f ${CONFIG_FILE} ]]; then
-    cp config-example.txt "${CONFIG_FILE}"
-  else
-    echo -e "${CONFIG_FILE}  [\033[32m √ \033[0m]"
-  fi
-  if [[ ! -f .env ]]; then
-    ln -s "${CONFIG_FILE}" .env
-  fi
-  configs=("nginx" "core" "koko" "mysql" "redis")
-  for d in "${configs[@]}"; do
-    for f in $(ls ${PROJECT_DIR}/config_init/${d} | grep -v cert); do
-      if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
-        \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
-      else
-        echo -e "${CONFIG_DIR}/${d}/${f}  [\033[32m √ \033[0m]"
-      fi
-    done
-  done
-  echo_done
-
-  nginx_cert_dir="${config_dir}/nginx/cert"
-  echo_yellow "\n2. $(gettext 'Configure Nginx')"
-  echo "$(gettext 'configuration file'): ${nginx_cert_dir}"
-  # 迁移 nginx 的证书
-  if [[ ! -d ${nginx_cert_dir} ]]; then
-    mkdir -p "${nginx_cert_dir}"
-    \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
-  fi
-
-  for f in $(ls ${PROJECT_DIR}/config_init/nginx/cert); do
-    if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
-      \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/${f} "${nginx_cert_dir}"
-    else
-      echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
-    fi
-  done
-  echo_done
-
-  backup_dir="${config_dir}/backup"
-  mkdir -p "${backup_dir}"
-  now=$(date +'%Y-%m-%d_%H-%M-%S')
-  backup_config_file="${backup_dir}/config.txt.${now}"
-  echo_yellow "\n3. $(gettext 'Backup Configuration File')"
-  cp "${CONFIG_FILE}" "${backup_config_file}"
-  echo "$(gettext 'Back up to') ${backup_config_file}"
-  echo_done
-
+function set_network() {
   # IPv6 支持
-  echo_yellow "\n4. $(gettext 'Configure Network')"
+  echo_yellow "1. $(gettext 'Configure Network')"
   use_ipv6=$(get_config USE_IPV6)
   confirm="n"
   if [[ "${use_ipv6}" == "1" ]]; then
@@ -230,14 +178,10 @@ function prepare_config() {
   cd "${cwd}" || exit
 }
 
-function set_jumpserver() {
-  prepare_config
+function main() {
+  set_network
   set_secret_key
   set_volume_dir
-}
-
-function main() {
-  set_jumpserver
   set_mysql
   set_redis
 }

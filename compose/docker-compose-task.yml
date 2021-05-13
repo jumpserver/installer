@@ -20,7 +20,7 @@ services:
     healthcheck:
       test: "cd /opt/jumpserver/apps && python manage.py check_celery"
       interval: 10s
-      timeout: 10s
+      timeout: 20s
       retries: 3
       start_period: 30s
     networks:
