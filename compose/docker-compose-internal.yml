@@ -15,7 +15,7 @@ services:
         condition: service_healthy
       koko:
         condition: service_healthy
-      guacamole:
+      lion:
         condition: service_healthy
 
     healthcheck:

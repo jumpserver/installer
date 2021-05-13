@@ -99,7 +99,7 @@ function get_images() {
     "jumpserver/luna:${VERSION}"
     "jumpserver/core:${VERSION}"
     "jumpserver/koko:${VERSION}"
-    "jumpserver/guacamole:${VERSION}"
+    "jumpserver/lion:${VERSION}"
     "jumpserver/lina:${VERSION}"
   )
   for image in "${images[@]}"; do
@@ -200,7 +200,7 @@ function log_error() {
 
 function get_docker_compose_services() {
   ignore_db="$1"
-  services="core koko guacamole lina luna nginx"
+  services="core koko lion lina luna nginx"
   use_task=$(get_config USE_TASK)
   if [[ "${use_task}" != "0" ]]; then
     services+=" celery"
