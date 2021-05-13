@@ -9,4 +9,3 @@ networks:
       config:
         - subnet: ${DOCKER_SUBNET}
         - subnet: ${DOCKER_SUBNET_IPV6}
-

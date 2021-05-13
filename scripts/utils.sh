@@ -19,13 +19,12 @@ function random_str() {
   if [[ -z ${len} ]]; then
     len=16
   fi
-  command -v ifconfig &>/dev/null
+  command -v dmidecode &>/dev/null
   if [[ "$?" == "0" ]]; then
-    cmd=ifconfig
+    dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len}; echo
   else
-    cmd="ip a"
+    cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
   fi
-  sh -c "${cmd}" | tail -10 | base64 | head -c ${len}
 }
 
 function has_config() {
@@ -159,9 +158,9 @@ function check_md5() {
 function is_running() {
   ps axu | grep -v grep | grep $1 &>/dev/null
   if [[ "$?" == "0" ]]; then
-    echo 1
-  else
     echo 0
+  else
+    echo 1
   fi
 }
 
@@ -302,6 +301,68 @@ function prepare_set_redhat_firewalld() {
       fi
     fi
   fi
+}
+
+function prepare_config() {
+  cwd=$(pwd)
+  cd "${PROJECT_DIR}" || exit
+
+  config_dir=$(dirname "${CONFIG_FILE}")
+  echo_yellow "1. $(gettext 'Check Configuration File')"
+  echo "$(gettext 'Path to Configuration file'): ${config_dir}"
+  if [[ ! -d ${config_dir} ]]; then
+    mkdir -p ${config_dir}
+    cp config-example.txt "${CONFIG_FILE}"
+  fi
+  if [[ ! -f ${CONFIG_FILE} ]]; then
+    cp config-example.txt "${CONFIG_FILE}"
+  else
+    echo -e "${CONFIG_FILE}  [\033[32m √ \033[0m]"
+  fi
+  if [[ ! -f .env ]]; then
+    ln -s "${CONFIG_FILE}" .env
+  fi
+  if [[ ! -f "./compose/.env" ]]; then
+    ln -s "${CONFIG_FILE}" ./compose/.env
+  fi
+  configs=("nginx" "core" "koko" "mysql" "redis")
+  for d in "${configs[@]}"; do
+    for f in $(ls ${PROJECT_DIR}/config_init/${d} | grep -v cert); do
+      if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
+        \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
+      else
+        echo -e "${CONFIG_DIR}/${d}/${f}  [\033[32m √ \033[0m]"
+      fi
+    done
+  done
+  echo_done
+
+  nginx_cert_dir="${config_dir}/nginx/cert"
+  echo_yellow "\n2. $(gettext 'Configure Nginx')"
+  echo "$(gettext 'configuration file'): ${nginx_cert_dir}"
+  # 迁移 nginx 的证书
+  if [[ ! -d ${nginx_cert_dir} ]]; then
+    mkdir -p "${nginx_cert_dir}"
+    \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
+  fi
+
+  for f in $(ls ${PROJECT_DIR}/config_init/nginx/cert); do
+    if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
+      \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/${f} "${nginx_cert_dir}"
+    else
+      echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
+    fi
+  done
+  echo_done
+
+  backup_dir="${config_dir}/backup"
+  mkdir -p "${backup_dir}"
+  now=$(date +'%Y-%m-%d_%H-%M-%S')
+  backup_config_file="${backup_dir}/config.txt.${now}"
+  echo_yellow "\n3. $(gettext 'Backup Configuration File')"
+  cp "${CONFIG_FILE}" "${backup_config_file}"
+  echo "$(gettext 'Back up to') ${backup_config_file}"
+  echo_done
 }
 
 function echo_logo() {
