@@ -405,7 +405,7 @@ function check_ipv6_iptables_if_need() {
   use_ipv6=$(get_config USE_IPV6)
   subnet_ipv6=$(get_config DOCKER_SUBNET_IPV6)
   if [[ "${use_ipv6}" == "1" ]]; then
-    if ! ip6tables -t nat -L | grep "${subnet_ipv6}"; then
+    if [[ ! "$(ip6tables -t nat -L | grep "${subnet_ipv6}")" ]]; then
       ip6tables -t nat -A POSTROUTING -s "${subnet_ipv6}" -j MASQUERADE
     fi
   fi
