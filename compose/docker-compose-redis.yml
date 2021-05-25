@@ -14,8 +14,9 @@ services:
       - ${VOLUME_DIR}/redis/data:/data
       - ${CONFIG_DIR}/redis/redis.conf:/etc/redis.conf
     command: ["redis-server", "/etc/redis.conf", "--requirepass", "$REDIS_PASSWORD"]
-    env_file:
-      - ${CONFIG_FILE}
+    environment:
+      REDIS_PORT: $REDIS_PORT
+      REDIS_PASSWORD: $REDIS_PASSWORD
     healthcheck:
       test: "redis-cli -h 127.0.0.1 -p $$REDIS_PORT -a $$REDIS_PASSWORD info"
       interval: 10s

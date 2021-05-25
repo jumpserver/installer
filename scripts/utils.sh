@@ -21,7 +21,12 @@ function random_str() {
   fi
   command -v dmidecode &>/dev/null
   if [[ "$?" == "0" ]]; then
-    dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len}; echo
+    uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len})
+    if [[ "$(echo $uuid | wc -L)" == "${len}" ]]; then
+      echo ${uuid}
+    else
+      cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
+    fi
   else
     cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
   fi

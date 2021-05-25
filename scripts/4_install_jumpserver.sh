@@ -6,7 +6,17 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 . "${BASE_DIR}/utils.sh"
 
 function pre_install() {
-  echo
+  command -v systemctl &>/dev/null
+  if [[ "$?" != "0" ]]; then
+    command -v docker > /dev/null || {
+      log_error "$(gettext 'The current Linux system does not support SYSTEMd management. Please deploy docker by yourself before running this script again')"
+      exit 1
+    }
+    command -v docker-compose > /dev/null || {
+      log_error "$(gettext 'The current Linux system does not support SYSTEMd management. Please deploy docker-compose by yourself before running this script again')"
+      exit 1
+    }
+  fi
 }
 
 function post_install() {

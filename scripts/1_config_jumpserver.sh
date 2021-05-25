@@ -46,7 +46,11 @@ function set_internal_mysql() {
   if [[ -z "${password}" ]]; then
     DB_PASSWORD=$(random_str 26)
     set_config DB_PASSWORD ${DB_PASSWORD}
-    set_config MYSQL_ROOT_PASSWORD ${DB_PASSWORD}
+  fi
+  user=$(get_config DB_USER)
+  if [[ "${user}" != "root" ]]; then
+    DB_USER=root
+    set_config DB_USER ${DB_USER}
   fi
 }
 
