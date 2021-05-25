@@ -277,7 +277,14 @@ function install_required_pkg() {
   elif command -v zypper > /dev/null; then
     zypper -q -n install $required_pkg
   elif command -v apk > /dev/null; then
-    apk add -q $required_pkg
+    if [ "$required_pkg" == "python" ]; then
+      apk add -q python2
+    else
+      apk add -q $required_pkg
+    fi
+    command -v gettext > /dev/null || {
+      apk add -q gettext-dev
+    }
   else
     echo_red "$(gettext 'Please install it first') $required_pkg"
     exit 1
