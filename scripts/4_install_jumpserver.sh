@@ -45,7 +45,7 @@ function post_install() {
   echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): admin"
 
   echo_yellow "\n4. SSH/SFTP $(gettext 'access')"
-  echo "ssh admin@${HOST} -p${SSH_PORT}"
+  echo "ssh -p${SSH_PORT} admin@${HOST}"
   echo "sftp -P${SSH_PORT} admin@${HOST}"
 
   echo_yellow "\n5. $(gettext 'More information')"
