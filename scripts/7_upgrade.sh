@@ -88,6 +88,10 @@ function db_migrations() {
     else
       exit 1
     fi
+    if [[ "$(docker ps -a | grep jms_guacamole)" ]]; then
+      docker stop jms_guacamole > /dev/null
+      docker rm jms_guacamole > /dev/null
+    fi
   fi
 
   perform_db_migrations

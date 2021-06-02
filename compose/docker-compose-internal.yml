@@ -13,11 +13,6 @@ services:
     depends_on:
       core:
         condition: service_healthy
-      koko:
-        condition: service_healthy
-      lion:
-        condition: service_healthy
-
     healthcheck:
       test: ["CMD", "test", "-f", "/var/run/nginx.pid"]
       interval: 10s

@@ -9,7 +9,7 @@ PROJECT_DIR=$(dirname ${BASE_DIR})
 function set_external_mysql() {
   mysql_host=$(get_config DB_HOST)
   read_from_input mysql_host "$(gettext 'Please enter MySQL server IP')" "" "${mysql_host}"
-  if [[ "${mysql_host}" == "127.0.0.1" ]]; then
+  if [[ "${mysql_host}" == "127.0.0.1" || "${mysql_host}" == "localhost" ]]; then
     mysql_host=$(hostname -I | cut -d ' ' -f1)
   fi
 
@@ -46,7 +46,11 @@ function set_internal_mysql() {
   if [[ -z "${password}" ]]; then
     DB_PASSWORD=$(random_str 26)
     set_config DB_PASSWORD ${DB_PASSWORD}
-    set_config MYSQL_ROOT_PASSWORD ${DB_PASSWORD}
+  fi
+  user=$(get_config DB_USER)
+  if [[ "${user}" != "root" ]]; then
+    DB_USER=root
+    set_config DB_USER ${DB_USER}
   fi
 }
 
@@ -70,7 +74,7 @@ function set_mysql() {
 function set_external_redis() {
   redis_host=$(get_config REDIS_HOST)
   read_from_input redis_host "$(gettext 'Please enter Redis server IP')" "" "${redis_host}"
-  if [[ "${redis_host}" == "127.0.0.1" ]]; then
+  if [[ "${redis_host}" == "127.0.0.1" || "${redis_host}" == "localhost" ]]; then
     redis_host=$(hostname -I | cut -d ' ' -f1)
   fi
 

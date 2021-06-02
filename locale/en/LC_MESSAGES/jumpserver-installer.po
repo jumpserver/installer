@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-04-22 12:13+0800\n"
+"POT-Creation-Date: 2021-05-25 11:06+0800\n"
 "PO-Revision-Date: 2021-01-21 19:15+0800\n"
 "Last-Translator: Bai <jiangjiebai@jiangjiedembp.lan>\n"
 "Language-Team: Language locale/en/LC\n"
@@ -84,71 +84,71 @@ msgstr ""
 msgid "Failed to connect to database, please reset"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:54
+#: scripts/1_config_jumpserver.sh:58
 msgid "Configure MySQL"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:60
+#: scripts/1_config_jumpserver.sh:64
 msgid "Do you want to use external MySQL"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:72
+#: scripts/1_config_jumpserver.sh:76
 msgid "Please enter Redis server IP"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:75
+#: scripts/1_config_jumpserver.sh:82
 msgid "Please enter Redis server port"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:78
+#: scripts/1_config_jumpserver.sh:85
 msgid "Please enter Redis password"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:82
+#: scripts/1_config_jumpserver.sh:89
 msgid "Failed to connect to redis, please reset"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:103
+#: scripts/1_config_jumpserver.sh:110
 msgid "Configure Redis"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:109
+#: scripts/1_config_jumpserver.sh:116
 msgid "Do you want to use external Redis"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:119
+#: scripts/1_config_jumpserver.sh:126
 msgid "Configure Private Key"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:138
+#: scripts/1_config_jumpserver.sh:145
 msgid "Configure Persistent Directory"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:144
+#: scripts/1_config_jumpserver.sh:151
 msgid "Do you need custom persistent store, will use the default directory"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:147
+#: scripts/1_config_jumpserver.sh:154
 msgid ""
 "To modify the persistent directory such as logs video, you can select your "
 "largest disk and create a directory in it, such as"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:148
+#: scripts/1_config_jumpserver.sh:155
 msgid ""
 "Note: you can not change it after installation, otherwise the database may "
 "be lost"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:152
+#: scripts/1_config_jumpserver.sh:159
 msgid "Persistent storage directory"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:163
+#: scripts/1_config_jumpserver.sh:170
 msgid "Configure Network"
 msgstr ""
 
-#: scripts/1_config_jumpserver.sh:169
+#: scripts/1_config_jumpserver.sh:176
 msgid "Do you want to support IPv6"
 msgstr ""
 
@@ -210,59 +210,71 @@ msgstr ""
 msgid "Docker image loaded, skipping"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:13
-msgid "The Installation is Complete"
+#: scripts/4_install_jumpserver.sh:12
+msgid ""
+"The current Linux system does not support SYSTEMd management. Please deploy "
+"docker by yourself before running this script again"
+msgstr ""
+
+#: scripts/4_install_jumpserver.sh:16
+msgid ""
+"The current Linux system does not support SYSTEMd management. Please deploy "
+"docker-compose by yourself before running this script again"
 msgstr ""
 
 #: scripts/4_install_jumpserver.sh:22
+msgid "The Installation is Complete"
+msgstr ""
+
+#: scripts/4_install_jumpserver.sh:31
 msgid "You can use the following command to start, and then visit"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:25
+#: scripts/4_install_jumpserver.sh:34
 msgid "Other management commands"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:30
+#: scripts/4_install_jumpserver.sh:39
 msgid "For more commands, you can enter ./jmsctl.sh --help to understand"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:32
+#: scripts/4_install_jumpserver.sh:41
 msgid "Web access"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:35
+#: scripts/4_install_jumpserver.sh:44
 msgid "Default username"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:35
+#: scripts/4_install_jumpserver.sh:44
 msgid "Default password"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:37
+#: scripts/4_install_jumpserver.sh:46
 msgid "access"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:41
+#: scripts/4_install_jumpserver.sh:50
 msgid "More information"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:42
+#: scripts/4_install_jumpserver.sh:51
 msgid "Offical Website"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:43
+#: scripts/4_install_jumpserver.sh:52
 msgid "Documentation"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:73
+#: scripts/4_install_jumpserver.sh:82
 msgid "Install and Configure Docker"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:75
+#: scripts/4_install_jumpserver.sh:84
 msgid "Loading Docker Image"
 msgstr ""
 
-#: scripts/4_install_jumpserver.sh:77
+#: scripts/4_install_jumpserver.sh:86
 msgid "Install and Configure JumpServer"
 msgstr ""
 
@@ -304,61 +316,57 @@ msgstr ""
 msgid "The backup file does not exist"
 msgstr ""
 
-#: scripts/7_upgrade.sh:83
+#: scripts/7_upgrade.sh:59
 msgid "Do you need to update"
 msgstr ""
 
-#: scripts/7_upgrade.sh:95
+#: scripts/7_upgrade.sh:71
 msgid "Failed to backup the database. Continue to upgrade"
 msgstr ""
 
-#: scripts/7_upgrade.sh:101
+#: scripts/7_upgrade.sh:77
 msgid "Skip database backup"
 msgstr ""
 
-#: scripts/7_upgrade.sh:108
+#: scripts/7_upgrade.sh:84
 msgid ""
 "Detected that the jms_core container is running. Do you want to close the "
 "container and continue to upgrade"
 msgstr ""
 
-#: scripts/7_upgrade.sh:119
+#: scripts/7_upgrade.sh:95
 msgid "Failed to change the table structure"
 msgstr ""
 
-#: scripts/7_upgrade.sh:121
+#: scripts/7_upgrade.sh:97
 msgid "Failed to change the table structure. Continue to upgrade"
 msgstr ""
 
-#: scripts/7_upgrade.sh:137
+#: scripts/7_upgrade.sh:113
 msgid "Are you sure you want to update the current version to"
 msgstr ""
 
-#: scripts/7_upgrade.sh:147
-msgid "Check configuration changes"
-msgstr ""
-
-#: scripts/7_upgrade.sh:150
+#: scripts/7_upgrade.sh:125
 msgid "Check program file changes"
 msgstr ""
 
-#: scripts/7_upgrade.sh:153
+#: scripts/7_upgrade.sh:128
 msgid "Upgrade Docker image"
 msgstr ""
 
-#: scripts/7_upgrade.sh:156 jmsctl.sh:60
+#: scripts/7_upgrade.sh:131 jmsctl.sh:60
 msgid "Backup database"
 msgstr ""
 
-#: scripts/7_upgrade.sh:159
+#: scripts/7_upgrade.sh:134
 msgid "Apply database changes"
 msgstr ""
 
-#: scripts/7_upgrade.sh:160
+#: scripts/7_upgrade.sh:135
 msgid "Changing database schema may take a while, please wait patiently"
 msgstr ""
 
-#: scripts/7_upgrade.sh:163
+#: scripts/7_upgrade.sh:138
 msgid "Upgrade successfully. You can now restart the program"
 msgstr ""
 
@@ -386,47 +394,47 @@ msgstr ""
 msgid "Uninstall JumpServer"
 msgstr ""
 
-#: scripts/utils.sh:123
+#: scripts/utils.sh:122
 msgid "no default"
 msgstr ""
 
-#: scripts/utils.sh:125
+#: scripts/utils.sh:124
 msgid "default"
 msgstr ""
 
-#: scripts/utils.sh:182
+#: scripts/utils.sh:181
 msgid "complete"
 msgstr ""
 
-#: scripts/utils.sh:186
+#: scripts/utils.sh:185
 msgid "fail"
 msgstr ""
 
-#: scripts/utils.sh:278
+#: scripts/utils.sh:277
 msgid "Please install it first"
 msgstr ""
 
-#: scripts/utils.sh:312
+#: scripts/utils.sh:311
 msgid "Check Configuration File"
 msgstr ""
 
-#: scripts/utils.sh:313
+#: scripts/utils.sh:312
 msgid "Path to Configuration file"
 msgstr ""
 
-#: scripts/utils.sh:342
+#: scripts/utils.sh:341
 msgid "Configure Nginx"
 msgstr ""
 
-#: scripts/utils.sh:343
+#: scripts/utils.sh:342
 msgid "configuration file"
 msgstr ""
 
-#: scripts/utils.sh:363
+#: scripts/utils.sh:362
 msgid "Backup Configuration File"
 msgstr ""
 
-#: scripts/utils.sh:365
+#: scripts/utils.sh:364
 msgid "Back up to"
 msgstr ""
 

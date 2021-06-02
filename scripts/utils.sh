@@ -21,7 +21,12 @@ function random_str() {
   fi
   command -v dmidecode &>/dev/null
   if [[ "$?" == "0" ]]; then
-    dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len}; echo
+    uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len})
+    if [[ "$(echo $uuid | wc -L)" == "${len}" ]]; then
+      echo ${uuid}
+    else
+      cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
+    fi
   else
     cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
   fi
@@ -272,7 +277,14 @@ function install_required_pkg() {
   elif command -v zypper > /dev/null; then
     zypper -q -n install $required_pkg
   elif command -v apk > /dev/null; then
-    apk add -q $required_pkg
+    if [ "$required_pkg" == "python" ]; then
+      apk add -q python2
+    else
+      apk add -q $required_pkg
+    fi
+    command -v gettext > /dev/null || {
+      apk add -q gettext-dev
+    }
   else
     echo_red "$(gettext 'Please install it first') $required_pkg"
     exit 1
