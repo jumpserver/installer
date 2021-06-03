@@ -158,26 +158,16 @@ function check_docker_config() {
 }
 
 function start_docker() {
-  systemctl daemon-reload
-  docker_is_running=$(is_running dockerd)
-
-  ret_code='1'
-  if [[ "${docker_is_running}" && "${docker_version_match}" != "1" || "${docker_config_change}" == "1" ]]; then
-    confirm="y"
-    read_from_input confirm "$(gettext 'Docker version has changed or Docker configuration file has been changed, do you want to restart')?" "y/n" "${confirm}"
-    if [[ "${confirm}" != "n" ]]; then
-      systemctl restart docker
-      ret_code="$?"
-    fi
-  else
+  if command -v systemctl > /dev/null; then
+    systemctl daemon-reload
     systemctl start docker
-    ret_code="$?"
   fi
-  systemctl enable docker &>/dev/null
-  if [[ "$ret_code" == "0" ]]; then
+  docker ps >/dev/null 2>&1
+  if [[ "$?" == "0" ]]; then
     echo_done
   else
     echo_failed
+    exit 1
   fi
 }
 
