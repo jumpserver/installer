@@ -111,6 +111,7 @@ function get_images() {
   if [[ "${scope}" == "all" ]]; then
     echo "registry.fit2cloud.com/jumpserver/xpack:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
   fi
 }
 
@@ -213,7 +214,7 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" xpack omnidb"
+    services+=" xpack omnidb xrdp"
   fi
   echo "${services}"
 }
@@ -244,9 +245,6 @@ function get_docker_compose_cmd_line() {
   fi
   if [[ "${services}" =~ xpack ]]; then
     cmd="${cmd} -f ./compose/docker-compose-xpack.yml"
-  fi
-  if [[ "${services}" =~ omnidb ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-omnidb.yml"
   fi
   echo "${cmd}"
 }
