@@ -51,6 +51,7 @@ function update_config_if_need() {
   migrate_coco_to_koko_v1_54_to_v1_55
   migrate_config_v1_5_to_v2_0
   migrate_config_v2_5_v2_6
+  upgrade_config
 }
 
 function backup_db() {

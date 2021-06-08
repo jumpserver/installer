@@ -129,7 +129,6 @@ function check_update() {
   echo "$(gettext 'The latest version is'): ${latest_version}"
   echo "$(gettext 'The current version is'): ${current_version}"
   echo
-  bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
 }
 
 function main() {
