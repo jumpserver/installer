@@ -2,50 +2,8 @@ version: '2.4'
 
 services:
   nginx:
-    image: jumpserver/nginx:alpine2
-    container_name: jms_nginx
-    restart: always
     ports:
       - ${HTTP_PORT}:80
-      - ${HTTPS_PORT}:443
-    volumes:
-      - ./config_static/http_server.conf:/etc/nginx/conf.d/default.conf
-      - ${CONFIG_DIR}/nginx/cert:/etc/nginx/cert
-      - ${VOLUME_DIR}/core/data:/data
-      - ${VOLUME_DIR}/nginx/log:/var/log/nginx
-    depends_on:
-      core:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "test", "-f", "/var/run/nginx.pid"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-    networks:
-      - net
-
-  koko:
-    image: jumpserver/koko:${VERSION}
-    container_name: jms_koko
-    restart: always
-    tty: true
-    env_file:
-      - ${CONFIG_FILE}
-    ports:
       - ${SSH_PORT}:2222
-    depends_on:
-      core:
-        condition: service_healthy
     volumes:
-      - ${CONFIG_DIR}/koko/config.yml:/opt/koko/config.yml
-      - ${VOLUME_DIR}/koko/data:/opt/koko/data
-    privileged: true
-    healthcheck:
-      test: "ps axu | grep -v 'grep' | grep 'koko'"
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - net
+      - ${CONFIG_DIR}/nginx/lb_ssh_server.conf:/etc/nginx/stream.d/ssh_server.conf

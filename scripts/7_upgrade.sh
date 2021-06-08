@@ -47,24 +47,15 @@ function migrate_config_v2_5_v2_6() {
   fi
 }
 
-
 function update_config_if_need() {
   migrate_coco_to_koko_v1_54_to_v1_55
   migrate_config_v1_5_to_v2_0
   migrate_config_v2_5_v2_6
-}
-
-function update_proc_if_need() {
-  confirm="n"
-  read_from_input confirm "$(gettext 'Do you need to update') Docker?" "y/n" "${confirm}"
-  if [[ "${confirm}" == "y" ]]; then
-    install_docker
-    install_compose
-  fi
-  echo_done
+  upgrade_config
 }
 
 function backup_db() {
+  docker_network_check
   if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
     if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
       confirm="n"
@@ -124,22 +115,16 @@ function main() {
     export VERSION=${to_version}
   fi
   echo
-  update_config_if_need && echo_done || (echo_failed; exit  3)
+  update_config_if_need && echo_done || (echo_failed; exit  1)
 
-  echo_yellow "\n4. $(gettext 'Check program file changes')"
-  update_proc_if_need || (echo_failed; exit  4)
+  echo_yellow "\n4. $(gettext 'Backup database')"
+  backup_db || exit 1
 
-  echo_yellow "\n5. $(gettext 'Upgrade Docker image')"
-  bash "${SCRIPT_DIR}/3_load_images.sh" && echo_done || (echo_failed; exit  5)
-
-  echo_yellow "\n6. $(gettext 'Backup database')"
-  backup_db || exit 2
-
-  echo_yellow "\n7. $(gettext 'Apply database changes')"
+  echo_yellow "\n5. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
-  db_migrations || exit 2
+  db_migrations || exit 1
 
-  echo_yellow "\n8. $(gettext 'Upgrade successfully. You can now restart the program')"
+  echo_yellow "\n6. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "./jmsctl.sh restart"
   echo -e "\n\n"
 }

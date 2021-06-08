@@ -6,9 +6,9 @@ services:
     container_name: jms_lb
     restart: always
     ports:
-      - ${LB_HTTP_PORT}:80
-      - ${LB_HTTPS_PORT}:443
-      - ${LB_SSH_PORT}:2222
+      - ${HTTP_PORT}:80
+      - ${HTTPS_PORT}:443
+      - ${SSH_PORT}:2222
     volumes:
       - ${VOLUME_DIR}/lb/log:/var/log/nginx
       - ${CONFIG_DIR}/nginx/cert:/etc/nginx/cert

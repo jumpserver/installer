@@ -16,6 +16,7 @@ DATABASE=$(get_config DB_NAME)
 DB_FILE="$1"
 
 function main() {
+  docker_network_check
   echo "$(gettext 'Start restoring database'): $DB_FILE"
   restore_cmd="mysql --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
 

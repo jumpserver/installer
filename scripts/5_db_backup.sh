@@ -13,6 +13,7 @@ DATABASE=$(get_config DB_NAME)
 DB_FILE=${BACKUP_DIR}/${DATABASE}-${VERSION}-$(date +%F_%T).sql
 
 function main() {
+  docker_network_check
   mkdir -p ${BACKUP_DIR}
   echo "$(gettext 'Backing up')..."
   backup_cmd="mysqldump --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"

@@ -26,5 +26,45 @@ services:
     networks:
       - net
 
+  omnidb:
+    image: registry.fit2cloud.com/jumpserver/omnidb:${VERSION}
+    container_name: jms_omnidb
+    env_file:
+      - ${CONFIG_FILE}
+    restart: always
+    volumes:
+      - ${VOLUME_DIR}/omnidb/data:/opt/omnidb/data
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: "ps axu | grep -v 'grep' | grep 'omnidb'"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
+
+  xrdp:
+    image: registry.fit2cloud.com/jumpserver/xrdp:${VERSION}
+    container_name: jms_xrdp
+    env_file:
+      - ${CONFIG_FILE}
+    restart: always
+    volumes:
+      - ${VOLUME_DIR}/xrdp/data:/opt/xrdp/data
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: "ps axu | grep -v 'grep' | grep 'xrdp'"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
+
 volumes:
   share-volume:

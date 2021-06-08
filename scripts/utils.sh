@@ -20,13 +20,12 @@ function random_str() {
     len=16
   fi
   command -v dmidecode &>/dev/null
+  uuid=None
   if [[ "$?" == "0" ]]; then
     uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len})
-    if [[ "$(echo $uuid | wc -L)" == "${len}" ]]; then
-      echo ${uuid}
-    else
-      cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
-    fi
+  fi
+  if [[ "$(echo $uuid | wc -L)" == "${len}" ]]; then
+    echo ${uuid}
   else
     cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
   fi
@@ -112,6 +111,7 @@ function get_images() {
   if [[ "${scope}" == "all" ]]; then
     echo "registry.fit2cloud.com/jumpserver/xpack:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
   fi
 }
 
@@ -157,15 +157,6 @@ function check_md5() {
     echo "1"
   else
     echo "0"
-  fi
-}
-
-function is_running() {
-  ps axu | grep -v grep | grep $1 &>/dev/null
-  if [[ "$?" == "0" ]]; then
-    echo 0
-  else
-    echo 1
   fi
 }
 
@@ -223,19 +214,19 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" xpack omnidb"
+    services+=" xpack omnidb xrdp"
   fi
   echo "${services}"
 }
 
 function get_docker_compose_cmd_line() {
   ignore_db="$1"
-  cmd="docker-compose -f ./compose/docker-compose-app.yml "
+  cmd="docker-compose -f ./compose/docker-compose-app.yml"
   use_ipv6=$(get_config USE_IPV6)
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-network.yml "
+    cmd="${cmd} -f compose/docker-compose-network.yml"
   else
-    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml "
+    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
   fi
   services=$(get_docker_compose_services "$ignore_db")
   if [[ "${services}" =~ celery ]]; then
@@ -248,15 +239,17 @@ function get_docker_compose_cmd_line() {
     cmd="${cmd} -f ./compose/docker-compose-redis.yml"
   fi
   if [[ "${services}" =~ lb ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-internal.yml -f ./compose/docker-compose-lb.yml"
+    cmd="${cmd} -f ./compose/docker-compose-lb.yml"
   else
     cmd="${cmd} -f ./compose/docker-compose-external.yml"
   fi
   if [[ "${services}" =~ xpack ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-xpack.yml"
-  fi
-  if [[ "${services}" =~ omnidb ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-omnidb.yml"
+      cmd="${cmd} -f ./compose/docker-compose-xpack.yml"
+      if [[ "${services}" =~ lb ]]; then
+        cmd="${cmd} -f ./compose/docker-compose-lb-xpack.yml"
+      else
+        cmd="${cmd} -f ./compose/docker-compose-xpack-external.yml"
+      fi
   fi
   echo "${cmd}"
 }
@@ -299,7 +292,8 @@ function prepare_online_install_required_pkg() {
 
 function prepare_set_redhat_firewalld() {
   if [[ -f "/etc/redhat-release" ]]; then
-    if [[ "$(firewall-cmd --state)" == "running" ]]; then
+    firewall-cmd --state > /dev/null 2>&1
+    if [[ "$?" == "0" ]]; then
       docker_subnet=$(get_config DOCKER_SUBNET)
       if [[ ! "$(firewall-cmd --list-rich-rule | grep ${docker_subnet})" ]]; then
         firewall-cmd --permanent --zone=public --add-rich-rule="rule family=ipv4 source address=${docker_subnet} accept"
@@ -406,6 +400,13 @@ function image_has_prefix() {
   fi
 }
 
+function docker_network_check() {
+  if [[ ! "$(docker network ls | grep jms_net)" ]]; then
+    docker_subnet=$(get_config DOCKER_SUBNET)
+    docker network create jms_net --subnet=${docker_subnet}
+  fi
+}
+
 function perform_db_migrations() {
   docker run -it --rm --network=jms_net \
     --env-file=/opt/jumpserver/config/config.txt \
@@ -420,5 +421,14 @@ function check_ipv6_iptables_if_need() {
     if [[ ! "$(ip6tables -t nat -L | grep "${subnet_ipv6}")" ]]; then
       ip6tables -t nat -A POSTROUTING -s "${subnet_ipv6}" -j MASQUERADE
     fi
+  fi
+}
+
+function upgrade_config() {
+  # 如果配置文件有更新, 则添加到新的配置文件
+  rdp_port=$(get_config RDP_PORT)
+  if [[ -z "${rdp_port}" ]]; then
+    RDP_PORT=3389
+    set_config RDP_PORT "${RDP_PORT}"
   fi
 }
