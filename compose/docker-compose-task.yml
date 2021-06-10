@@ -18,9 +18,9 @@ services:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
     healthcheck:
-      test: "cd /opt/jumpserver/apps && python manage.py check_celery"
+      test: "./jms status task | grep stopped && exit 1 || exit 0"
       interval: 10s
-      timeout: 20s
+      timeout: 5s
       retries: 3
       start_period: 30s
     networks:

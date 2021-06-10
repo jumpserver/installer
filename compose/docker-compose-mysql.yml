@@ -11,8 +11,10 @@ services:
     container_name: jms_mysql
     restart: always
     command: --character-set-server=utf8
-    env_file:
-      - ${CONFIG_FILE}
+    environment:
+      DB_PORT: $DB_PORT
+      MYSQL_ROOT_PASSWORD: $DB_PASSWORD
+      MYSQL_DATABASE: $DB_NAME
     volumes:
       - ${CONFIG_DIR}/mysql/my.cnf:/etc/mysql/my.cnf
       - ${VOLUME_DIR}/mysql/data:/var/lib/mysql

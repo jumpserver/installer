@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-04-22 12:13+0800\n"
+"POT-Creation-Date: 2021-05-25 11:06+0800\n"
 "PO-Revision-Date: 2021-01-21 19:15+0800\n"
 "Last-Translator: Bai <jiangjiebai@jiangjiedembp.lan>\n"
 "Language-Team: Language locale/zh\n"
@@ -84,71 +84,71 @@ msgstr "请输入 mysql 的密码"
 msgid "Failed to connect to database, please reset"
 msgstr "测试连接数据库失败, 请重新设置"
 
-#: scripts/1_config_jumpserver.sh:54
+#: scripts/1_config_jumpserver.sh:58
 msgid "Configure MySQL"
 msgstr "配置 MySQL"
 
-#: scripts/1_config_jumpserver.sh:60
+#: scripts/1_config_jumpserver.sh:64
 msgid "Do you want to use external MySQL"
 msgstr "是否使用外部 MySQL"
 
-#: scripts/1_config_jumpserver.sh:72
+#: scripts/1_config_jumpserver.sh:76
 msgid "Please enter Redis server IP"
 msgstr "请输入 Redis 的主机地址"
 
-#: scripts/1_config_jumpserver.sh:75
+#: scripts/1_config_jumpserver.sh:82
 msgid "Please enter Redis server port"
 msgstr "请输入 Redis 的端口"
 
-#: scripts/1_config_jumpserver.sh:78
+#: scripts/1_config_jumpserver.sh:85
 msgid "Please enter Redis password"
 msgstr "请输入 Redis 的密码"
 
-#: scripts/1_config_jumpserver.sh:82
+#: scripts/1_config_jumpserver.sh:89
 msgid "Failed to connect to redis, please reset"
 msgstr "测试连接 Redis 失败, 请重新设置"
 
-#: scripts/1_config_jumpserver.sh:103
+#: scripts/1_config_jumpserver.sh:110
 msgid "Configure Redis"
 msgstr "配置 Redis"
 
-#: scripts/1_config_jumpserver.sh:109
+#: scripts/1_config_jumpserver.sh:116
 msgid "Do you want to use external Redis"
 msgstr "是否使用外部 Redis"
 
-#: scripts/1_config_jumpserver.sh:119
+#: scripts/1_config_jumpserver.sh:126
 msgid "Configure Private Key"
 msgstr "配置加密密钥"
 
-#: scripts/1_config_jumpserver.sh:138
+#: scripts/1_config_jumpserver.sh:145
 msgid "Configure Persistent Directory"
 msgstr "配置持久化目录"
 
-#: scripts/1_config_jumpserver.sh:144
+#: scripts/1_config_jumpserver.sh:151
 msgid "Do you need custom persistent store, will use the default directory"
 msgstr "是否需要自定义持久化存储, 默认将使用目录"
 
-#: scripts/1_config_jumpserver.sh:147
+#: scripts/1_config_jumpserver.sh:154
 msgid ""
 "To modify the persistent directory such as logs video, you can select your "
 "largest disk and create a directory in it, such as"
 msgstr "修改日志录像等持久化的目录，可以找个最大的磁盘，并创建目录，如"
 
-#: scripts/1_config_jumpserver.sh:148
+#: scripts/1_config_jumpserver.sh:155
 msgid ""
 "Note: you can not change it after installation, otherwise the database may "
 "be lost"
 msgstr "注意：安装后不能更改，否则数据库可能会丢失"
 
-#: scripts/1_config_jumpserver.sh:152
+#: scripts/1_config_jumpserver.sh:159
 msgid "Persistent storage directory"
 msgstr "持久化存储目录"
 
-#: scripts/1_config_jumpserver.sh:163
+#: scripts/1_config_jumpserver.sh:170
 msgid "Configure Network"
 msgstr "配置网络"
 
-#: scripts/1_config_jumpserver.sh:169
+#: scripts/1_config_jumpserver.sh:176
 msgid "Do you want to support IPv6"
 msgstr "是否需要支持 IPv6"
 
@@ -210,59 +210,74 @@ msgstr "镜像文件没有发现"
 msgid "Docker image loaded, skipping"
 msgstr "镜像已加载, 跳过"
 
-#: scripts/4_install_jumpserver.sh:13
+#: scripts/4_install_jumpserver.sh:12
+msgid ""
+"The current Linux system does not support SYSTEMd management. Please deploy "
+"docker by yourself before running this script again"
+msgstr ""
+"当前 Linux 系统不支持 systemd 管理, 请先自行部署 docker 后再重新运行此脚本"
+
+#: scripts/4_install_jumpserver.sh:16
+msgid ""
+"The current Linux system does not support SYSTEMd management. Please deploy "
+"docker-compose by yourself before running this script again"
+msgstr ""
+"当前 Linux 系统不支持 systemd 管理, 请先自行部署 docker-compose 后再重新运行"
+"此脚本"
+
+#: scripts/4_install_jumpserver.sh:22
 msgid "The Installation is Complete"
 msgstr "安装完成了"
 
-#: scripts/4_install_jumpserver.sh:22
+#: scripts/4_install_jumpserver.sh:31
 msgid "You can use the following command to start, and then visit"
 msgstr "可以使用如下命令启动, 然后访问"
 
-#: scripts/4_install_jumpserver.sh:25
+#: scripts/4_install_jumpserver.sh:34
 msgid "Other management commands"
 msgstr "其它一些管理命令"
 
-#: scripts/4_install_jumpserver.sh:30
+#: scripts/4_install_jumpserver.sh:39
 msgid "For more commands, you can enter ./jmsctl.sh --help to understand"
 msgstr "更多还有一些命令, 你可以 ./jmsctl.sh --help 来了解"
 
-#: scripts/4_install_jumpserver.sh:32
+#: scripts/4_install_jumpserver.sh:41
 msgid "Web access"
 msgstr "Web 访问"
 
-#: scripts/4_install_jumpserver.sh:35
+#: scripts/4_install_jumpserver.sh:44
 msgid "Default username"
 msgstr "默认用户"
 
-#: scripts/4_install_jumpserver.sh:35
+#: scripts/4_install_jumpserver.sh:44
 msgid "Default password"
 msgstr "默认密码"
 
-#: scripts/4_install_jumpserver.sh:37
+#: scripts/4_install_jumpserver.sh:46
 msgid "access"
 msgstr "访问"
 
-#: scripts/4_install_jumpserver.sh:41
+#: scripts/4_install_jumpserver.sh:50
 msgid "More information"
 msgstr "更多信息"
 
-#: scripts/4_install_jumpserver.sh:42
+#: scripts/4_install_jumpserver.sh:51
 msgid "Offical Website"
 msgstr "我们的官网"
 
-#: scripts/4_install_jumpserver.sh:43
+#: scripts/4_install_jumpserver.sh:52
 msgid "Documentation"
 msgstr "我们的文档"
 
-#: scripts/4_install_jumpserver.sh:73
+#: scripts/4_install_jumpserver.sh:82
 msgid "Install and Configure Docker"
 msgstr "安装配置 Docker"
 
-#: scripts/4_install_jumpserver.sh:75
+#: scripts/4_install_jumpserver.sh:84
 msgid "Loading Docker Image"
 msgstr "加载 Docker 镜像"
 
-#: scripts/4_install_jumpserver.sh:77
+#: scripts/4_install_jumpserver.sh:86
 msgid "Install and Configure JumpServer"
 msgstr "安装配置 JumpServer"
 
@@ -304,61 +319,57 @@ msgstr "格式错误"
 msgid "The backup file does not exist"
 msgstr "备份文件不存在"
 
-#: scripts/7_upgrade.sh:83
+#: scripts/7_upgrade.sh:59
 msgid "Do you need to update"
 msgstr "是否需要更新"
 
-#: scripts/7_upgrade.sh:95
+#: scripts/7_upgrade.sh:71
 msgid "Failed to backup the database. Continue to upgrade"
 msgstr "备份数据库失败, 继续升级吗"
 
-#: scripts/7_upgrade.sh:101
+#: scripts/7_upgrade.sh:77
 msgid "Skip database backup"
 msgstr "跳过备份数据库"
 
-#: scripts/7_upgrade.sh:108
+#: scripts/7_upgrade.sh:84
 msgid ""
 "Detected that the jms_core container is running. Do you want to close the "
 "container and continue to upgrade"
 msgstr "检测到 jms_core 正在运行, 是否需要关闭 jms_core 并继续升级"
 
-#: scripts/7_upgrade.sh:119
+#: scripts/7_upgrade.sh:95
 msgid "Failed to change the table structure"
 msgstr "表结构变更失败"
 
-#: scripts/7_upgrade.sh:121
+#: scripts/7_upgrade.sh:97
 msgid "Failed to change the table structure. Continue to upgrade"
 msgstr "表结构变更失败, 是否继续"
 
-#: scripts/7_upgrade.sh:137
+#: scripts/7_upgrade.sh:113
 msgid "Are you sure you want to update the current version to"
 msgstr "是否将版本更新至"
 
-#: scripts/7_upgrade.sh:147
-msgid "Check configuration changes"
-msgstr "检查配置变更"
-
-#: scripts/7_upgrade.sh:150
+#: scripts/7_upgrade.sh:125
 msgid "Check program file changes"
 msgstr "检查程序文件变更"
 
-#: scripts/7_upgrade.sh:153
+#: scripts/7_upgrade.sh:128
 msgid "Upgrade Docker image"
 msgstr "升级镜像文件"
 
-#: scripts/7_upgrade.sh:156 jmsctl.sh:60
+#: scripts/7_upgrade.sh:131 jmsctl.sh:60
 msgid "Backup database"
 msgstr "备份数据库"
 
-#: scripts/7_upgrade.sh:159
+#: scripts/7_upgrade.sh:134
 msgid "Apply database changes"
 msgstr "进行数据库变更"
 
-#: scripts/7_upgrade.sh:160
+#: scripts/7_upgrade.sh:135
 msgid "Changing database schema may take a while, please wait patiently"
 msgstr "表结构变更可能需要一段时间, 请耐心等待"
 
-#: scripts/7_upgrade.sh:163
+#: scripts/7_upgrade.sh:138
 msgid "Upgrade successfully. You can now restart the program"
 msgstr "升级成功, 可以重启程序了"
 
@@ -386,47 +397,47 @@ msgstr "清理完成"
 msgid "Uninstall JumpServer"
 msgstr "卸载 JumpServer"
 
-#: scripts/utils.sh:123
+#: scripts/utils.sh:122
 msgid "no default"
 msgstr "无默认值"
 
-#: scripts/utils.sh:125
+#: scripts/utils.sh:124
 msgid "default"
 msgstr "默认为"
 
-#: scripts/utils.sh:182
+#: scripts/utils.sh:181
 msgid "complete"
 msgstr "完成"
 
-#: scripts/utils.sh:186
+#: scripts/utils.sh:185
 msgid "fail"
 msgstr "失败"
 
-#: scripts/utils.sh:278
+#: scripts/utils.sh:277
 msgid "Please install it first"
 msgstr "请先安装"
 
-#: scripts/utils.sh:312
+#: scripts/utils.sh:311
 msgid "Check Configuration File"
 msgstr "检查配置文件"
 
-#: scripts/utils.sh:313
+#: scripts/utils.sh:312
 msgid "Path to Configuration file"
 msgstr "配置文件位置"
 
-#: scripts/utils.sh:342
+#: scripts/utils.sh:341
 msgid "Configure Nginx"
 msgstr "配置 Nginx"
 
-#: scripts/utils.sh:343
+#: scripts/utils.sh:342
 msgid "configuration file"
 msgstr "配置文件"
 
-#: scripts/utils.sh:363
+#: scripts/utils.sh:362
 msgid "Backup Configuration File"
 msgstr "备份配置文件"
 
-#: scripts/utils.sh:365
+#: scripts/utils.sh:364
 msgid "Back up to"
 msgstr "备份至"
 
@@ -517,6 +528,3 @@ msgstr "最新版本是"
 #: jmsctl.sh:130
 msgid "The current version is"
 msgstr "当前版本是"
-
-#~ msgid "Auto-Generate"
-#~ msgstr "自动生成"
