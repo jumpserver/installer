@@ -17,7 +17,7 @@ function load_image_files() {
       filename=${filename_windows}
     fi
     if [[ ! -f ${IMAGE_DIR}/${filename} ]]; then
-      if [[ ! ${filename} =~ xpack* && ! ${filename} =~ omnidb* ]]; then
+      if [[ ! ${filename} =~ xpack* && ! ${filename} =~ omnidb* && ! ${filename} =~ xrdp* ]]; then
         echo_red "$(gettext 'Docker image not found'): ${IMAGE_DIR}/${filename}"
       fi
       continue

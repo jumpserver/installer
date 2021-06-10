@@ -183,7 +183,7 @@ function set_redis() {
 }
 
 function init_db() {
-  #statements
+  echo
 }
 
 function main() {
