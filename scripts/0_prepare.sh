@@ -96,9 +96,7 @@ function prepare_image_files() {
     fi
     echo
   done
-
 }
-
 
 function main() {
   prepare_online_install_required_pkg
@@ -110,7 +108,6 @@ function main() {
 
   echo -e "\n $(gettext 'Preparing image offline package')"
   prepare_image_files
-
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then

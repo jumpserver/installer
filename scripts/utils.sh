@@ -79,7 +79,7 @@ function test_mysql_connect() {
   password=$4
   db=$5
   command="CREATE TABLE IF NOT EXISTS test(id INT); DROP TABLE test;"
-  docker run -it --rm jumpserver/mysql:5 mysql -h${host} -P${port} -u${user} -p${password} ${db} -e "${command}" 2>/dev/null
+  docker run -i --rm jumpserver/mysql:5 mysql -h${host} -P${port} -u${user} -p${password} ${db} -e "${command}" 2>/dev/null
 }
 
 function test_redis_connect() {
@@ -87,7 +87,7 @@ function test_redis_connect() {
   port=$2
   password=$3
   password=${password:=''}
-  docker run -it --rm jumpserver/redis:6-alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" >/dev/null
+  docker run -i --rm jumpserver/redis:6-alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" >/dev/null
 }
 
 function get_images() {
@@ -233,10 +233,10 @@ function get_docker_compose_cmd_line() {
     cmd="${cmd} -f ./compose/docker-compose-task.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
+    cmd="${cmd} -f ./compose/docker-compose-mysql.yml -f ./compose/docker-compose-mysql-internal.yml"
   fi
   if [[ "${services}" =~ redis ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-redis.yml"
+    cmd="${cmd} -f ./compose/docker-compose-redis.yml -f ./compose/docker-compose-redis-internal.yml"
   fi
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f ./compose/docker-compose-lb.yml"
@@ -400,16 +400,11 @@ function image_has_prefix() {
   fi
 }
 
-function docker_network_check() {
-  if [[ ! "$(docker network ls | grep jms_net)" ]]; then
-    docker_subnet=$(get_config DOCKER_SUBNET)
-    docker network create jms_net --subnet=${docker_subnet}
-  fi
-}
-
 function perform_db_migrations() {
-  docker run -it --rm --network=jms_net \
+  volume_dir=$(get_config VOLUME_DIR)
+  docker run -i --rm --network=jms_net \
     --env-file=/opt/jumpserver/config/config.txt \
+    -v ${volume_dir}/core/data:/opt/jumpserver/data \
     jumpserver/core:"${VERSION}" upgrade_db
 }
 
