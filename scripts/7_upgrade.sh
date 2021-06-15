@@ -7,6 +7,19 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 target=$1
 
+function upgrade_config() {
+  # 如果配置文件有更新, 则添加到新的配置文件
+  rdp_port=$(get_config RDP_PORT)
+  if [[ -z "${rdp_port}" ]]; then
+    RDP_PORT=3389
+    set_config RDP_PORT "${RDP_PORT}"
+  fi
+  current_version=$(get_config CURRENT_VERSION)
+  if [ -z "${current_version}" ]; then
+    set_config CURRENT_VERSION "${VERSION}"
+  fi
+}
+
 function migrate_coco_to_koko_v1_54_to_v1_55() {
   volume_dir=$(get_config VOLUME_DIR)
   coco_dir="${volume_dir}/coco"
@@ -113,18 +126,22 @@ function main() {
     export VERSION=${to_version}
   fi
   echo
-  update_config_if_need && echo_done || (echo_failed; exit  1)
+  update_config_if_need && echo_done || (echo_failed; exit 1)
 
-  echo_yellow "\n4. $(gettext 'Backup database')"
+  echo_yellow "\n4. $(gettext 'Loading Docker Image')"
+  bash "${BASE_DIR}/3_load_images.sh" || exit 1
+
+  echo_yellow "\n5. $(gettext 'Backup database')"
   backup_db || exit 1
 
-  echo_yellow "\n5. $(gettext 'Apply database changes')"
+  echo_yellow "\n6. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
   db_migrations || exit 1
 
-  echo_yellow "\n6. $(gettext 'Upgrade successfully. You can now restart the program')"
+  echo_yellow "\n7. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "./jmsctl.sh restart"
   echo -e "\n\n"
+  set_current_version
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
