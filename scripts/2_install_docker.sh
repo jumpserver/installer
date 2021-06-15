@@ -17,8 +17,8 @@ cd "${BASE_DIR}" || exit
 function copy_docker() {
   \cp -f ./docker/* /usr/bin/ \
   && \cp -f ./docker.service /etc/systemd/system/ \
-  && chmod +x /usr/bin/docker* \
-  && chmod 754 /etc/systemd/system/docker.service
+  && chmod 755 /usr/bin/docker* \
+  && chmod 755 /etc/systemd/system/docker.service
   if [[ "$?" != "0" ]]; then
     docker_copy_failed=1
   fi
@@ -30,7 +30,7 @@ function install_docker() {
   fi
   if [[ ! -f ./docker/dockerd ]]; then
     echo_red "Error: $(gettext 'Docker program does not exist')"
-    exit
+    exit 1
   fi
 
   docker_exist=1

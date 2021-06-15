@@ -55,7 +55,6 @@ function update_config_if_need() {
 }
 
 function backup_db() {
-  docker_network_check
   if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
     if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
       confirm="n"
@@ -85,8 +84,7 @@ function db_migrations() {
     fi
   fi
 
-  perform_db_migrations
-  if [[ "$?" != "0" ]]; then
+  if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     confirm="n"
     read_from_input confirm "$(gettext 'Failed to change the table structure. Continue to upgrade')?" "y/n" "${confirm}"

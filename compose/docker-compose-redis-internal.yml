@@ -1,0 +1,7 @@
+version: '2.4'
+
+services:
+  core:
+    depends_on:
+      redis:
+        condition: service_healthy

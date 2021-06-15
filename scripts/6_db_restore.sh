@@ -16,22 +16,15 @@ DATABASE=$(get_config DB_NAME)
 DB_FILE="$1"
 
 function main() {
-  docker_network_check
   echo "$(gettext 'Start restoring database'): $DB_FILE"
   restore_cmd="mysql --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
 
   if [[ ! -f "${DB_FILE}" ]]; then
     echo "$(gettext 'file does not exist'): ${DB_FILE}"
-    exit 2
+    exit 1
   fi
 
-  if [[ "${DB_FILE}" == *".gz" ]]; then
-    gunzip <${DB_FILE} | docker run --rm -i --network=jms_net jumpserver/mysql:5 ${restore_cmd}
-  else
-    docker run --rm -i --network=jms_net jumpserver/mysql:5 $restore_cmd <"${DB_FILE}"
-  fi
-  code="x$?"
-  if [[ "$code" != "x0" ]]; then
+  if ! docker run --rm -i --network=jms_net jumpserver/mysql:5 $restore_cmd <"${DB_FILE}"; then
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
     exit 1
   else
@@ -46,7 +39,7 @@ if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
   fi
   if [[ ! -f $1 ]]; then
     echo "$(gettext 'The backup file does not exist'): $1"
-    exit 2
+    exit 1
   fi
   main
 fi
