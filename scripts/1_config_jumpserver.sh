@@ -58,6 +58,11 @@ function set_volume_dir() {
     df -h | egrep -v "map|devfs|tmpfs|overlay|shm"
     echo
     read_from_input volume_dir "$(gettext 'Persistent storage directory')" "" "${volume_dir}"
+    if [[ "${volume_dir}" == "y" ]]; then
+      echo_failed
+      echo
+      set_volume_dir
+    fi
   fi
   if [[ ! -d "${volume_dir}" ]]; then
     mkdir -p ${volume_dir}
@@ -182,8 +187,55 @@ function set_redis() {
   echo_done
 }
 
+function external_port() {
+  echo_yellow "\n6. $(gettext 'Configure External Port')"
+  http_port=$(get_config HTTP_PORT)
+  ssh_port=$(get_config SSH_PORT)
+  rdp_port=$(get_config RDP_PORT)
+  use_xpack=$(get_config USE_XPACK)
+  confirm="n"
+  read_from_input confirm "$(gettext 'Do you need to customize the JumpServer external port')?" "y/n" "${confirm}"
+  if [[ "${confirm}" == "y" ]]; then
+    echo
+    read_from_input http_port "$(gettext 'JumpServer web port')" "${http_port}" "${http_port}"
+    set_config HTTP_PORT ${http_port}
+
+    read_from_input ssh_port "$(gettext 'JumpServer ssh port')" "${ssh_port}" "${ssh_port}"
+    set_config SSH_PORT ${ssh_port}
+
+    if [[ "${use_xpack}" == "1" ]]; then
+      read_from_input rdp_port "$(gettext 'JumpServer rdp port')" "${rdp_port}" "${rdp_port}"
+      set_config RDP_PORT ${rdp_port}
+    fi
+  fi
+}
+
 function init_db() {
+  echo_yellow "\n7. $(gettext 'Init JumpServer Database')"
+  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  use_ipv6=$(get_config USE_IPV6)
+  cmd="docker-compose -f ./compose/docker-compose-redis.yml"
+  if [[ "${use_external_mysql}" == "0" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
+  fi
+  if [[ "${use_ipv6}" != "1" ]]; then
+    cmd="${cmd} -f compose/docker-compose-network.yml"
+  else
+    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
+  fi
+  ${cmd} up -d
+  if ! perform_db_migrations; then
+    re_code="1"
+  fi
   echo
+  ${cmd} down
+  echo
+  if [[ "${re_code}" ]]; then
+    log_error "$(gettext 'Failed to change the table structure')!"
+    exit 1
+  else
+    echo_done
+  fi
 }
 
 function main() {
@@ -192,6 +244,7 @@ function main() {
   set_volume_dir
   set_mysql
   set_redis
+  init_db
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
