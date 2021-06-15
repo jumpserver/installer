@@ -419,11 +419,9 @@ function check_ipv6_iptables_if_need() {
   fi
 }
 
-function upgrade_config() {
-  # 如果配置文件有更新, 则添加到新的配置文件
-  rdp_port=$(get_config RDP_PORT)
-  if [[ -z "${rdp_port}" ]]; then
-    RDP_PORT=3389
-    set_config RDP_PORT "${RDP_PORT}"
+function set_current_version(){
+  current_version=$(get_config CURRENT_VERSION)
+  if [ "${current_version}" != "${VERSION}" ]; then
+    set_config CURRENT_VERSION "${VERSION}"
   fi
 }

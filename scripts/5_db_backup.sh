@@ -4,13 +4,14 @@ PROJECT_DIR=$(dirname ${BASE_DIR})
 # shellcheck source=./util.sh
 . "${BASE_DIR}/utils.sh"
 BACKUP_DIR=/opt/jumpserver/db_backup
+CURRENT_VERSION=$(get_config CURRENT_VERSION)
 
 HOST=$(get_config DB_HOST)
 PORT=$(get_config DB_PORT)
 USER=$(get_config DB_USER)
 PASSWORD=$(get_config DB_PASSWORD)
 DATABASE=$(get_config DB_NAME)
-DB_FILE=${BACKUP_DIR}/${DATABASE}-${VERSION}-$(date +%F_%T).sql
+DB_FILE=${BACKUP_DIR}/${DATABASE}-${CURRENT_VERSION}-$(date +%F_%T).sql
 
 function main() {
   mkdir -p ${BACKUP_DIR}
