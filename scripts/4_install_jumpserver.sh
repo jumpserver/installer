@@ -80,6 +80,7 @@ function main() {
   set_lang
   pre_install
   prepare_config
+  set_current_version
   echo_green "\n>>> $(gettext 'Install and Configure Docker')"
   if ! bash "${BASE_DIR}/2_install_docker.sh"; then
     exit 1
