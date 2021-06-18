@@ -217,7 +217,7 @@ function init_db() {
   use_ipv6=$(get_config USE_IPV6)
   cmd="docker-compose -f ./compose/docker-compose-redis.yml"
   if [[ "${use_external_mysql}" == "0" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
+    cmd="${cmd} -f ./compose/docker-compose-mysql.yml -f ./compose/docker-compose-init-db.yml"
   fi
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
