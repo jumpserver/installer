@@ -187,7 +187,7 @@ function set_redis() {
   echo_done
 }
 
-function external_port() {
+function set_service_port() {
   echo_yellow "\n6. $(gettext 'Configure External Port')"
   http_port=$(get_config HTTP_PORT)
   ssh_port=$(get_config SSH_PORT)
@@ -208,6 +208,7 @@ function external_port() {
       set_config RDP_PORT ${rdp_port}
     fi
   fi
+  echo_done
 }
 
 function init_db() {
@@ -244,6 +245,7 @@ function main() {
   set_volume_dir
   set_mysql
   set_redis
+  set_service_port
   init_db
 }
 

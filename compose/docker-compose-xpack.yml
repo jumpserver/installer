@@ -11,6 +11,7 @@ services:
       - share-volume:/opt/jumpserver/apps/xpack
     depends_on:
       - xpack
+      
   xpack:
     image: registry.fit2cloud.com/jumpserver/xpack:${VERSION}
     container_name: jms_xpack
