@@ -41,7 +41,11 @@ function post_install() {
 
   echo_yellow "\n3. $(gettext 'Web access')"
   echo "http://${HOST}:${HTTP_PORT}"
-  echo "https://${HOST}:${HTTPS_PORT}"
+
+  use_lb=$(get_config USE_LB)
+  if [[ "${use_lb}" == "1" ]]; then
+    echo "https://${HOST}:${HTTPS_PORT}"
+  fi
   echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): admin"
 
   echo_yellow "\n4. SSH/SFTP $(gettext 'access')"
