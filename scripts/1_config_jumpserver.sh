@@ -196,15 +196,14 @@ function set_service_port() {
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need to customize the JumpServer external port')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
-    echo
-    read_from_input http_port "$(gettext 'JumpServer web port')" "${http_port}" "${http_port}"
+    read_from_input http_port "$(gettext 'JumpServer web port')" "" "${http_port}"
     set_config HTTP_PORT ${http_port}
 
-    read_from_input ssh_port "$(gettext 'JumpServer ssh port')" "${ssh_port}" "${ssh_port}"
+    read_from_input ssh_port "$(gettext 'JumpServer ssh port')" "" "${ssh_port}"
     set_config SSH_PORT ${ssh_port}
 
     if [[ "${use_xpack}" == "1" ]]; then
-      read_from_input rdp_port "$(gettext 'JumpServer rdp port')" "${rdp_port}" "${rdp_port}"
+      read_from_input rdp_port "$(gettext 'JumpServer rdp port')" "" "${rdp_port}"
       set_config RDP_PORT ${rdp_port}
     fi
   fi
