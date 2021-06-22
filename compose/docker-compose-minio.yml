@@ -1,0 +1,19 @@
+version: '2.4'
+  minio:
+    image: jumpserver/minio:latest
+    container_name: jms_minio
+    restart: always
+    volumes:
+      - ${VOLUME_DIR}/minio/data:/data
+      - ${CONFIG_DIR}/minio/config:/root/.minio
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: $BOOTSTRAP_TOKEN
+    healthcheck:
+      test: "curl -sL http://localhost:9000 > /dev/null"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - net
