@@ -10,7 +10,6 @@ cd "${BASE_DIR}" || return
 function load_image_files() {
   images=$(get_images)
   for image in ${images}; do
-    echo ""
     filename=$(basename "${image}").tar
     filename_windows=${filename/:/_}
     if [[ -f ${IMAGE_DIR}/${filename_windows} ]]; then

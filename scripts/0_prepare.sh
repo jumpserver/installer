@@ -67,11 +67,14 @@ function prepare_image_files() {
   for image in ${images}; do
     ((i++)) || true
     echo "[${image}]"
-    if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
-      docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
-      docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
-    else
-      docker pull "${image}"
+    if [[ ! "$(docker images | grep $(echo ${image%:*}) | grep $(echo ${image#*:}))" ]]; then
+      if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
+        docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
+        docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
+        docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
+      else
+        docker pull "${image}"
+      fi
     fi
     filename=$(basename "${image}").tar
     component=$(echo "${filename}" | awk -F: '{ print $1 }')
