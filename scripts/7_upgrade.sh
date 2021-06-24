@@ -139,7 +139,7 @@ function main() {
 
   echo_yellow "\n7. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "./jmsctl.sh restart"
-  echo -e "\n\n"
+  echo -e "\n"
   set_current_version
 }
 

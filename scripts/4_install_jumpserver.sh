@@ -55,7 +55,7 @@ function post_install() {
   echo_yellow "\n5. $(gettext 'More information')"
   echo "$(gettext 'Offical Website'): https://www.jumpserver.org/"
   echo "$(gettext 'Documentation'): https://docs.jumpserver.org/"
-  echo -e "\n\n"
+  echo -e "\n"
 }
 
 function set_lang() {
