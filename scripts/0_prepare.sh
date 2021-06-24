@@ -107,7 +107,9 @@ function main() {
 
   echo " $(gettext 'Preparing Docker offline package')"
   prepare_docker_bin
-  prepare_compose_bin
+  if [[ "$(uname -m)" == "x86_64" ]]; then
+    prepare_compose_bin
+  fi
 
   echo -e "\n $(gettext 'Preparing image offline package')"
   prepare_image_files
