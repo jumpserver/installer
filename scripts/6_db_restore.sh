@@ -30,7 +30,7 @@ function main() {
     mysql_images=jumpserver/mariadb:10
   fi
 
-  if ! docker run --rm -i --network=jms_net "${mysql_images}" "${restore_cmd}" <"${DB_FILE}"; then
+  if ! docker run --rm -i --network=jms_net "${mysql_images}" ${restore_cmd} <"${DB_FILE}"; then
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
     exit 1
   else
