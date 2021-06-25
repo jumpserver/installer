@@ -344,11 +344,10 @@ function prepare_config() {
   done
   echo_done
 
-  echo_yellow "\n2. $(gettext 'Configure Nginx')"
-  echo "$(gettext 'configuration file'): ${nginx_dir}"
-
   nginx_dir="${CONFIG_DIR}/nginx"
   nginx_cert_dir="${CONFIG_DIR}/nginx/cert"
+  echo_yellow "\n2. $(gettext 'Configure Nginx')"
+  echo "$(gettext 'configuration file'): ${nginx_dir}"
 
   if [[ ! -d ${nginx_dir} ]]; then
     mkdir -p "${nginx_dir}"

@@ -230,16 +230,8 @@ function init_db() {
   fi
   ${cmd} up -d
   if ! perform_db_migrations; then
-    re_code="1"
-  fi
-  echo
-  ${cmd} down
-  echo
-  if [[ "${re_code}" ]]; then
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
-  else
-    echo_done
   fi
 }
 
