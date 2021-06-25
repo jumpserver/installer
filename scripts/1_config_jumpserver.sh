@@ -90,18 +90,17 @@ function set_external_mysql() {
   mysql_pass=$(get_config DB_PASSWORD)
   read_from_input mysql_pass "$(gettext 'Please enter MySQL password')" "" "${mysql_pass}"
 
-  test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
-  if [[ "$?" != "0" ]]; then
+  if ! test_mysql_connect "${mysql_host}" "${mysql_port}" "${mysql_user}" "${mysql_pass}" "${mysql_db}"; then
     echo_red "$(gettext 'Failed to connect to database, please reset')"
     echo
     set_mysql
   fi
 
-  set_config DB_HOST ${mysql_host}
-  set_config DB_PORT ${mysql_port}
-  set_config DB_USER ${mysql_user}
-  set_config DB_PASSWORD ${mysql_pass}
-  set_config DB_NAME ${mysql_db}
+  set_config DB_HOST "${mysql_host}"
+  set_config DB_PORT "${mysql_port}"
+  set_config DB_USER "${mysql_user}"
+  set_config DB_PASSWORD "${mysql_pass}"
+  set_config DB_NAME "${mysql_db}"
   set_config USE_EXTERNAL_MYSQL 1
 }
 
@@ -110,12 +109,12 @@ function set_internal_mysql() {
   password=$(get_config DB_PASSWORD)
   if [[ -z "${password}" ]]; then
     DB_PASSWORD=$(random_str 26)
-    set_config DB_PASSWORD ${DB_PASSWORD}
+    set_config DB_PASSWORD "${DB_PASSWORD}"
   fi
   user=$(get_config DB_USER)
   if [[ "${user}" != "root" ]]; then
     DB_USER=root
-    set_config DB_USER ${DB_USER}
+    set_config DB_USER "${DB_USER}"
   fi
 }
 
@@ -149,16 +148,15 @@ function set_external_redis() {
   redis_password=$(get_config REDIS_PASSWORD)
   read_from_input redis_password "$(gettext 'Please enter Redis password')" "" "${redis_password}"
 
-  test_redis_connect ${redis_host} ${redis_port} ${redis_password}
-  if [[ "$?" != "0" ]]; then
+  if ! test_redis_connect "${redis_host}" "${redis_port}" "${redis_password}"; then
     echo_red "$(gettext 'Failed to connect to redis, please reset')"
     echo
     set_redis
   fi
 
-  set_config REDIS_HOST ${redis_host}
-  set_config REDIS_PORT ${redis_port}
-  set_config REDIS_PASSWORD ${redis_password}
+  set_config REDIS_HOST "${redis_host}"
+  set_config REDIS_PORT "${redis_port}"
+  set_config REDIS_PASSWORD "${redis_password}"
   set_config USE_EXTERNAL_REDIS 1
 }
 
@@ -197,14 +195,14 @@ function set_service_port() {
   read_from_input confirm "$(gettext 'Do you need to customize the JumpServer external port')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
     read_from_input http_port "$(gettext 'JumpServer web port')" "" "${http_port}"
-    set_config HTTP_PORT ${http_port}
+    set_config HTTP_PORT "${http_port}"
 
     read_from_input ssh_port "$(gettext 'JumpServer ssh port')" "" "${ssh_port}"
-    set_config SSH_PORT ${ssh_port}
+    set_config SSH_PORT "${ssh_port}"
 
     if [[ "${use_xpack}" == "1" ]]; then
       read_from_input rdp_port "$(gettext 'JumpServer rdp port')" "" "${rdp_port}"
-      set_config RDP_PORT ${rdp_port}
+      set_config RDP_PORT "${rdp_port}"
     fi
   fi
   echo_done
@@ -223,7 +221,7 @@ function init_db() {
       cmd="${cmd} -f ./compose/docker-compose-mariadb.yml -f ./compose/docker-compose-init-mariadb.yml"
     fi
   fi
-  if [[ "${use_ipv6}" != "1" ]]; then
+  if [[ "${use_ipv6}" == "0" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
   else
     cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
@@ -232,6 +230,10 @@ function init_db() {
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
+  fi
+  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
+  if [[ "${use_external_redis}" == "1" ]]; then
+    ${cmd} down >/dev/null 2>&1
   fi
 }
 

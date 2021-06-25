@@ -16,9 +16,9 @@ function remove_jumpserver() {
       sleep 2s
       echo
       echo -e "$(gettext 'Cleaning up') ${VOLUME_DIR}"
-      rm -rf ${VOLUME_DIR}
+      rm -rf "${VOLUME_DIR}"
       echo -e "$(gettext 'Cleaning up') ${CONFIG_DIR}"
-      rm -rf ${CONFIG_DIR}
+      rm -rf "${CONFIG_DIR}"
       echo_done
     fi
   fi
@@ -28,7 +28,7 @@ function remove_jumpserver() {
   if [[ "${confirm}" == "y" ]]; then
     images=$(get_images public)
     for image in ${images}; do
-      docker rmi ${image}
+      docker rmi "${image}"
     done
   fi
   echo_green "$(gettext 'Cleanup complete')!"

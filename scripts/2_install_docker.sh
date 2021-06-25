@@ -59,7 +59,6 @@ function install_docker() {
     echo_red "systemctl stop docker"
     exit 1
   fi
-  echo_done
 }
 
 function install_compose() {
@@ -72,7 +71,6 @@ function install_compose() {
     \cp -f ./docker/docker-compose /usr/bin/
     chmod +x /usr/bin/docker-compose
   fi
-  echo_done
 }
 
 function check_docker_install() {
@@ -142,18 +140,14 @@ function config_docker() {
   set_docker_config data-root "${docker_storage_path}"
   set_docker_config log-driver "json-file"
   set_docker_config log-opts '{"max-size": "10m", "max-file": "3"}'
-  diff /etc/docker/daemon.json /etc/docker/daemon.json.bak &>/dev/null
-  if [[ "$?" != "0" ]]; then
+  if ! diff /etc/docker/daemon.json /etc/docker/daemon.json.bak &>/dev/null; then
     docker_config_change=1
   fi
-  echo_done
 }
 
 function check_docker_config() {
   if [[ ! -f "/etc/docker/daemon.json" ]]; then
     config_docker
-  else
-    echo_done
   fi
 }
 
@@ -163,10 +157,7 @@ function start_docker() {
     systemctl enable docker
     systemctl start docker
   fi
-  docker ps >/dev/null 2>&1
-  if [[ "$?" == "0" ]]; then
-    echo_done
-  else
+  if ! docker ps >/dev/null 2>&1; then
     echo_failed
     exit 1
   fi
@@ -174,11 +165,17 @@ function start_docker() {
 
 function check_docker_start() {
   prepare_set_redhat_firewalld
-  docker ps > /dev/null 2>&1
-  if [[ "$?" != "0" ]]; then
+  if ! docker ps > /dev/null 2>&1; then
     start_docker
   else
     echo_done
+  fi
+}
+
+function check_docker_compose() {
+  if ! docker-compose -v > /dev/null 2>&1; then
+    echo_failed
+    exit 1
   fi
 }
 
@@ -194,6 +191,8 @@ function main() {
   check_docker_config
   echo_yellow "\n3. $(gettext 'Start Docker')"
   check_docker_start
+  check_docker_compose
+  echo_done
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then

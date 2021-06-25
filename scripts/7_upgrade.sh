@@ -25,8 +25,8 @@ function migrate_coco_to_koko_v1_54_to_v1_55() {
   coco_dir="${volume_dir}/coco"
   koko_dir="${volume_dir}/koko"
   if [[ ! -d "${koko_dir}" && -d "${coco_dir}" ]]; then
-    mv ${coco_dir} ${koko_dir}
-    ln -s ${koko_dir} ${coco_dir}
+    mv "${coco_dir}" "${koko_dir}"
+    ln -s "${koko_dir}" "${coco_dir}"
   fi
 }
 

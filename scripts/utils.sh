@@ -23,10 +23,10 @@ function random_str() {
   if command -v dmidecode &>/dev/null; then
     uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len})
   fi
-  if [[ "$(echo $uuid | wc -L)" == "${len}" ]]; then
-    echo ${uuid}
+  if [[ "$(echo "$uuid" | wc -L)" == "${len}" ]]; then
+    echo "${uuid}"
   else
-    cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
+    cat < /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
   fi
 }
 
@@ -74,25 +74,38 @@ function test_mysql_connect() {
   password=$4
   db=$5
   command="CREATE TABLE IF NOT EXISTS test(id INT); DROP TABLE test;"
-  docker run -i --rm jumpserver/mariadb:10 mysql -h${host} -P${port} -u${user} -p${password} ${db} -e "${command}" 2>/dev/null
+
+  if [[ "${host}" == "mysql" ]]; then
+    mysql_images=jumpserver/mysql:5
+  else
+    mysql_images=jumpserver/mariadb:10
+  fi
+  docker run -i --rm "${mysql_images}" mysql -h"${host}" -P"${port}" -u"${user}" -p"${password}" "${db}" -e "${command}" 2>/dev/null
 }
 
 function test_redis_connect() {
   host=$1
   port=$2
   password=$3
-  password=${password:=''}
   docker run -i --rm jumpserver/redis:6-alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" >/dev/null
 }
 
 function get_images() {
   scope="all"
-  if [[ ! -z "$1" ]]; then
+  if [[ -n "$1" ]]; then
     scope="$1"
   fi
+
+  db_host=$(get_config DB_HOST)
+  if [[ "${db_host}" == "mysql" ]]; then
+    mysql_images=jumpserver/mysql:5
+  else
+    mysql_images=jumpserver/mariadb:10
+  fi
+
   images=(
     "jumpserver/redis:6-alpine"
-    "jumpserver/mariadb:10"
+    "${mysql_images}"
     "jumpserver/nginx:alpine2"
     "jumpserver/luna:${VERSION}"
     "jumpserver/core:${VERSION}"
@@ -115,7 +128,7 @@ function read_from_input() {
   msg=$2
   choices=$3
   default=$4
-  if [[ ! -z "${choices}" ]]; then
+  if [[ -n "${choices}" ]]; then
     msg="${msg} (${choices}) "
   fi
   if [[ -z "${default}" ]]; then
@@ -124,11 +137,11 @@ function read_from_input() {
     msg="${msg} ($(gettext 'default') ${default})"
   fi
   echo -n "${msg}: "
-  read input
-  if [[ -z "${input}" && ! -z "${default}" ]]; then
-    export ${var}="${default}"
+  read -r input
+  if [[ -z "${input}" && -n "${default}" ]]; then
+    export "${var}"="${default}"
   else
-    export ${var}="${input}"
+    export "${var}"="${input}"
   fi
 }
 
@@ -218,7 +231,7 @@ function get_docker_compose_cmd_line() {
   ignore_db="$1"
   cmd="docker-compose -f ./compose/docker-compose-app.yml"
   use_ipv6=$(get_config USE_IPV6)
-  if [[ "${use_ipv6}" != "1" ]]; then
+  if [[ "${use_ipv6}" == "0" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
   else
     cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
@@ -261,19 +274,19 @@ function install_required_pkg() {
       dnf -q -y install python2
       ln -s /usr/bin/python2 /usr/bin/python
     else
-      dnf -q -y install $required_pkg
+      dnf -q -y install "$required_pkg"
     fi
   elif command -v yum > /dev/null; then
-    yum -q -y install $required_pkg
+    yum -q -y install "$required_pkg"
   elif command -v apt > /dev/null; then
-    apt-get -qq -y install $required_pkg
+    apt-get -qq -y install "$required_pkg"
   elif command -v zypper > /dev/null; then
-    zypper -q -n install $required_pkg
+    zypper -q -n install "$required_pkg"
   elif command -v apk > /dev/null; then
     if [ "$required_pkg" == "python" ]; then
       apk add -q python2
     else
-      apk add -q $required_pkg
+      apk add -q "$required_pkg"
     fi
     command -v gettext > /dev/null || {
       apk add -q gettext-dev
@@ -292,8 +305,7 @@ function prepare_online_install_required_pkg() {
 
 function prepare_set_redhat_firewalld() {
   if command -v firewall-cmd > /dev/null; then
-    firewall-cmd --state > /dev/null 2>&1
-    if [[ "$?" == "0" ]]; then
+    if firewall-cmd --state > /dev/null 2>&1; then
       docker_subnet=$(get_config DOCKER_SUBNET)
       if [[ ! "$(firewall-cmd --list-rich-rule | grep ${docker_subnet})" ]]; then
         firewall-cmd --permanent --zone=public --add-rich-rule="rule family=ipv4 source address=${docker_subnet} accept"
@@ -318,7 +330,7 @@ function prepare_config() {
   echo_yellow "1. $(gettext 'Check Configuration File')"
   echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"
   if [[ ! -d ${CONFIG_DIR} ]]; then
-    mkdir -p ${CONFIG_DIR}
+    mkdir -p "${CONFIG_DIR}"
     cp config-example.txt "${CONFIG_FILE}"
   fi
   if [[ ! -f ${CONFIG_FILE} ]]; then
@@ -342,6 +354,10 @@ function prepare_config() {
       fi
     done
   done
+
+  if [[ "$(uname -m)" == "aarch64" ]]; then
+    sed -i "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
+  fi
   echo_done
 
   nginx_dir="${CONFIG_DIR}/nginx"
@@ -354,7 +370,7 @@ function prepare_config() {
     \cp -rf "${PROJECT_DIR}/config_init/nginx" "${CONFIG_DIR}"
   fi
 
-  for f in $(ls ${PROJECT_DIR}/config_init/nginx | grep -v cert); do
+  for f in $(ls "${PROJECT_DIR}/config_init/nginx" | grep -v cert); do
     if [[ ! -f "${nginx_dir}/${f}" ]]; then
       \cp -f "${PROJECT_DIR}/config_init/nginx/${f}" "${nginx_dir}"
     else
@@ -369,7 +385,7 @@ function prepare_config() {
 
   for f in $(ls ${PROJECT_DIR}/config_init/nginx/cert); do
     if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
-      \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/${f} "${nginx_cert_dir}"
+      \cp -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" "${nginx_cert_dir}"
     else
       echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
     fi
@@ -394,7 +410,7 @@ function echo_logo() {
        ██║██║   ██║██╔████╔██║██████╔╝███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝
   ██   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗
   ╚█████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║
-  ╚════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
+   ╚════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
 
 EOF
 
@@ -419,7 +435,7 @@ function perform_db_migrations() {
   volume_dir=$(get_config VOLUME_DIR)
   docker run -i --rm --network=jms_net \
     --env-file=/opt/jumpserver/config/config.txt \
-    -v ${volume_dir}/core/data:/opt/jumpserver/data \
+    -v "${volume_dir}/core/data":/opt/jumpserver/data \
     jumpserver/core:"${VERSION}" upgrade_db
 }
 

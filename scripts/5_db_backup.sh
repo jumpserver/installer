@@ -24,7 +24,7 @@ function main() {
   fi
 
   backup_cmd="mysqldump --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
-  if ! docker run --rm -i --network=jms_net ${mysql_images} ${backup_cmd} > ${DB_FILE}; then
+  if ! docker run --rm -i --network=jms_net "${mysql_images}" "${backup_cmd}" > "${DB_FILE}"; then
     log_error "$(gettext 'Backup failed')!"
     rm -f "${DB_FILE}"
     exit 1

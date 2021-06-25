@@ -66,6 +66,7 @@ function main() {
   else
     pull_image
   fi
+  echo_done
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
