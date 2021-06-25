@@ -19,9 +19,8 @@ function random_str() {
   if [[ -z ${len} ]]; then
     len=16
   fi
-  command -v dmidecode &>/dev/null
   uuid=None
-  if [[ "$?" == "0" ]]; then
+  if command -v dmidecode &>/dev/null; then
     uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len})
   fi
   if [[ "$(echo $uuid | wc -L)" == "${len}" ]]; then
@@ -33,10 +32,7 @@ function random_str() {
 
 function has_config() {
   key=$1
-  cwd=$(pwd)
-  grep "^${key}=" "${CONFIG_FILE}" &>/dev/null
-
-  if [[ "$?" == "0" ]]; then
+  if grep "^${key}=" "${CONFIG_FILE}" &>/dev/null; then
     echo "1"
   else
     echo "0"
@@ -44,7 +40,6 @@ function has_config() {
 }
 
 function get_config() {
-  cwd=$(pwd)
   key=$1
   value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }')
   echo "${value}"
@@ -79,7 +74,7 @@ function test_mysql_connect() {
   password=$4
   db=$5
   command="CREATE TABLE IF NOT EXISTS test(id INT); DROP TABLE test;"
-  docker run -i --rm jumpserver/mysql:5 mysql -h${host} -P${port} -u${user} -p${password} ${db} -e "${command}" 2>/dev/null
+  docker run -i --rm jumpserver/mariadb:10 mysql -h${host} -P${port} -u${user} -p${password} ${db} -e "${command}" 2>/dev/null
 }
 
 function test_redis_connect() {
@@ -97,7 +92,7 @@ function get_images() {
   fi
   images=(
     "jumpserver/redis:6-alpine"
-    "jumpserver/mysql:5"
+    "jumpserver/mariadb:10"
     "jumpserver/nginx:alpine2"
     "jumpserver/luna:${VERSION}"
     "jumpserver/core:${VERSION}"
@@ -233,7 +228,12 @@ function get_docker_compose_cmd_line() {
     cmd="${cmd} -f ./compose/docker-compose-task.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-mysql.yml -f ./compose/docker-compose-mysql-internal.yml"
+    db_host=$(get_config DB_HOST)
+    if [[ "${db_host}" == "mysql" ]]; then
+      cmd="${cmd} -f ./compose/docker-compose-mysql.yml -f ./compose/docker-compose-mysql-internal.yml"
+    else
+      cmd="${cmd} -f ./compose/docker-compose-mariadb.yml -f ./compose/docker-compose-mariadb-internal.yml"
+    fi
   fi
   if [[ "${services}" =~ redis ]]; then
     cmd="${cmd} -f ./compose/docker-compose-redis.yml -f ./compose/docker-compose-redis-internal.yml"
@@ -313,14 +313,12 @@ function prepare_set_redhat_firewalld() {
 }
 
 function prepare_config() {
-  cwd=$(pwd)
   cd "${PROJECT_DIR}" || exit
 
-  config_dir=$(dirname "${CONFIG_FILE}")
   echo_yellow "1. $(gettext 'Check Configuration File')"
-  echo "$(gettext 'Path to Configuration file'): ${config_dir}"
-  if [[ ! -d ${config_dir} ]]; then
-    mkdir -p ${config_dir}
+  echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"
+  if [[ ! -d ${CONFIG_DIR} ]]; then
+    mkdir -p ${CONFIG_DIR}
     cp config-example.txt "${CONFIG_FILE}"
   fi
   if [[ ! -f ${CONFIG_FILE} ]]; then
@@ -334,9 +332,9 @@ function prepare_config() {
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
-  configs=("nginx" "core" "koko" "mysql" "redis")
+  configs=("core" "koko" "mysql" "mariadb" "redis")
   for d in "${configs[@]}"; do
-    for f in $(ls ${PROJECT_DIR}/config_init/${d} | grep -v cert); do
+    for f in $(ls ${PROJECT_DIR}/config_init/${d}); do
       if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
         \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
       else
@@ -346,13 +344,28 @@ function prepare_config() {
   done
   echo_done
 
-  nginx_cert_dir="${config_dir}/nginx/cert"
   echo_yellow "\n2. $(gettext 'Configure Nginx')"
-  echo "$(gettext 'configuration file'): ${nginx_cert_dir}"
-  # 迁移 nginx 的证书
+  echo "$(gettext 'configuration file'): ${nginx_dir}"
+
+  nginx_dir="${CONFIG_DIR}/nginx"
+  nginx_cert_dir="${CONFIG_DIR}/nginx/cert"
+
+  if [[ ! -d ${nginx_dir} ]]; then
+    mkdir -p "${nginx_dir}"
+    \cp -rf "${PROJECT_DIR}/config_init/nginx" "${CONFIG_DIR}"
+  fi
+
+  for f in $(ls ${PROJECT_DIR}/config_init/nginx | grep -v cert); do
+    if [[ ! -f "${nginx_dir}/${f}" ]]; then
+      \cp -f "${PROJECT_DIR}/config_init/nginx/${f}" "${nginx_dir}"
+    else
+      echo -e "${nginx_dir}/${f}  [\033[32m √ \033[0m]"
+    fi
+  done
+
   if [[ ! -d ${nginx_cert_dir} ]]; then
     mkdir -p "${nginx_cert_dir}"
-    \cp -f "${PROJECT_DIR}"/config_init/nginx/cert/* "${nginx_cert_dir}"
+    \cp -rf "${PROJECT_DIR}/config_init/nginx/cert" "${CONFIG_DIR}/nginx"
   fi
 
   for f in $(ls ${PROJECT_DIR}/config_init/nginx/cert); do
@@ -364,7 +377,7 @@ function prepare_config() {
   done
   echo_done
 
-  backup_dir="${config_dir}/backup"
+  backup_dir="${CONFIG_DIR}/backup"
   mkdir -p "${backup_dir}"
   now=$(date +'%Y-%m-%d_%H-%M-%S')
   backup_config_file="${backup_dir}/config.txt.${now}"

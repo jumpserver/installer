@@ -16,8 +16,15 @@ DB_FILE=${BACKUP_DIR}/${DATABASE}-${CURRENT_VERSION}-$(date +%F_%T).sql
 function main() {
   mkdir -p ${BACKUP_DIR}
   echo "$(gettext 'Backing up')..."
+
+  if [[ "${HOST}" == "mysql" ]]; then
+    mysql_images=jumpserver/mysql:5
+  else
+    mysql_images=jumpserver/mariadb:10
+  fi
+
   backup_cmd="mysqldump --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
-  if ! docker run --rm -i --network=jms_net jumpserver/mysql:5 ${backup_cmd} > ${DB_FILE}; then
+  if ! docker run --rm -i --network=jms_net ${mysql_images} ${backup_cmd} > ${DB_FILE}; then
     log_error "$(gettext 'Backup failed')!"
     rm -f "${DB_FILE}"
     exit 1

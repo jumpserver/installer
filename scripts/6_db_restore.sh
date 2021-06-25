@@ -2,7 +2,7 @@
 # coding: utf-8
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-PROJECT_DIR=$(dirname ${BASE_DIR})
+PROJECT_DIR="$(dirname "$BASE_DIR")"
 # shellcheck source=./util.sh
 . "${BASE_DIR}/utils.sh"
 BACKUP_DIR=/opt/jumpserver/db_backup
@@ -24,7 +24,13 @@ function main() {
     exit 1
   fi
 
-  if ! docker run --rm -i --network=jms_net jumpserver/mysql:5 $restore_cmd <"${DB_FILE}"; then
+  if [[ "${HOST}" == "mysql" ]]; then
+    mysql_images=jumpserver/mysql:5
+  else
+    mysql_images=jumpserver/mariadb:10
+  fi
+
+  if ! docker run --rm -i --network=jms_net "${mysql_images}" "${restore_cmd}" <"${DB_FILE}"; then
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
     exit 1
   else

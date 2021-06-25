@@ -213,10 +213,15 @@ function set_service_port() {
 function init_db() {
   echo_yellow "\n7. $(gettext 'Init JumpServer Database')"
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  db_host=$(get_config DB_HOST)
   use_ipv6=$(get_config USE_IPV6)
   cmd="docker-compose -f ./compose/docker-compose-redis.yml"
   if [[ "${use_external_mysql}" == "0" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-mysql.yml -f ./compose/docker-compose-init-db.yml"
+    if [[ "${db_host}" == "mysql" ]]; then
+      cmd="${cmd} -f ./compose/docker-compose-mysql.yml -f ./compose/docker-compose-init-mysql.yml"
+    else
+      cmd="${cmd} -f ./compose/docker-compose-mariadb.yml -f ./compose/docker-compose-init-mariadb.yml"
+    fi
   fi
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
