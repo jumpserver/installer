@@ -18,13 +18,11 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 
 export OS=$(uname -s)
 export DOCKER_VERSION=18.06.3-ce
-export DOCKER_MD5=ea3304ea2fff21dd1e501795c43c48ff
 export DOCKER_MIRROR="https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable"
 DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
 export DOCKER_BIN_URL
 
-export DOCKER_COMPOSE_VERSION=1.27.4
-export DOCKER_COMPOSE_MD5=bec660213f97d788d129410d047f261f
-export DOCKER_COMPOSE_MIRROR="https://get.daocloud.io/docker/compose/releases/download"
+export DOCKER_COMPOSE_VERSION=1.29.2
+export DOCKER_COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
 DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)"
 export DOCKER_COMPOSE_BIN_URL

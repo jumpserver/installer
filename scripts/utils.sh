@@ -109,9 +109,9 @@ function get_images() {
     echo "${image}"
   done
   if [[ "${scope}" == "all" ]]; then
-    echo "registry.fit2cloud.com/jumpserver/xpack:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
+    echo "registry.jumpserver.org/jumpserver/xpack:${VERSION}"
+    echo "registry.jumpserver.org/jumpserver/omnidb:${VERSION}"
+    echo "registry.jumpserver.org/jumpserver/xrdp:${VERSION}"
   fi
 }
 

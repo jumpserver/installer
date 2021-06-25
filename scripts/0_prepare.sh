@@ -15,8 +15,7 @@ function prepare_config_xpack() {
 }
 
 function prepare_docker_bin() {
-  md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
-  if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
+  if [[ ! -f /tmp/docker.tar.gz ]]; then
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker.tar.gz
     echo "$(gettext 'Starting to download Docker engine') ..."
@@ -32,8 +31,7 @@ function prepare_docker_bin() {
 }
 
 function prepare_compose_bin() {
-  md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
-  if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
+  if [[ ! -f /tmp/docker-compose ]]; then
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker-compose
     echo "$(gettext 'Starting to download Docker Compose binary') ..."
@@ -107,9 +105,7 @@ function main() {
 
   echo " $(gettext 'Preparing Docker offline package')"
   prepare_docker_bin
-  if [[ "$(uname -m)" == "x86_64" ]]; then
-    prepare_compose_bin
-  fi
+  prepare_compose_bin
 
   echo -e "\n $(gettext 'Preparing image offline package')"
   prepare_image_files
