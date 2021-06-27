@@ -2,18 +2,17 @@
 #
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-# shellcheck source=./util.sh
+
 . "${BASE_DIR}/utils.sh"
 
 function pre_install() {
-  command -v systemctl &>/dev/null
-  if [[ "$?" != "0" ]]; then
-    command -v docker > /dev/null || {
-      log_error "$(gettext 'The current Linux system does not support SYSTEMd management. Please deploy docker by yourself before running this script again')"
+  if ! command -v systemctl &>/dev/null; then
+    command -v docker >/dev/null || {
+      log_error "$(gettext 'The current Linux system does not support systemd management. Please deploy docker by yourself before running this script again')"
       exit 1
     }
-    command -v docker-compose > /dev/null || {
-      log_error "$(gettext 'The current Linux system does not support SYSTEMd management. Please deploy docker-compose by yourself before running this script again')"
+    command -v docker-compose >/dev/null || {
+      log_error "$(gettext 'The current Linux system does not support systemd management. Please deploy docker-compose by yourself before running this script again')"
       exit 1
     }
   fi
@@ -21,7 +20,7 @@ function pre_install() {
 
 function post_install() {
   echo_green "\n>>> $(gettext 'The Installation is Complete')"
-  HOST=$(ip addr | grep 'state UP' -A2 | grep inet | egrep -v '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
+  HOST=$(ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
   if [ ! "$HOST" ]; then
       HOST=$(hostname -I | cut -d ' ' -f1)
   fi
@@ -64,7 +63,7 @@ function set_lang() {
     return
   fi
   # 设置过就不用改了
-  if grep "export LANG=" ~/.bashrc &> /dev/null; then
+  if grep "export LANG=" ~/.bashrc &>/dev/null; then
     return
   fi
   lang="cn"

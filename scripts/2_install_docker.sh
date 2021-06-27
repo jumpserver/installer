@@ -1,15 +1,13 @@
 #!/bin/bash
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-PROJECT_DIR=$(dirname ${BASE_DIR})
-# shellcheck source=./util.sh
+
 . "${BASE_DIR}/utils.sh"
 
 # shellcheck source=./0_prepare.sh
 . "${BASE_DIR}/0_prepare.sh"
 
 DOCKER_CONFIG="/etc/docker/daemon.json"
-docker_config_change=0
 docker_copy_failed=0
 
 cd "${BASE_DIR}" || exit
@@ -74,15 +72,16 @@ function install_compose() {
 }
 
 function check_docker_install() {
-  command -v docker > /dev/null || {
+  command -v docker >/dev/null || {
     install_docker
   }
 }
 
 function check_compose_install() {
-  command -v docker-compose > /dev/null && echo_done || {
+  command -v docker-compose >/dev/null || {
     install_compose
   }
+  echo_done
 }
 
 function set_docker_config() {
@@ -140,19 +139,17 @@ function config_docker() {
   set_docker_config data-root "${docker_storage_path}"
   set_docker_config log-driver "json-file"
   set_docker_config log-opts '{"max-size": "10m", "max-file": "3"}'
-  if ! diff /etc/docker/daemon.json /etc/docker/daemon.json.bak &>/dev/null; then
-    docker_config_change=1
-  fi
 }
 
 function check_docker_config() {
   if [[ ! -f "/etc/docker/daemon.json" ]]; then
     config_docker
   fi
+  echo_done
 }
 
 function start_docker() {
-  if command -v systemctl > /dev/null; then
+  if command -v systemctl >/dev/null; then
     systemctl daemon-reload
     systemctl enable docker
     systemctl start docker
@@ -165,18 +162,17 @@ function start_docker() {
 
 function check_docker_start() {
   prepare_set_redhat_firewalld
-  if ! docker ps > /dev/null 2>&1; then
+  if ! docker ps >/dev/null 2>&1; then
     start_docker
-  else
-    echo_done
   fi
 }
 
 function check_docker_compose() {
-  if ! docker-compose -v > /dev/null 2>&1; then
+  if ! docker-compose -v >/dev/null 2>&1; then
     echo_failed
     exit 1
   fi
+  echo_done
 }
 
 function main() {
@@ -192,7 +188,6 @@ function main() {
   echo_yellow "\n3. $(gettext 'Start Docker')"
   check_docker_start
   check_docker_compose
-  echo_done
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then

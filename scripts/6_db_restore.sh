@@ -2,10 +2,8 @@
 # coding: utf-8
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-PROJECT_DIR="$(dirname "$BASE_DIR")"
-# shellcheck source=./util.sh
+
 . "${BASE_DIR}/utils.sh"
-BACKUP_DIR=/opt/jumpserver/db_backup
 
 HOST=$(get_config DB_HOST)
 PORT=$(get_config DB_PORT)
@@ -28,6 +26,12 @@ function main() {
     mysql_images=jumpserver/mysql:5
   else
     mysql_images=jumpserver/mariadb:10
+  fi
+
+  project_name=$(get_config COMPOSE_PROJECT_NAME)
+  net_name="${project_name}_net"
+  if ! docker network ls | grep "${net_name}" >/dev/null; then
+    check_container_if_need
   fi
 
   if ! docker run --rm -i --network=jms_net "${mysql_images}" ${restore_cmd} <"${DB_FILE}"; then

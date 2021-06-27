@@ -1,9 +1,7 @@
 #!/bin/bash
 #
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-PROJECT_DIR=$(dirname ${BASE_DIR})
 
-# shellcheck source=./util.sh
 . "${BASE_DIR}/utils.sh"
 
 function set_network() {
@@ -19,8 +17,6 @@ function set_network() {
     set_config USE_IPV6 1
   fi
   echo_done
-
-  cd "${cwd}" || exit
 }
 
 function set_secret_key() {
@@ -55,7 +51,7 @@ function set_volume_dir() {
     echo "$(gettext 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /opt/jumpserver"
     echo "$(gettext 'Note: you can not change it after installation, otherwise the database may be lost')"
     echo
-    df -h | egrep -v "map|devfs|tmpfs|overlay|shm"
+    df -h | grep -Ev "map|devfs|tmpfs|overlay|shm"
     echo
     read_from_input volume_dir "$(gettext 'Persistent storage directory')" "" "${volume_dir}"
     if [[ "${volume_dir}" == "y" ]]; then
@@ -210,30 +206,21 @@ function set_service_port() {
 
 function init_db() {
   echo_yellow "\n7. $(gettext 'Init JumpServer Database')"
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  db_host=$(get_config DB_HOST)
-  use_ipv6=$(get_config USE_IPV6)
-  cmd="docker-compose -f ./compose/docker-compose-redis.yml"
-  if [[ "${use_external_mysql}" == "0" ]]; then
-    if [[ "${db_host}" == "mysql" ]]; then
-      cmd="${cmd} -f ./compose/docker-compose-mysql.yml -f ./compose/docker-compose-init-mysql.yml"
-    else
-      cmd="${cmd} -f ./compose/docker-compose-mariadb.yml -f ./compose/docker-compose-init-mariadb.yml"
-    fi
+
+  project_name=$(get_config COMPOSE_PROJECT_NAME)
+  net_name="${project_name}_net"
+  if ! docker network ls | grep "${net_name}" >/dev/null 2>&1; then
+    check_container_if_need
   fi
-  if [[ "${use_ipv6}" == "0" ]]; then
-    cmd="${cmd} -f compose/docker-compose-network.yml"
-  else
-    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
-  fi
-  ${cmd} up -d
+
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
   fi
   use_external_redis=$(get_config USE_EXTERNAL_REDIS)
   if [[ "${use_external_redis}" == "1" ]]; then
-    ${cmd} down >/dev/null 2>&1
+    cd "${PROJECT_DIR}" || exit 1
+    bash ./jmsctl.sh stop jms_redis >/dev/null 2>&1
   fi
 }
 

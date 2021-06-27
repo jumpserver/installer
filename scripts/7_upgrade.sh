@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-# shellcheck source=./util.sh
+
 . "${BASE_DIR}/utils.sh"
-# shellcheck source=./2_install_docker.sh
-. "${BASE_DIR}/2_install_docker.sh"
 
 target=$1
 
 function upgrade_config() {
   # 如果配置文件有更新, 则添加到新的配置文件
+  if docker ps -a | grep jms_guacamole >/dev/null; then
+    docker stop jms_guacamole >/dev/null
+    docker rm jms_guacamole >/dev/null
+  fi
   rdp_port=$(get_config RDP_PORT)
   if [[ -z "${rdp_port}" ]]; then
     RDP_PORT=3389
@@ -65,9 +67,16 @@ function update_config_if_need() {
   migrate_config_v1_5_to_v2_0
   migrate_config_v2_5_v2_6
   upgrade_config
+  echo_done
 }
 
 function backup_db() {
+  project_name=$(get_config COMPOSE_PROJECT_NAME)
+  net_name="${project_name}_net"
+  if ! docker network ls | grep "${net_name}" >/dev/null; then
+    check_container_if_need
+  fi
+
   if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
     if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
       confirm="n"
@@ -82,18 +91,17 @@ function backup_db() {
 }
 
 function db_migrations() {
-  if [[ "$(docker ps | grep jms_core )" ]]; then
+  if docker ps | grep jumpserver >/dev/null; then
     confirm="n"
-    read_from_input confirm "$(gettext 'Detected that the jms_core container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
+    read_from_input confirm "$(gettext 'Detected that the JumpServer container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
-      docker stop jms_core
-      docker rm jms_core
+      echo
+      cd "${PROJECT_DIR}" || exit 1
+      bash ./jmsctl.sh stop
+      sleep 2s
+      echo
     else
       exit 1
-    fi
-    if [[ "$(docker ps -a | grep jms_guacamole)" ]]; then
-      docker stop jms_guacamole > /dev/null
-      docker rm jms_guacamole > /dev/null
     fi
   fi
 
@@ -105,8 +113,27 @@ function db_migrations() {
       exit 1
     fi
   else
+    use_external_redis=$(get_config USE_EXTERNAL_REDIS)
+    if [[ "${use_external_redis}" == "1" ]]; then
+      cd "${PROJECT_DIR}" || exit 1
+      bash ./jmsctl.sh stop jms_redis >/dev/null 2>&1
+    fi
     echo_done
   fi
+}
+
+function clear_images() {
+  if [[ "${current_version}" != "${to_version}" ]]; then
+    confirm="n"
+    read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
+    if [[ "${confirm}" != "y" ]]; then
+      exit 1
+    else
+      docker images | grep "jumpserver/" | grep "${current_version}" | awk '{print $3}' | xargs docker rmi -f
+      echo
+    fi
+  fi
+  echo_done
 }
 
 function main() {
@@ -125,20 +152,24 @@ function main() {
     sed -i "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
     export VERSION=${to_version}
   fi
-  update_config_if_need && echo_done || (echo_failed; exit 1)
+  echo
+  update_config_if_need
 
   echo_yellow "\n4. $(gettext 'Loading Docker Image')"
-  bash "${BASE_DIR}/3_load_images.sh" || (echo_failed; exit  1)
+  bash "${BASE_DIR}/3_load_images.sh"
 
   echo_yellow "\n5. $(gettext 'Backup database')"
-  backup_db || exit 1
+  backup_db
 
   echo_yellow "\n6. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
-  db_migrations || exit 1
+  db_migrations
 
-  echo_yellow "\n7. $(gettext 'Upgrade successfully. You can now restart the program')"
-  echo "./jmsctl.sh restart"
+  echo_yellow "\n7. $(gettext 'Cleanup Image')"
+  clear_images
+
+  echo_yellow "\n8. $(gettext 'Upgrade successfully. You can now restart the program')"
+  echo "./jmsctl.sh start"
   echo -e "\n"
   set_current_version
 }
