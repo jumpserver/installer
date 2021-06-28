@@ -14,7 +14,7 @@ services:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health/"]
+      test: ["curl -fsL http://localhost:8080/api/health/ > /dev/null"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -30,7 +30,7 @@ services:
       core:
         condition: service_healthy
     healthcheck:
-      test: "curl -sL http://localhost/luna/ > /dev/null"
+      test: "curl -fsL http://localhost/luna/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
@@ -46,7 +46,7 @@ services:
       core:
         condition: service_healthy
     healthcheck:
-      test: "curl -sL http://localhost/ > /dev/null"
+      test: "curl -fsL http://localhost/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
@@ -69,7 +69,7 @@ services:
         condition: service_healthy
     privileged: true
     healthcheck:
-      test: "ps axu | grep -v 'grep' | grep 'koko'"
+      test: "curl -fsL http://localhost:5000/koko/health/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
@@ -89,7 +89,7 @@ services:
       core:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:8081/lion/health/"]
+      test: "curl -fsL http://localhost:8081/lion/health/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
