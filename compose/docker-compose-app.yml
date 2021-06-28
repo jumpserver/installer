@@ -14,7 +14,7 @@ services:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
     healthcheck:
-      test: ["curl -fsL http://localhost:8080/api/health/ > /dev/null"]
+      test: "curl -fsL http://localhost:8080/api/health/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
