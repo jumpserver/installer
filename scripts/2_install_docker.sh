@@ -10,7 +10,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 DOCKER_CONFIG="/etc/docker/daemon.json"
 docker_copy_failed=0
 
-cd "${BASE_DIR}" || exit
+cd "${BASE_DIR}" || exit 1
 
 function copy_docker() {
   \cp -f ./docker/* /usr/bin/ \
@@ -124,7 +124,7 @@ function config_docker() {
   if [[ "${confirm}" == "y" ]]; then
     echo
     echo "$(gettext 'Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as') /opt/docker"
-    df -h | egrep -v "map|devfs|tmpfs|overlay|shm"
+    df -h | grep -Ev "map|devfs|tmpfs|overlay|shm"
     echo
     read_from_input docker_storage_path "$(gettext 'Docker image storage directory')" '' "${docker_storage_path}"
   fi

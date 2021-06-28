@@ -27,6 +27,7 @@ function prepare_docker_bin() {
     echo "$(gettext 'Using Docker cache'): /tmp/docker.tar.gz"
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
+  chown -R root:root docker
   chmod +x docker/*
 }
 
@@ -46,6 +47,7 @@ function prepare_compose_bin() {
     mkdir -p "${BASE_DIR}/docker"
   fi
   cp /tmp/docker-compose docker/
+  chown -R root:root docker
   chmod +x docker/*
   export PATH=$PATH:$(pwd)/docker
 }
@@ -65,14 +67,12 @@ function prepare_image_files() {
   for image in ${images}; do
     ((i++)) || true
     echo "[${image}]"
-    if ! docker images | grep "${image%:*}" | grep "${image#*:}" >/dev/null; then
-      if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
-        docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
-        docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
-        docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
-      else
-        docker pull "${image}"
-      fi
+    if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
+      docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
+      docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
+      docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
+    else
+      docker pull "${image}"
     fi
     filename=$(basename "${image}").tar
     component=$(echo "${filename}" | awk -F: '{ print $1 }')
