@@ -206,22 +206,15 @@ function set_service_port() {
 
 function init_db() {
   echo_yellow "\n7. $(gettext 'Init JumpServer Database')"
-
-  project_name=$(get_config COMPOSE_PROJECT_NAME)
-  net_name="${project_name}_net"
-  if ! docker network ls | grep "${net_name}" >/dev/null 2>&1; then
-    check_container_if_need
-  fi
+  check_container_if_need
 
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
   fi
-  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
-  if [[ "${use_external_redis}" == "1" ]]; then
-    cd "${PROJECT_DIR}" || exit 1
-    bash ./jmsctl.sh stop jms_redis >/dev/null 2>&1
-  fi
+
+  docker stop jms_redis >/dev/null 2>&1
+  docker rm jms_redis >/dev/null 2>&1
 }
 
 function main() {

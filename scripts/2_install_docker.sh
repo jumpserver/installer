@@ -88,6 +88,16 @@ function set_docker_config() {
   key=$1
   value=$2
 
+  if command -v python >/dev/null; then
+    docker_command=python
+  elif command -v python2 >/dev/null; then
+    docker_command=python2
+  elif command -v python3 >/dev/null; then
+    docker_command=python3
+  else
+    return
+  fi
+
   if [[ ! -f "${DOCKER_CONFIG}" ]]; then
     config_dir=$(dirname ${DOCKER_CONFIG})
     if [[ ! -d ${config_dir} ]]; then
@@ -95,7 +105,8 @@ function set_docker_config() {
     fi
     echo -e "{\n}" >>${DOCKER_CONFIG}
   fi
-  $(python -c "import json
+
+"${docker_command}" -c "import json
 key = '${key}'
 value = '${value}'
 try:
@@ -110,7 +121,7 @@ f.close();
 f = open(filepath, 'w');
 json.dump(config, f, indent=True, sort_keys=True);
 f.close()
-")
+"
 }
 
 function config_docker() {

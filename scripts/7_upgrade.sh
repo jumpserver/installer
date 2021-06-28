@@ -71,12 +71,6 @@ function update_config_if_need() {
 }
 
 function backup_db() {
-  project_name=$(get_config COMPOSE_PROJECT_NAME)
-  net_name="${project_name}_net"
-  if ! docker network ls | grep "${net_name}" >/dev/null; then
-    check_container_if_need
-  fi
-
   if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
     if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
       confirm="n"
@@ -105,6 +99,13 @@ function db_migrations() {
     fi
   fi
 
+  project_name=$(get_config COMPOSE_PROJECT_NAME)
+  net_name="${project_name}_net"
+  if ! docker network ls | grep "${net_name}" >/dev/null; then
+    check_container_if_need
+    flag=1
+  fi
+
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     confirm="n"
@@ -112,13 +113,12 @@ function db_migrations() {
     if [[ "${confirm}" != "y" ]]; then
       exit 1
     fi
-  else
-    use_external_redis=$(get_config USE_EXTERNAL_REDIS)
-    if [[ "${use_external_redis}" == "1" ]]; then
-      cd "${PROJECT_DIR}" || exit 1
-      bash ./jmsctl.sh stop jms_redis >/dev/null 2>&1
-    fi
-    echo_done
+  fi
+
+  if [[ "$flag" ]]; then
+    docker stop jms_redis >/dev/null 2>&1
+    docker rm jms_redis >/dev/null 2>&1
+    unset flag
   fi
 }
 

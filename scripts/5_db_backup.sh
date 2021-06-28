@@ -28,6 +28,7 @@ function main() {
   net_name="${project_name}_net"
   if ! docker network ls | grep "${net_name}" >/dev/null; then
     check_container_if_need
+    flag=1
   fi
 
   backup_cmd="mysqldump --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
@@ -37,6 +38,12 @@ function main() {
     exit 1
   else
     log_success "$(gettext 'Backup succeeded! The backup file has been saved to'): ${DB_FILE}"
+  fi
+
+  if [[ "$flag" ]]; then
+    docker stop jms_redis >/dev/null 2>&1
+    docker rm jms_redis >/dev/null 2>&1
+    unset flag
   fi
 }
 

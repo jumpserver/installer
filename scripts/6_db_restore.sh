@@ -32,6 +32,7 @@ function main() {
   net_name="${project_name}_net"
   if ! docker network ls | grep "${net_name}" >/dev/null; then
     check_container_if_need
+    flag=1
   fi
 
   if ! docker run --rm -i --network="${net_name}" "${mysql_images}" $restore_cmd <"${DB_FILE}"; then
@@ -39,6 +40,12 @@ function main() {
     exit 1
   else
     log_success "$(gettext 'Database recovered successfully')!"
+  fi
+
+  if [[ "$flag" ]]; then
+    docker stop jms_redis >/dev/null 2>&1
+    docker rm jms_redis >/dev/null 2>&1
+    unset flag
   fi
 }
 

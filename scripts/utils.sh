@@ -269,7 +269,6 @@ function install_required_pkg() {
   if command -v dnf >/dev/null; then
     if [ "$required_pkg" == "python" ]; then
       dnf -q -y install python2
-      ln -s /usr/bin/python2 /usr/bin/python
     else
       dnf -q -y install "$required_pkg"
     fi
@@ -316,6 +315,7 @@ function prepare_set_redhat_firewalld() {
       fi
       if [[ "$flag" ]]; then
           firewall-cmd --reload
+          unset flag
       fi
     fi
   fi
