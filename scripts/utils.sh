@@ -105,7 +105,7 @@ function get_images() {
   images=(
     "jumpserver/redis:6-alpine"
     "${mysql_images}"
-    "jumpserver/nginx:alpine2"
+    "jumpserver/nginx:${VERSION}"
     "jumpserver/core:${VERSION}"
     "jumpserver/koko:${VERSION}"
     "jumpserver/lion:${VERSION}"
