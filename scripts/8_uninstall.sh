@@ -6,6 +6,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 function remove_jumpserver() {
   echo -e "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
   VOLUME_DIR=$(get_config VOLUME_DIR)
+  images=$(get_images public)
   confirm="n"
   read_from_input confirm "$(gettext 'Are you clean up JumpServer files')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
@@ -25,7 +26,6 @@ function remove_jumpserver() {
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need to clean up the Docker image')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
-    images=$(get_images public)
     for image in ${images}; do
       docker rmi "${image}"
     done
