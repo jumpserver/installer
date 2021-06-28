@@ -371,6 +371,7 @@ function prepare_config() {
       fi
     fi
   done
+  chmod 644 -R "${CONFIG_DIR}"
   echo_done
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
