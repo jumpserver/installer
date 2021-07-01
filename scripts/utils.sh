@@ -74,12 +74,7 @@ function test_mysql_connect() {
   db=$5
   command="CREATE TABLE IF NOT EXISTS test(id INT); DROP TABLE test;"
 
-  use_mariadb=$(get_config USE_MARIADB)
-  if [[ "${use_mariadb}" == "1" ]]; then
-    mysql_images=jumpserver/mariadb:10
-  else
-    mysql_images=jumpserver/mysql:5
-  fi
+  mysql_images=$(get_mysql_images)
   docker run -i --rm "${mysql_images}" mysql -h"${host}" -P"${port}" -u"${user}" -p"${password}" "${db}" -e "${command}" 2>/dev/null
 }
 
@@ -90,18 +85,23 @@ function test_redis_connect() {
   docker run -i --rm jumpserver/redis:6-alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" 2>/dev/null
 }
 
-function get_images() {
-  scope="all"
-  if [[ -n "$1" ]]; then
-    scope="$1"
-  fi
-
+function get_mysql_images() {
   use_mariadb=$(get_config USE_MARIADB)
   if [[ "${use_mariadb}" == "1" ]]; then
     mysql_images=jumpserver/mariadb:10
   else
     mysql_images=jumpserver/mysql:5
   fi
+  echo "${mysql_images}"
+}
+
+function get_images() {
+  scope="all"
+  if [[ -n "$1" ]]; then
+    scope="$1"
+  fi
+
+  mysql_images=$(get_mysql_images)
 
   images=(
     "jumpserver/redis:6-alpine"

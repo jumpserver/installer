@@ -18,12 +18,7 @@ function main() {
   fi
   echo "$(gettext 'Backing up')..."
 
-  use_mariadb=$(get_config USE_MARIADB)
-  if [[ "${use_mariadb}" == "1" ]]; then
-    mysql_images=jumpserver/mariadb:10
-  else
-    mysql_images=jumpserver/mysql:5
-  fi
+  mysql_images=$(get_mysql_images)
 
   project_name=$(get_config COMPOSE_PROJECT_NAME)
   net_name="${project_name}_net"
