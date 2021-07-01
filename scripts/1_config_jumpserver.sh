@@ -101,17 +101,16 @@ function set_external_mysql() {
 }
 
 function set_internal_mysql() {
-  set_config USE_EXTERNAL_MYSQL 0
+  user=$(get_config DB_USER)
+  if [[ "${user}" != "root" ]]; then
+    set_config DB_USER root
+  fi
   password=$(get_config DB_PASSWORD)
   if [[ -z "${password}" ]]; then
     DB_PASSWORD=$(random_str 26)
     set_config DB_PASSWORD "${DB_PASSWORD}"
   fi
-  user=$(get_config DB_USER)
-  if [[ "${user}" != "root" ]]; then
-    DB_USER=root
-    set_config DB_USER "${DB_USER}"
-  fi
+  set_config USE_EXTERNAL_MYSQL 0
 }
 
 function set_mysql() {
@@ -157,12 +156,16 @@ function set_external_redis() {
 }
 
 function set_internal_redis() {
-  set_config USE_EXTERNAL_REDIS 0
+  redis_host=$(get_config REDIS_HOST)
+  if [[ "${redis_host}" != "redis" ]]; then
+    set_config REDIS_HOST redis
+  fi
   password=$(get_config REDIS_PASSWORD)
   if [[ -z "${password}" ]]; then
     REDIS_PASSWORD=$(random_str 26)
     set_config REDIS_PASSWORD "${REDIS_PASSWORD}"
   fi
+  set_config USE_EXTERNAL_REDIS 0
 }
 
 function set_redis() {
@@ -207,6 +210,16 @@ function set_service_port() {
 function init_db() {
   echo_yellow "\n7. $(gettext 'Init JumpServer Database')"
   check_container_if_need
+
+  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  if [[ "${use_external_mysql}" == "0" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+      sleep 5s
+    done
+    if ! docker ps | grep jms_redis >/dev/null; then
+      check_container_if_need
+    fi
+  fi
 
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"

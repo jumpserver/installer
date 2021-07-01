@@ -86,8 +86,7 @@ function test_redis_connect() {
 }
 
 function get_mysql_images() {
-  use_mariadb=$(get_config USE_MARIADB)
-  if [[ "${use_mariadb}" == "1" ]]; then
+  if [[ "$(uname -m)" == "aarch64" ]]; then
     mysql_images=jumpserver/mariadb:10
   else
     mysql_images=jumpserver/mysql:5
@@ -230,18 +229,17 @@ function get_docker_compose_cmd_line() {
   cmd="docker-compose -f ./compose/docker-compose-app.yml"
   use_ipv6=$(get_config USE_IPV6)
   if [[ "${use_ipv6}" == "0" ]]; then
-    cmd="${cmd} -f compose/docker-compose-network.yml"
+    cmd="${cmd} -f ./compose/docker-compose-network.yml"
   else
-    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
+    cmd="${cmd} -f ./compose/docker-compose-network_ipv6.yml"
   fi
   services=$(get_docker_compose_services "$ignore_db")
   if [[ "${services}" =~ celery ]]; then
     cmd="${cmd} -f ./compose/docker-compose-task.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
-    cmd="${cmd} -f ./docker-compose-mysql-internal.yml"
-    use_mariadb=$(get_config USE_MARIADB)
-    if [[ "${use_mariadb}" == "1" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-mysql-internal.yml"
+    if [[ "$(uname -m)" == "aarch64" ]]; then
       cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
     else
       cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
@@ -421,14 +419,13 @@ function image_has_prefix() {
 
 function check_container_if_need() {
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  use_mariadb=$(get_config USE_MARIADB)
   use_ipv6=$(get_config USE_IPV6)
   volume_dir=$(get_config VOLUME_DIR)
 
   cmd="docker-compose -f ./compose/docker-compose-redis.yml"
   if [[ "${use_external_mysql}" == "0" ]]; then
     cmd="${cmd} -f ./compose/docker-compose-init-mysql.yml"
-    if [[ "${use_mariadb}" == "1" ]]; then
+    if [[ "$(uname -m)" == "aarch64" ]]; then
       cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
     else
       cmd="${cmd} -f ./compose/docker-compose-mysql.yml"

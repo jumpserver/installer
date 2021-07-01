@@ -66,9 +66,6 @@ function prepare_image_files() {
   i=0
   for image in ${images}; do
     ((i++)) || true
-    if [[ "${image}" == "jumpserver/mysql:5" ]]; then
-        image=jumpserver/mariadb:10
-    fi
     echo "[${image}]"
     if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
       docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
