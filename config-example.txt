@@ -57,3 +57,4 @@ CORE_HOST=http://core:8080
 
 # 额外的配置
 CURRENT_VERSION=
+USE_MARIADB=1

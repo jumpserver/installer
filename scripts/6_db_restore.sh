@@ -22,10 +22,11 @@ function main() {
     exit 1
   fi
 
-  if [[ "${HOST}" == "mysql" ]]; then
-    mysql_images=jumpserver/mysql:5
-  else
+  use_mariadb=$(get_config USE_MARIADB)
+  if [[ "${use_mariadb}" == "1" ]]; then
     mysql_images=jumpserver/mariadb:10
+  else
+    mysql_images=jumpserver/mysql:5
   fi
 
   project_name=$(get_config COMPOSE_PROJECT_NAME)

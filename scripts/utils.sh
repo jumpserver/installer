@@ -74,10 +74,11 @@ function test_mysql_connect() {
   db=$5
   command="CREATE TABLE IF NOT EXISTS test(id INT); DROP TABLE test;"
 
-  if [[ "${host}" == "mysql" ]]; then
-    mysql_images=jumpserver/mysql:5
-  else
+  use_mariadb=$(get_config USE_MARIADB)
+  if [[ "${use_mariadb}" == "1" ]]; then
     mysql_images=jumpserver/mariadb:10
+  else
+    mysql_images=jumpserver/mysql:5
   fi
   docker run -i --rm "${mysql_images}" mysql -h"${host}" -P"${port}" -u"${user}" -p"${password}" "${db}" -e "${command}" 2>/dev/null
 }
@@ -95,11 +96,11 @@ function get_images() {
     scope="$1"
   fi
 
-  db_host=$(get_config DB_HOST)
-  if [[ "${db_host}" == "mysql" ]]; then
-    mysql_images=jumpserver/mysql:5
-  else
+  use_mariadb=$(get_config USE_MARIADB)
+  if [[ "${use_mariadb}" == "1" ]]; then
     mysql_images=jumpserver/mariadb:10
+  else
+    mysql_images=jumpserver/mysql:5
   fi
 
   images=(
@@ -238,11 +239,12 @@ function get_docker_compose_cmd_line() {
     cmd="${cmd} -f ./compose/docker-compose-task.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
-    db_host=$(get_config DB_HOST)
-    if [[ "${db_host}" == "mysql" ]]; then
-      cmd="${cmd} -f ./compose/docker-compose-mysql.yml -f ./compose/docker-compose-mysql-internal.yml"
+    cmd="${cmd} -f ./docker-compose-mysql-internal.yml"
+    use_mariadb=$(get_config USE_MARIADB)
+    if [[ "${use_mariadb}" == "1" ]]; then
+      cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
     else
-      cmd="${cmd} -f ./compose/docker-compose-mariadb.yml -f ./compose/docker-compose-mariadb-internal.yml"
+      cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
     fi
   fi
   if [[ "${services}" =~ redis ]]; then
@@ -419,16 +421,17 @@ function image_has_prefix() {
 
 function check_container_if_need() {
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  db_host=$(get_config DB_HOST)
+  use_mariadb=$(get_config USE_MARIADB)
   use_ipv6=$(get_config USE_IPV6)
   volume_dir=$(get_config VOLUME_DIR)
 
   cmd="docker-compose -f ./compose/docker-compose-redis.yml"
   if [[ "${use_external_mysql}" == "0" ]]; then
-    if [[ "${db_host}" == "mysql" ]]; then
-      cmd="${cmd} -f ./compose/docker-compose-mysql.yml -f ./compose/docker-compose-init-mysql.yml"
+    cmd="${cmd} -f ./compose/docker-compose-init-mysql.yml"
+    if [[ "${use_mariadb}" == "1" ]]; then
+      cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
     else
-      cmd="${cmd} -f ./compose/docker-compose-mariadb.yml -f ./compose/docker-compose-init-mariadb.yml"
+      cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
     fi
   fi
   if [[ "${use_ipv6}" == "0" ]]; then
