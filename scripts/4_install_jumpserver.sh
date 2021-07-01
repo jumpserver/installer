@@ -2,18 +2,17 @@
 #
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-# shellcheck source=./util.sh
+
 . "${BASE_DIR}/utils.sh"
 
 function pre_install() {
-  command -v systemctl &>/dev/null
-  if [[ "$?" != "0" ]]; then
-    command -v docker > /dev/null || {
-      log_error "$(gettext 'The current Linux system does not support SYSTEMd management. Please deploy docker by yourself before running this script again')"
+  if ! command -v systemctl &>/dev/null; then
+    command -v docker >/dev/null || {
+      log_error "$(gettext 'The current Linux system does not support systemd management. Please deploy docker by yourself before running this script again')"
       exit 1
     }
-    command -v docker-compose > /dev/null || {
-      log_error "$(gettext 'The current Linux system does not support SYSTEMd management. Please deploy docker-compose by yourself before running this script again')"
+    command -v docker-compose >/dev/null || {
+      log_error "$(gettext 'The current Linux system does not support systemd management. Please deploy docker-compose by yourself before running this script again')"
       exit 1
     }
   fi
@@ -21,7 +20,7 @@ function pre_install() {
 
 function post_install() {
   echo_green "\n>>> $(gettext 'The Installation is Complete')"
-  HOST=$(ip addr | grep 'state UP' -A2 | grep inet | egrep -v '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
+  HOST=$(ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
   if [ ! "$HOST" ]; then
       HOST=$(hostname -I | cut -d ' ' -f1)
   fi
@@ -30,6 +29,7 @@ function post_install() {
   SSH_PORT=$(get_config SSH_PORT)
 
   echo_yellow "1. $(gettext 'You can use the following command to start, and then visit')"
+  echo "cd ${PROJECT_DIR}"
   echo "./jmsctl.sh start"
 
   echo_yellow "\n2. $(gettext 'Other management commands')"
@@ -58,30 +58,8 @@ function post_install() {
   echo -e "\n"
 }
 
-function set_lang() {
-  # 安装默认不会为中文，所以直接用中文
-  if [[ "${LANG-''}" == "zh_CN.UTF-8" ]]; then
-    return
-  fi
-  # 设置过就不用改了
-  if grep "export LANG=" ~/.bashrc &> /dev/null; then
-    return
-  fi
-  lang="cn"
-  read_from_input lang "语言 Language " "cn/en" "${lang}"
-  LANG='zh_CN.UTF-8'
-  if [[ "${lang}" == "en" ]]; then
-    LANG='en_US.UTF-8'
-  fi
-  echo "export LANG=${LANG}" >> ~/.bashrc
-  # 之所以这么设置，是因为设置完 ~/.bashrc，就不会再询问，然而 LANG 环境变量，在用户当前 bash 进程中不生效
-  echo "export LANG=${LANG}" >> "${PROJECT_DIR}"/static.env
-  export LANG
-}
-
 function main() {
   echo_logo
-  set_lang
   pre_install
   prepare_config
   set_current_version

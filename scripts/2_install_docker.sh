@@ -1,18 +1,16 @@
 #!/bin/bash
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-PROJECT_DIR=$(dirname ${BASE_DIR})
-# shellcheck source=./util.sh
+
 . "${BASE_DIR}/utils.sh"
 
 # shellcheck source=./0_prepare.sh
 . "${BASE_DIR}/0_prepare.sh"
 
 DOCKER_CONFIG="/etc/docker/daemon.json"
-docker_config_change=0
 docker_copy_failed=0
 
-cd "${BASE_DIR}" || exit
+cd "${BASE_DIR}" || exit 1
 
 function copy_docker() {
   \cp -f ./docker/* /usr/bin/ \
@@ -59,7 +57,6 @@ function install_docker() {
     echo_red "systemctl stop docker"
     exit 1
   fi
-  echo_done
 }
 
 function install_compose() {
@@ -72,24 +69,34 @@ function install_compose() {
     \cp -f ./docker/docker-compose /usr/bin/
     chmod +x /usr/bin/docker-compose
   fi
-  echo_done
 }
 
 function check_docker_install() {
-  command -v docker > /dev/null || {
+  command -v docker >/dev/null || {
     install_docker
   }
 }
 
 function check_compose_install() {
-  command -v docker-compose > /dev/null && echo_done || {
+  command -v docker-compose >/dev/null || {
     install_compose
   }
+  echo_done
 }
 
 function set_docker_config() {
   key=$1
   value=$2
+
+  if command -v python >/dev/null; then
+    docker_command=python
+  elif command -v python2 >/dev/null; then
+    docker_command=python2
+  elif command -v python3 >/dev/null; then
+    docker_command=python3
+  else
+    return
+  fi
 
   if [[ ! -f "${DOCKER_CONFIG}" ]]; then
     config_dir=$(dirname ${DOCKER_CONFIG})
@@ -98,7 +105,8 @@ function set_docker_config() {
     fi
     echo -e "{\n}" >>${DOCKER_CONFIG}
   fi
-  $(python -c "import json
+
+"${docker_command}" -c "import json
 key = '${key}'
 value = '${value}'
 try:
@@ -113,7 +121,7 @@ f.close();
 f = open(filepath, 'w');
 json.dump(config, f, indent=True, sort_keys=True);
 f.close()
-")
+"
 }
 
 function config_docker() {
@@ -127,7 +135,7 @@ function config_docker() {
   if [[ "${confirm}" == "y" ]]; then
     echo
     echo "$(gettext 'Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as') /opt/docker"
-    df -h | egrep -v "map|devfs|tmpfs|overlay|shm"
+    df -h | grep -Ev "map|devfs|tmpfs|overlay|shm"
     echo
     read_from_input docker_storage_path "$(gettext 'Docker image storage directory')" '' "${docker_storage_path}"
   fi
@@ -142,31 +150,22 @@ function config_docker() {
   set_docker_config data-root "${docker_storage_path}"
   set_docker_config log-driver "json-file"
   set_docker_config log-opts '{"max-size": "10m", "max-file": "3"}'
-  diff /etc/docker/daemon.json /etc/docker/daemon.json.bak &>/dev/null
-  if [[ "$?" != "0" ]]; then
-    docker_config_change=1
-  fi
-  echo_done
 }
 
 function check_docker_config() {
   if [[ ! -f "/etc/docker/daemon.json" ]]; then
     config_docker
-  else
-    echo_done
   fi
+  echo_done
 }
 
 function start_docker() {
-  if command -v systemctl > /dev/null; then
+  if command -v systemctl >/dev/null; then
     systemctl daemon-reload
     systemctl enable docker
     systemctl start docker
   fi
-  docker ps >/dev/null 2>&1
-  if [[ "$?" == "0" ]]; then
-    echo_done
-  else
+  if ! docker ps >/dev/null 2>&1; then
     echo_failed
     exit 1
   fi
@@ -174,12 +173,17 @@ function start_docker() {
 
 function check_docker_start() {
   prepare_set_redhat_firewalld
-  docker ps > /dev/null 2>&1
-  if [[ "$?" != "0" ]]; then
+  if ! docker ps >/dev/null 2>&1; then
     start_docker
-  else
-    echo_done
   fi
+}
+
+function check_docker_compose() {
+  if ! docker-compose -v >/dev/null 2>&1; then
+    echo_failed
+    exit 1
+  fi
+  echo_done
 }
 
 function main() {
@@ -194,6 +198,7 @@ function main() {
   check_docker_config
   echo_yellow "\n3. $(gettext 'Start Docker')"
   check_docker_start
+  check_docker_compose
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then

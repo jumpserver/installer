@@ -2,10 +2,8 @@
 # coding: utf-8
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-PROJECT_DIR=$(dirname ${BASE_DIR})
-# shellcheck source=./util.sh
+
 . "${BASE_DIR}/utils.sh"
-BACKUP_DIR=/opt/jumpserver/db_backup
 
 HOST=$(get_config DB_HOST)
 PORT=$(get_config DB_PORT)
@@ -24,11 +22,26 @@ function main() {
     exit 1
   fi
 
-  if ! docker run --rm -i --network=jms_net jumpserver/mysql:5 $restore_cmd <"${DB_FILE}"; then
+  mysql_images=$(get_mysql_images)
+
+  project_name=$(get_config COMPOSE_PROJECT_NAME)
+  net_name="${project_name}_net"
+  if ! docker network ls | grep "${net_name}" >/dev/null; then
+    check_container_if_need
+    flag=1
+  fi
+
+  if ! docker run --rm -i --network="${net_name}" "${mysql_images}" $restore_cmd <"${DB_FILE}"; then
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
     exit 1
   else
     log_success "$(gettext 'Database recovered successfully')!"
+  fi
+
+  if [[ "$flag" ]]; then
+    docker stop jms_redis >/dev/null 2>&1
+    docker rm jms_redis >/dev/null 2>&1
+    unset flag
   fi
 }
 

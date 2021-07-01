@@ -1,9 +1,7 @@
 #!/bin/bash
 #
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-PROJECT_DIR=$(dirname ${BASE_DIR})
 
-# shellcheck source=./util.sh
 . "${BASE_DIR}/utils.sh"
 
 function set_network() {
@@ -19,8 +17,6 @@ function set_network() {
     set_config USE_IPV6 1
   fi
   echo_done
-
-  cd "${cwd}" || exit
 }
 
 function set_secret_key() {
@@ -55,7 +51,7 @@ function set_volume_dir() {
     echo "$(gettext 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /opt/jumpserver"
     echo "$(gettext 'Note: you can not change it after installation, otherwise the database may be lost')"
     echo
-    df -h | egrep -v "map|devfs|tmpfs|overlay|shm"
+    df -h | grep -Ev "map|devfs|tmpfs|overlay|shm"
     echo
     read_from_input volume_dir "$(gettext 'Persistent storage directory')" "" "${volume_dir}"
     if [[ "${volume_dir}" == "y" ]]; then
@@ -90,18 +86,17 @@ function set_external_mysql() {
   mysql_pass=$(get_config DB_PASSWORD)
   read_from_input mysql_pass "$(gettext 'Please enter MySQL password')" "" "${mysql_pass}"
 
-  test_mysql_connect ${mysql_host} ${mysql_port} ${mysql_user} ${mysql_pass} ${mysql_db}
-  if [[ "$?" != "0" ]]; then
+  if ! test_mysql_connect "${mysql_host}" "${mysql_port}" "${mysql_user}" "${mysql_pass}" "${mysql_db}"; then
     echo_red "$(gettext 'Failed to connect to database, please reset')"
     echo
     set_mysql
   fi
 
-  set_config DB_HOST ${mysql_host}
-  set_config DB_PORT ${mysql_port}
-  set_config DB_USER ${mysql_user}
-  set_config DB_PASSWORD ${mysql_pass}
-  set_config DB_NAME ${mysql_db}
+  set_config DB_HOST "${mysql_host}"
+  set_config DB_PORT "${mysql_port}"
+  set_config DB_USER "${mysql_user}"
+  set_config DB_PASSWORD "${mysql_pass}"
+  set_config DB_NAME "${mysql_db}"
   set_config USE_EXTERNAL_MYSQL 1
 }
 
@@ -110,12 +105,12 @@ function set_internal_mysql() {
   password=$(get_config DB_PASSWORD)
   if [[ -z "${password}" ]]; then
     DB_PASSWORD=$(random_str 26)
-    set_config DB_PASSWORD ${DB_PASSWORD}
+    set_config DB_PASSWORD "${DB_PASSWORD}"
   fi
   user=$(get_config DB_USER)
   if [[ "${user}" != "root" ]]; then
     DB_USER=root
-    set_config DB_USER ${DB_USER}
+    set_config DB_USER "${DB_USER}"
   fi
 }
 
@@ -149,16 +144,15 @@ function set_external_redis() {
   redis_password=$(get_config REDIS_PASSWORD)
   read_from_input redis_password "$(gettext 'Please enter Redis password')" "" "${redis_password}"
 
-  test_redis_connect ${redis_host} ${redis_port} ${redis_password}
-  if [[ "$?" != "0" ]]; then
+  if ! test_redis_connect "${redis_host}" "${redis_port}" "${redis_password}"; then
     echo_red "$(gettext 'Failed to connect to redis, please reset')"
     echo
     set_redis
   fi
 
-  set_config REDIS_HOST ${redis_host}
-  set_config REDIS_PORT ${redis_port}
-  set_config REDIS_PASSWORD ${redis_password}
+  set_config REDIS_HOST "${redis_host}"
+  set_config REDIS_PORT "${redis_port}"
+  set_config REDIS_PASSWORD "${redis_password}"
   set_config USE_EXTERNAL_REDIS 1
 }
 
@@ -197,14 +191,14 @@ function set_service_port() {
   read_from_input confirm "$(gettext 'Do you need to customize the JumpServer external port')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
     read_from_input http_port "$(gettext 'JumpServer web port')" "" "${http_port}"
-    set_config HTTP_PORT ${http_port}
+    set_config HTTP_PORT "${http_port}"
 
     read_from_input ssh_port "$(gettext 'JumpServer ssh port')" "" "${ssh_port}"
-    set_config SSH_PORT ${ssh_port}
+    set_config SSH_PORT "${ssh_port}"
 
     if [[ "${use_xpack}" == "1" ]]; then
       read_from_input rdp_port "$(gettext 'JumpServer rdp port')" "" "${rdp_port}"
-      set_config RDP_PORT ${rdp_port}
+      set_config RDP_PORT "${rdp_port}"
     fi
   fi
   echo_done
@@ -212,30 +206,15 @@ function set_service_port() {
 
 function init_db() {
   echo_yellow "\n7. $(gettext 'Init JumpServer Database')"
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  use_ipv6=$(get_config USE_IPV6)
-  cmd="docker-compose -f ./compose/docker-compose-redis.yml"
-  if [[ "${use_external_mysql}" == "0" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-mysql.yml -f ./compose/docker-compose-init-db.yml"
-  fi
-  if [[ "${use_ipv6}" != "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-network.yml"
-  else
-    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
-  fi
-  ${cmd} up -d
+  check_container_if_need
+
   if ! perform_db_migrations; then
-    re_code="1"
-  fi
-  echo
-  ${cmd} down
-  echo
-  if [[ "${re_code}" ]]; then
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
-  else
-    echo_done
   fi
+
+  docker stop jms_redis >/dev/null 2>&1
+  docker rm jms_redis >/dev/null 2>&1
 }
 
 function main() {
