@@ -12,7 +12,7 @@ LOG_LEVEL=ERROR
 
 ##  MySQL 配置, USE_EXTERNAL_MYSQL=1 表示使用外置数据库, 请输入正确的 MySQL 信息
 USE_EXTERNAL_MYSQL=0
-DB_HOST=mariadb
+DB_HOST=mysql
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=
@@ -57,4 +57,3 @@ CORE_HOST=http://core:8080
 
 # 额外的配置
 CURRENT_VERSION=
-USE_MARIADB=1
