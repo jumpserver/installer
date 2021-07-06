@@ -228,7 +228,7 @@ function get_docker_compose_cmd_line() {
   ignore_db="$1"
   cmd="docker-compose -f ./compose/docker-compose-app.yml"
   use_ipv6=$(get_config USE_IPV6)
-  if [[ "${use_ipv6}" == "0" ]]; then
+  if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f ./compose/docker-compose-network.yml"
   else
     cmd="${cmd} -f ./compose/docker-compose-network_ipv6.yml"
@@ -431,7 +431,7 @@ function check_container_if_need() {
       cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
     fi
   fi
-  if [[ "${use_ipv6}" == "0" ]]; then
+  if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
   else
     cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
