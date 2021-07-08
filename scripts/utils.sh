@@ -304,17 +304,17 @@ function prepare_set_redhat_firewalld() {
     if firewall-cmd --state >/dev/null 2>&1; then
       docker_subnet=$(get_config DOCKER_SUBNET)
       if ! firewall-cmd --list-rich-rule | grep "${docker_subnet}" >/dev/null; then
-        firewall-cmd --permanent --zone=public --add-rich-rule="rule family=ipv4 source address=${docker_subnet} accept"
+        firewall-cmd --permanent --zone=public --add-rich-rule="rule family=ipv4 source address=${docker_subnet} accept" >/dev/null
         flag=1
       fi
       if command -v dnf >/dev/null; then
         if ! firewall-cmd --list-all | grep 'masquerade: yes' >/dev/null; then
-          firewall-cmd --permanent --add-masquerade
+          firewall-cmd --permanent --add-masquerade >/dev/null
           flag=1
         fi
       fi
       if [[ "$flag" ]]; then
-          firewall-cmd --reload
+          firewall-cmd --reload >/dev/null
           unset flag
       fi
     fi
