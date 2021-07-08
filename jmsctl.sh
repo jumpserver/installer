@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-# shellcheck source=scripts/utils.sh
+
 . "${PROJECT_DIR}/scripts/utils.sh"
 
 action=${1-}
@@ -15,9 +15,7 @@ function check_config_file() {
     return 3
   fi
   if [[ -f .env ]]; then
-    ls -l .env | grep "${CONFIG_FILE}" &>/dev/null
-    code="$?"
-    if [[ "$code" != "0" ]]; then
+    if ! ls -l .env | grep "${CONFIG_FILE}" &>/dev/null; then
       echo ".env $(gettext 'There is a problem with the soft connection, Please update it again')"
       rm -f .env
     fi
@@ -128,7 +126,7 @@ function check_update() {
   fi
   echo "$(gettext 'The latest version is'): ${latest_version}"
   echo "$(gettext 'The current version is'): ${current_version}"
-  echo
+  bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
 }
 
 function main() {
@@ -151,6 +149,7 @@ function main() {
     check_update
     ;;
   reconfig)
+    ${EXE} down -v
     bash "${SCRIPT_DIR}/1_config_jumpserver.sh"
     ;;
   start)

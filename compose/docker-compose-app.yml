@@ -14,43 +14,11 @@ services:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health/"]
+      test: "curl -fsL http://localhost:8080/api/health/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 90s
-    networks:
-      - net
-
-  luna:
-    image: jumpserver/luna:${VERSION}
-    container_name: jms_luna
-    restart: always
-    depends_on:
-      core:
-        condition: service_healthy
-    healthcheck:
-      test: "curl -L http://localhost/luna/ > /dev/null"
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - net
-
-  lina:
-    image: jumpserver/lina:${VERSION}
-    container_name: jms_lina
-    restart: always
-    depends_on:
-      core:
-        condition: service_healthy
-    healthcheck:
-      test: "curl -L http://localhost/ > /dev/null"
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
     networks:
       - net
 
@@ -69,7 +37,7 @@ services:
         condition: service_healthy
     privileged: true
     healthcheck:
-      test: "ps axu | grep -v 'grep' | grep 'koko'"
+      test: "curl -fsL http://localhost:5000/koko/health/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
@@ -89,7 +57,7 @@ services:
       core:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:8081/lion/health/"]
+      test: "curl -fsL http://localhost:8081/lion/health/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
@@ -98,22 +66,20 @@ services:
       - net
 
   nginx:
-    image: jumpserver/nginx:alpine2
+    image: jumpserver/nginx:${VERSION}
     container_name: jms_nginx
     restart: always
     volumes:
-      - ./config_static/http_server.conf:/etc/nginx/conf.d/default.conf
-      - ${CONFIG_DIR}/nginx/cert:/etc/nginx/cert
-      - ${VOLUME_DIR}/core/data:/data
+      - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/nginx/log:/var/log/nginx
     depends_on:
       core:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "test", "-f", "/var/run/nginx.pid"]
+      test: "curl -fsL http://localhost/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      start_period: 10s
     networks:
       - net

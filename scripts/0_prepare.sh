@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-# shellcheck source=./util.sh
+
 . "${BASE_DIR}/utils.sh"
 
 IMAGE_DIR="images"
@@ -15,8 +15,7 @@ function prepare_config_xpack() {
 }
 
 function prepare_docker_bin() {
-  md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
-  if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
+  if [[ ! -f /tmp/docker.tar.gz ]]; then
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker.tar.gz
     echo "$(gettext 'Starting to download Docker engine') ..."
@@ -28,12 +27,12 @@ function prepare_docker_bin() {
     echo "$(gettext 'Using Docker cache'): /tmp/docker.tar.gz"
   fi
   cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
+  chown -R root:root docker
   chmod +x docker/*
 }
 
 function prepare_compose_bin() {
-  md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
-  if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
+  if [[ ! -f /tmp/docker-compose ]]; then
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker-compose
     echo "$(gettext 'Starting to download Docker Compose binary') ..."
@@ -45,15 +44,16 @@ function prepare_compose_bin() {
     echo "$(gettext 'Using Docker Compose cache'): /tmp/docker-compose"
   fi
   if [[ ! -d "$BASE_DIR/docker" ]]; then
-    mkdir -p ${BASE_DIR}/docker
+    mkdir -p "${BASE_DIR}/docker"
   fi
   cp /tmp/docker-compose docker/
+  chown -R root:root docker
   chmod +x docker/*
   export PATH=$PATH:$(pwd)/docker
 }
 
 function prepare_image_files() {
-  if ! pgrep -f "docker" > /dev/null; then
+  if ! pgrep -f "docker" >/dev/null; then
     echo "$(gettext 'Docker is not running, please install and start') ..."
     exit 1
   fi
@@ -70,6 +70,7 @@ function prepare_image_files() {
     if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
       docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
       docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
+      docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
     else
       docker pull "${image}"
     fi
