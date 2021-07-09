@@ -163,20 +163,20 @@ function main() {
   echo
   update_config_if_need
 
-  echo_yellow "\n4. $(gettext 'Loading Docker Image')"
+  echo_yellow "\n3. $(gettext 'Loading Docker Image')"
   bash "${BASE_DIR}/3_load_images.sh"
 
-  echo_yellow "\n5. $(gettext 'Backup database')"
+  echo_yellow "\n4. $(gettext 'Backup database')"
   backup_db
 
-  echo_yellow "\n6. $(gettext 'Apply database changes')"
+  echo_yellow "\n5. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
   db_migrations
 
-  echo_yellow "\n7. $(gettext 'Cleanup Image')"
+  echo_yellow "\n6. $(gettext 'Cleanup Image')"
   clear_images
 
-  echo_yellow "\n8. $(gettext 'Upgrade successfully. You can now restart the program')"
+  echo_yellow "\n7. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "cd ${PROJECT_DIR}"
   echo "./jmsctl.sh start"
   echo -e "\n"
