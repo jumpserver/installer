@@ -7,20 +7,17 @@ target=$1
 
 function upgrade_config() {
   # 如果配置文件有更新, 则添加到新的配置文件
-  if docker ps -a | grep jms_guacamole >/dev/null; then
-    docker stop jms_guacamole >/dev/null
-    docker rm jms_guacamole >/dev/null
-    docker images | grep jumpserver/guacamole | awk '{print $3}' | xargs docker rmi -f >/dev/null
+  if docker ps -a | grep jms_guacamole &>/dev/null; then
+    docker stop jms_guacamole &>/dev/null
+    docker rm jms_guacamole &>/dev/null
   fi
-  if docker ps -a | grep jms_lina >/dev/null; then
-    docker stop jms_lina >/dev/null
-    docker rm jms_lina >/dev/null
-    docker images | grep jumpserver/lina | awk '{print $3}' | xargs docker rmi -f >/dev/null
+  if docker ps -a | grep jms_lina &>/dev/null; then
+    docker stop jms_lina &>/dev/null
+    docker rm jms_lina &>/dev/null
   fi
-  if docker ps -a | grep jms_luna >/dev/null; then
-    docker stop jms_luna >/dev/null
-    docker rm jms_luna >/dev/null
-    docker images | grep jumpserver/luna | awk '{print $3}' | xargs docker rmi -f >/dev/null
+  if docker ps -a | grep jms_luna &>/dev/null; then
+    docker stop jms_luna &>/dev/null
+    docker rm jms_luna &>/dev/null
   fi
   rdp_port=$(get_config RDP_PORT)
   if [[ -z "${rdp_port}" ]]; then
