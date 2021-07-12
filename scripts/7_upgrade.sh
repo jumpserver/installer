@@ -7,20 +7,17 @@ target=$1
 
 function upgrade_config() {
   # 如果配置文件有更新, 则添加到新的配置文件
-  if docker ps -a | grep jms_guacamole >/dev/null; then
-    docker stop jms_guacamole >/dev/null
-    docker rm jms_guacamole >/dev/null
-    docker images | grep jumpserver/guacamole | awk '{print $3}' | xargs docker rmi -f >/dev/null
+  if docker ps -a | grep jms_guacamole &>/dev/null; then
+    docker stop jms_guacamole &>/dev/null
+    docker rm jms_guacamole &>/dev/null
   fi
-  if docker ps -a | grep jms_lina >/dev/null; then
-    docker stop jms_lina >/dev/null
-    docker rm jms_lina >/dev/null
-    docker images | grep jumpserver/lina | awk '{print $3}' | xargs docker rmi -f >/dev/null
+  if docker ps -a | grep jms_lina &>/dev/null; then
+    docker stop jms_lina &>/dev/null
+    docker rm jms_lina &>/dev/null
   fi
-  if docker ps -a | grep jms_luna >/dev/null; then
-    docker stop jms_luna >/dev/null
-    docker rm jms_luna >/dev/null
-    docker images | grep jumpserver/luna | awk '{print $3}' | xargs docker rmi -f >/dev/null
+  if docker ps -a | grep jms_luna &>/dev/null; then
+    docker stop jms_luna &>/dev/null
+    docker rm jms_luna &>/dev/null
   fi
   rdp_port=$(get_config RDP_PORT)
   if [[ -z "${rdp_port}" ]]; then
@@ -166,20 +163,20 @@ function main() {
   echo
   update_config_if_need
 
-  echo_yellow "\n4. $(gettext 'Loading Docker Image')"
+  echo_yellow "\n3. $(gettext 'Loading Docker Image')"
   bash "${BASE_DIR}/3_load_images.sh"
 
-  echo_yellow "\n5. $(gettext 'Backup database')"
+  echo_yellow "\n4. $(gettext 'Backup database')"
   backup_db
 
-  echo_yellow "\n6. $(gettext 'Apply database changes')"
+  echo_yellow "\n5. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
   db_migrations
 
-  echo_yellow "\n7. $(gettext 'Cleanup Image')"
+  echo_yellow "\n6. $(gettext 'Cleanup Image')"
   clear_images
 
-  echo_yellow "\n8. $(gettext 'Upgrade successfully. You can now restart the program')"
+  echo_yellow "\n7. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "cd ${PROJECT_DIR}"
   echo "./jmsctl.sh start"
   echo -e "\n"
