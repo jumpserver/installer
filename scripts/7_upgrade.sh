@@ -107,11 +107,15 @@ function db_migrations() {
     fi
   fi
 
-  project_name=$(get_config COMPOSE_PROJECT_NAME)
-  net_name="${project_name}_net"
-  if ! docker network ls | grep "${net_name}" >/dev/null; then
-    check_container_if_need
-    flag=1
+  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  if [[ "${use_external_mysql}" != "1" ]]; then
+    if ! docker ps | grep jms_redis >/dev/null; then
+      check_container_if_need
+      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
+        sleep 5s
+      done
+      flag=1
+    fi
   fi
 
   if ! perform_db_migrations; then
@@ -134,9 +138,7 @@ function clear_images() {
   if [[ "${current_version}" != "${to_version}" ]]; then
     confirm="n"
     read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
-    if [[ "${confirm}" != "y" ]]; then
-      exit 1
-    else
+    if [[ "${confirm}" == "y" ]]; then
       docker images | grep "jumpserver/" | grep "${current_version}" | awk '{print $3}' | xargs docker rmi -f
       echo
     fi
