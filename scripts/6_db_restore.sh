@@ -24,14 +24,12 @@ function main() {
 
   mysql_images=$(get_mysql_images)
 
-  project_name=$(get_config COMPOSE_PROJECT_NAME)
-  net_name="${project_name}_net"
-  if ! docker network ls | grep "${net_name}" >/dev/null; then
+  if ! docker network ls | grep jms_net >/dev/null; then
     check_container_if_need
     flag=1
   fi
 
-  if ! docker run --rm -i --network="${net_name}" "${mysql_images}" $restore_cmd <"${DB_FILE}"; then
+  if ! docker run --rm -i --network=jms_net "${mysql_images}" $restore_cmd <"${DB_FILE}"; then
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
     exit 1
   else
