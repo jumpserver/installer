@@ -28,6 +28,14 @@ function check_config_file() {
 
 function pre_check() {
   check_config_file || return 3
+
+  if [[ "${SHELL}" == "/bin/bash" ]]; then
+    if ! grep -q "alias jmsctl=" ~/.bashrc; then
+      echo 'alias jmsctl="'${PROJECT_DIR}'/jmsctl.sh"' >> ~/.bashrc
+    else
+      sed -i 's@alias jmsctl=.*@alias jmsctl="'${PROJECT_DIR}'/jmsctl.sh"@g' ~/.bashrc
+    fi
+  fi
 }
 
 function usage() {
