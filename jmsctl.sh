@@ -30,10 +30,10 @@ function pre_check() {
   check_config_file || return 3
 
   if [[ "${SHELL}" == "/bin/bash" ]]; then
-    if ! grep -q "alias jmsctl=" ~/.bashrc; then
-      echo 'alias jmsctl="'${PROJECT_DIR}'/jmsctl.sh"' >> ~/.bashrc
+    if grep -q "alias jmsctl=" ~/.bashrc; then
+      sed -i 's@alias jmsctl=$@alias jmsctl="cd '${PROJECT_DIR}' && ./jmsctl.sh"@g' ~/.bashrc
     else
-      sed -i 's@alias jmsctl=.*@alias jmsctl="'${PROJECT_DIR}'/jmsctl.sh"@g' ~/.bashrc
+      echo 'alias jmsctl="cd '${PROJECT_DIR}' && ./jmsctl.sh"' >> ~/.bashrc
     fi
   fi
 }
