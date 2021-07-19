@@ -13,7 +13,7 @@ services:
       - xpack
       
   xpack:
-    image: registry.jumpserver.org/jumpserver/xpack:${VERSION}
+    image: registry.fit2cloud.com/jumpserver/xpack:${VERSION}
     container_name: jms_xpack
     restart: always
     volumes:
@@ -28,7 +28,7 @@ services:
       - net
 
   omnidb:
-    image: registry.jumpserver.org/jumpserver/omnidb:${VERSION}
+    image: registry.fit2cloud.com/jumpserver/omnidb:${VERSION}
     container_name: jms_omnidb
     env_file:
       - ${CONFIG_FILE}
@@ -48,7 +48,7 @@ services:
       - net
 
   xrdp:
-    image: registry.jumpserver.org/jumpserver/xrdp:${VERSION}
+    image: registry.fit2cloud.com/jumpserver/xrdp:${VERSION}
     container_name: jms_xrdp
     env_file:
       - ${CONFIG_FILE}
