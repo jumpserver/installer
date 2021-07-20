@@ -150,6 +150,11 @@ function config_docker() {
     df -h | grep -Ev "map|devfs|tmpfs|overlay|shm"
     echo
     read_from_input docker_storage_path "$(gettext 'Docker image storage directory')" '' "${docker_storage_path}"
+    if [[ "${docker_storage_path}" == "y" ]]; then
+      echo_failed
+      echo
+      config_docker
+    fi
   fi
 
   if [[ ! -d "${docker_storage_path}" ]]; then

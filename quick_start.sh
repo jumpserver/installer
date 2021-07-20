@@ -38,7 +38,7 @@ function get_installer() {
   echo "download install script to /opt/jumpserver-installer-${Version} (开始下载安装脚本到 /opt/jumpserver-installer-${Version})"
   cd /opt || exit 1
   if [ ! -d "/opt/jumpserver-installer-${Version}" ]; then
-    wget -qO jumpserver-installer-${Version}.tar.gz https://github.com/jumpserver/installer/releases/download/${Version}/jumpserver-installer-${Version}.tar.gz || {
+    timeout 60 wget -qO jumpserver-installer-${Version}.tar.gz https://github.com/jumpserver/installer/releases/download/${Version}/jumpserver-installer-${Version}.tar.gz || {
       rm -rf /opt/jumpserver-installer-${Version}.tar.gz
       echo -e "[\033[31m ERROR \033[0m] Failed to download jumpserver-installer-${Version} (下载 jumpserver-installer-${Version} 失败, 请检查网络是否正常或尝试重新执行脚本)"
       exit 1
@@ -56,6 +56,7 @@ function config_installer() {
   cd /opt/jumpserver-installer-${Version} || exit 1
   sed -i "s/VERSION=.*/VERSION=${Version}/g" /opt/jumpserver-installer-${Version}/static.env
   ./jmsctl.sh install
+  ./jmsctl.sh start
 }
 
 function main(){
