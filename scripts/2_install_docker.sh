@@ -13,13 +13,8 @@ docker_copy_failed=0
 cd "${BASE_DIR}" || exit 1
 
 function copy_docker() {
-  \cp -f ./docker/* /usr/bin/ \
-  && \cp -f ./docker.service /etc/systemd/system/ \
-  && chmod 755 /usr/bin/docker* \
-  && chmod 755 /etc/systemd/system/docker.service
-  if [[ "$?" != "0" ]]; then
-    docker_copy_failed=1
-  fi
+  \cp -f ./docker/* /usr/bin/
+  \cp -f ./docker.service /etc/systemd/system/
 }
 
 function install_docker() {
@@ -50,12 +45,6 @@ function install_docker() {
     if [[ "${confirm}" == "y" ]]; then
       copy_docker
     fi
-  fi
-
-  if [[ "${docker_copy_failed}" != "0" ]]; then
-    echo_red "$(gettext 'Docker file copy failed. May be that docker service is already running. Please stop the running docker and re-execute it')"
-    echo_red "systemctl stop docker"
-    exit 1
   fi
 }
 
