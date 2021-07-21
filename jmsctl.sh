@@ -190,7 +190,7 @@ function main() {
     bash "${SCRIPT_DIR}/3_load_images.sh"
     ;;
   pull_images)
-    bash "${SCRIPT_DIR}/3_load_images.sh" pull
+    pull_images
     ;;
   cmd)
     echo "${EXE}"

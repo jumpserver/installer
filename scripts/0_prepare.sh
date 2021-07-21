@@ -52,40 +52,17 @@ function prepare_compose_bin() {
   export PATH=$PATH:$(pwd)/docker
 }
 
-function pull_image() {
-  image=$1
-  if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
-    docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
-    docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
-    docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
-  else
-    docker pull "${image}"
-  fi
-}
-
 function prepare_image_files() {
   if ! pgrep -f "docker" >/dev/null; then
     echo "$(gettext 'Docker is not running, please install and start') ..."
     exit 1
   fi
 
-  scope="public"
-  if [[ "${USE_XPACK}" == "1" ]]; then
-    scope="all"
-  fi
-  images=$(get_images $scope)
-  i=0
+  images=$(get_images)
 
-  IMAGE_PULL_POLICY=${IMAGE_PULL_POLICY-"Always"} # IfNotPresent
   for image in ${images}; do
-    ((i++)) || true
     echo "[${image}]"
-
-    if [[ "$IMAGE_PULL_POLICY" == "IfNotPresent" ]];then
-      docker image inspect -f '{{ .Id }}' jumpserver/guacamole:dev &> /dev/null || pull_image "$image"
-    else
-      pull_image "$image"
-    fi
+    pull_image "$image"
 
     filename=$(basename "${image}").tar
     component=$(echo "${filename}" | awk -F: '{ print $1 }')

@@ -40,19 +40,6 @@ function load_image_files() {
   done
 }
 
-function pull_images() {
-  scope="public"
-  USE_XPACK=$(get_config USE_XPACK)
-  if [[ "${USE_XPACK}" == "1" ]]; then
-    scope="all"
-  fi
-  images=$(get_images $scope)
-  for image in ${images}; do
-    pull_image "$image"
-    echo ""
-  done
-}
-
 function main() {
   if [[ -z "$1" && -d "${IMAGE_DIR}" && -f "${IMAGE_DIR}/redis:6-alpine.tar" ]]; then
     load_image_files
