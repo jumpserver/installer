@@ -471,13 +471,14 @@ function set_current_version(){
 
 function pull_image(){
   image=$1
-  DOCKER_IMAGE_PREFIX=$(get_config DOCKER_IMAGE_PREFIX)
+  DOCKER_IMAGE_PREFIX=${DOCKER_IMAGE_PREFIX-''}
   IMAGE_PULL_POLICY=${IMAGE_PULL_POLICY-"Always"}
 
-  docker image inspect -f '{{ .Id }}' jumpserver/guacamole:dev &> /dev/null
+  docker image inspect -f '{{ .Id }}' "$image" &> /dev/null
   exits=$?
 
   if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]];then
+    echo "Image exist, pass"
     return
   fi
 
