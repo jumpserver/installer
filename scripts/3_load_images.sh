@@ -41,7 +41,7 @@ function load_image_files() {
 }
 
 function main() {
-  if [[ -z "$1" && -d "${IMAGE_DIR}" && -f "${IMAGE_DIR}/redis:6-alpine.tar" ]]; then
+  if [[ -d "${IMAGE_DIR}" && -f "${IMAGE_DIR}/redis:6-alpine.tar" ]]; then
     load_image_files
   else
     pull_images
@@ -50,5 +50,5 @@ function main() {
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
-  main "$1"
+  main
 fi
