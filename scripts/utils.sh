@@ -463,3 +463,26 @@ function set_current_version(){
     set_config CURRENT_VERSION "${VERSION}"
   fi
 }
+
+function pull_image(){
+  image=$1
+  DOCKER_IMAGE_PREFIX=$(get_config DOCKER_IMAGE_PREFIX)
+  IMAGE_PULL_POLICY=${IMAGE_PULL_POLICY-"Always"}
+
+  echo "Pull [${image}]"
+  docker images | grep "${image%:*}" | grep "${image#*:}" >/dev/null
+  exits=$?
+
+  if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]];then
+    return
+  fi
+
+  if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
+    docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
+    docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
+    docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
+  else
+    docker pull "${image}"
+  fi
+  echo ""
+}
