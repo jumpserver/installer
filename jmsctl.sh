@@ -211,6 +211,9 @@ function main() {
   load_image)
     bash "${SCRIPT_DIR}/3_load_images.sh"
     ;;
+  pull_images)
+    pull_images
+    ;;
   cmd)
     echo "${EXE}"
     ;;

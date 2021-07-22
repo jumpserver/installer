@@ -40,31 +40,11 @@ function load_image_files() {
   done
 }
 
-function pull_image() {
-  images=$(get_images public)
-  DOCKER_IMAGE_PREFIX=$(get_config DOCKER_IMAGE_PREFIX)
-  i=1
-  for image in ${images}; do
-    echo "[${image}]"
-    if ! docker images | grep "${image%:*}" | grep "${image#*:}" >/dev/null; then
-      if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
-        docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
-        docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
-        docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
-      else
-        docker pull "${image}"
-      fi
-    fi
-    echo ""
-    ((i++)) || true
-  done
-}
-
 function main() {
   if [[ -d "${IMAGE_DIR}" && -f "${IMAGE_DIR}/redis:6-alpine.tar" ]]; then
     load_image_files
   else
-    pull_image
+    pull_images
   fi
   echo_done
 }
