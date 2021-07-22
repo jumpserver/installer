@@ -103,6 +103,7 @@ function get_images() {
   mysql_images=$(get_mysql_images)
 
   images=(
+    "jumpserver/nginx:alpine2"
     "jumpserver/redis:6-alpine"
     "${mysql_images}"
     "jumpserver/nginx:${VERSION}"
