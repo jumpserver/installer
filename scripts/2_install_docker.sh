@@ -137,10 +137,7 @@ f.close()
 }
 
 function config_docker() {
-  docker_storage_path=$(get_config DOCKER_DIR)
-  if [[ -z "${docker_storage_path}" ]]; then
-    docker_storage_path="/var/lib/docker"
-  fi
+  docker_storage_path=$(get_config DOCKER_DIR "/var/lib/docker")
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need custom docker root dir, will use the default directory') ${docker_storage_path}?" "y/n" "${confirm}"
 

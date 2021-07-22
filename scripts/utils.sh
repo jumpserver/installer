@@ -40,7 +40,37 @@ function has_config() {
 
 function get_config() {
   key=$1
+  default=${2-''}
   value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }')
+  if [[ -z "$value" ]];then
+    value="$default"
+  fi
+  echo "${value}"
+}
+
+function get_env_value() {
+  key=$1
+  default=${2-''}
+  value=$(env | grep "$key=" | awk -F= '{ print $2 }')
+
+  echo "${value}"
+}
+
+function get_config_or_env() {
+  key=$1
+  value=''
+  default=${2-''}
+  if [[ -f "${CONFIG_FILE}" ]];then
+    value=$(get_config "$key")
+  fi
+
+  if [[ -z "$value" ]];then
+    value=$(get_env_value "$key")
+  fi
+
+  if [[ -z "$value" ]];then
+    value="$default"
+  fi
   echo "${value}"
 }
 
@@ -95,11 +125,7 @@ function get_mysql_images() {
 }
 
 function get_images() {
-  USE_XPACK=${USE_XPACK-'0'}
-  if [[ -f "${CONFIG_FILE}" && $(get_config USE_XPACK) == '1' ]];then
-      USE_XPACK=1
-  fi
-
+  USE_XPACK=$(get_config_or_env '0')
   scope="public"
   if [[ "$USE_XPACK" == "1" ]];then
     scope="all"
@@ -471,7 +497,7 @@ function set_current_version(){
 
 function pull_image(){
   image=$1
-  DOCKER_IMAGE_PREFIX=${DOCKER_IMAGE_PREFIX-''}
+  DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
   IMAGE_PULL_POLICY=${IMAGE_PULL_POLICY-"Always"}
 
   docker image inspect -f '{{ .Id }}' "$image" &> /dev/null
