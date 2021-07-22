@@ -25,6 +25,8 @@ function remove_jumpserver() {
       rm -rf "${VOLUME_DIR}"
       echo -e "$(gettext 'Cleaning up') ${CONFIG_DIR}"
       rm -rf "${CONFIG_DIR}"
+      echo -e "$(gettext 'Cleaning up') /usr/bin/jmsctl"
+      rm -f /usr/bin/jmsctl
       echo_done
     fi
   fi
