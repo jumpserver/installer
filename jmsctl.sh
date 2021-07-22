@@ -28,14 +28,6 @@ function check_config_file() {
 
 function pre_check() {
   check_config_file || return 3
-
-  if [[ "${SHELL}" == "/bin/bash" ]]; then
-    if grep -q "alias jmsctl=" ~/.bashrc; then
-      sed -i 's@alias jmsctl=$@alias jmsctl="cd '${PROJECT_DIR}' && ./jmsctl.sh"@g' ~/.bashrc
-    else
-      echo 'alias jmsctl="cd '${PROJECT_DIR}' && ./jmsctl.sh"' >> ~/.bashrc
-    fi
-  fi
 }
 
 function usage() {
@@ -67,7 +59,7 @@ function usage() {
   echo "  restore_db [file] $(gettext 'Data recovery through database backup file')"
   echo "  raw               $(gettext 'Execute the original docker-compose command')"
   echo "  tail [service]    $(gettext 'View log')"
-
+  echo
 }
 
 function service_to_docker_name() {
@@ -157,9 +149,6 @@ function check_update() {
   cd "${Install_DIR}/jumpserver-installer-${latest_version}" || exit 1
   echo
   ./jmsctl.sh upgrade "${latest_version}"
-  if [[ -d "${Install_DIR}/jumpserver-installer-${current_version}" ]]; then
-    mv "${Install_DIR}/jumpserver-installer-${current_version}" "${Install_DIR}/jumpserver-installer-${current_version}_old"
-  fi
 }
 
 function main() {

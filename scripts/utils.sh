@@ -324,6 +324,10 @@ function prepare_set_redhat_firewalld() {
 
 function prepare_config() {
   cd "${PROJECT_DIR}" || exit 1
+  echo -e "#!/usr/bin/env bash\n#" > /usr/bin/jmsctl
+  echo -e "cd ${PROJECT_DIR}" >> /usr/bin/jmsctl
+  echo -e './jmsctl.sh $@' >> /usr/bin/jmsctl
+  chmod 755 /usr/bin/jmsctl
 
   echo_yellow "1. $(gettext 'Check Configuration File')"
   echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"
