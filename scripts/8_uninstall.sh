@@ -1,4 +1,5 @@
-##　卸载脚本
+#!/usr/bin/env bash
+#
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/utils.sh"
@@ -19,6 +20,8 @@ function remove_jumpserver() {
       rm -rf "${VOLUME_DIR}"
       echo -e "$(gettext 'Cleaning up') ${CONFIG_DIR}"
       rm -rf "${CONFIG_DIR}"
+      echo -e "$(gettext 'Cleaning up') /usr/bin/jmsctl"
+      rm -f /usr/bin/jmsctl
       echo_done
     fi
   fi

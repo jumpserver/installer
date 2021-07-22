@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+#
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/const.sh"
@@ -134,6 +134,7 @@ function get_images() {
   mysql_images=$(get_mysql_images)
 
   images=(
+    "jumpserver/nginx:alpine2"
     "jumpserver/redis:6-alpine"
     "${mysql_images}"
     "jumpserver/nginx:${VERSION}"
@@ -354,6 +355,10 @@ function prepare_set_redhat_firewalld() {
 
 function prepare_config() {
   cd "${PROJECT_DIR}" || exit 1
+  echo -e "#!/usr/bin/env bash\n#" > /usr/bin/jmsctl
+  echo -e "cd ${PROJECT_DIR}" >> /usr/bin/jmsctl
+  echo -e './jmsctl.sh $@' >> /usr/bin/jmsctl
+  chmod 755 /usr/bin/jmsctl
 
   echo_yellow "1. $(gettext 'Check Configuration File')"
   echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"

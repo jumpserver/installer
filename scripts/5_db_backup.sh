@@ -1,8 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/utils.sh"
-BACKUP_DIR=/opt/jumpserver/db_backup
+
+VOLUME_DIR=$(get_config VOLUME_DIR)
+BACKUP_DIR="${VOLUME_DIR}/db_backup"
 CURRENT_VERSION=$(get_config CURRENT_VERSION)
 
 HOST=$(get_config DB_HOST)

@@ -1,5 +1,5 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
+#
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/utils.sh"
@@ -14,29 +14,36 @@ function prepare_config_xpack() {
 }
 
 function prepare_docker_bin() {
-  if [[ ! -f /tmp/docker.tar.gz ]]; then
+  md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
+  if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker.tar.gz
     echo "$(gettext 'Starting to download Docker engine') ..."
     wget -q "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz || {
       log_error "$(gettext 'Download docker fails, check the network is normal')"
+      rm -f /tmp/docker.tar.gz
       exit 1
     }
   else
     echo "$(gettext 'Using Docker cache'): /tmp/docker.tar.gz"
   fi
-  cp /tmp/docker.tar.gz . && tar xzf docker.tar.gz && rm -f docker.tar.gz
+  tar -xf /tmp/docker.tar.gz -C ./ || {
+    rm -rf docker /tmp/docker.tar.gz
+    exit 1
+  }
   chown -R root:root docker
   chmod +x docker/*
 }
 
 function prepare_compose_bin() {
-  if [[ ! -f /tmp/docker-compose ]]; then
+  md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
+  if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
     prepare_online_install_required_pkg
     get_file_md5 /tmp/docker-compose
     echo "$(gettext 'Starting to download Docker Compose binary') ..."
     wget -q "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose || {
       log_error "$(gettext 'Download docker-compose fails, check the network is normal')"
+      rm -f /tmp/docker-compose
       exit 1
     }
   else
@@ -45,7 +52,7 @@ function prepare_compose_bin() {
   if [[ ! -d "$BASE_DIR/docker" ]]; then
     mkdir -p "${BASE_DIR}/docker"
   fi
-  cp /tmp/docker-compose docker/
+  \cp -rf /tmp/docker-compose docker/
   chown -R root:root docker
   chmod +x docker/*
   export PATH=$PATH:$(pwd)/docker
