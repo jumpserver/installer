@@ -40,10 +40,7 @@ function set_secret_key() {
 
 function set_volume_dir() {
   echo_yellow "\n3. $(gettext 'Configure Persistent Directory')"
-  volume_dir=$(get_config VOLUME_DIR)
-  if [[ -z "${volume_dir}" ]]; then
-    volume_dir="/opt/jumpserver"
-  fi
+  volume_dir=$(get_config VOLUME_DIR "/opt/jumpserver")
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need custom persistent store, will use the default directory') ${volume_dir}?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
