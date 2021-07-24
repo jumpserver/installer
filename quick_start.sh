@@ -26,7 +26,7 @@ function install_soft() {
       exit 1
     fi
 }
-
+##
 function prepare_install() {
   for i in curl wget zip python; do
     command -v $i &>/dev/null || install_soft $i
