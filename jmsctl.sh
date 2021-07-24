@@ -1,5 +1,5 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
+#
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${PROJECT_DIR}/scripts/utils.sh"
@@ -59,7 +59,7 @@ function usage() {
   echo "  restore_db [file] $(gettext 'Data recovery through database backup file')"
   echo "  raw               $(gettext 'Execute the original docker-compose command')"
   echo "  tail [service]    $(gettext 'View log')"
-
+  echo
 }
 
 function service_to_docker_name() {
@@ -124,9 +124,31 @@ function check_update() {
     echo "$(gettext 'The current version is up to date')"
     return
   fi
-  echo "$(gettext 'The latest version is'): ${latest_version}"
-  echo "$(gettext 'The current version is'): ${current_version}"
-  bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
+  if [[ -n "${latest_version}" ]] && [[ ${latest_version} =~ v.* ]]; then
+    echo -e "\033[32m$(gettext 'The latest version is'): ${latest_version}\033[0m"
+  else
+    exit 1
+  fi
+  echo -e "$(gettext 'The current version is'): ${current_version}"
+  Install_DIR="$(cd "$(dirname "${PROJECT_DIR}")" >/dev/null 2>&1 && pwd)"
+  if [[ ! -d "${Install_DIR}/jumpserver-installer-${latest_version}" ]]; then
+    if [[ ! -f "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" ]]; then
+      timeout 60s wget -qO "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" "https://github.com/jumpserver/installer/releases/download/${latest_version}/jumpserver-installer-${latest_version}.tar.gz" || {
+        rm -f "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz"
+        timeout 60s wget -qO "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" "https://demo.jumpserver.org/download/installer/${latest_version}/jumpserver-installer-${latest_version}.tar.gz" || {
+          rm -f "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz"
+          exit 1
+        }
+      }
+    fi
+    tar -xf "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" -C "${Install_DIR}" || {
+      rm -rf "${Install_DIR}/jumpserver-installer-${latest_version}" "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz"
+      exit 1
+    }
+  fi
+  cd "${Install_DIR}/jumpserver-installer-${latest_version}" || exit 1
+  echo
+  ./jmsctl.sh upgrade "${latest_version}"
 }
 
 function main() {

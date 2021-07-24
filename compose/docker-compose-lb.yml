@@ -18,7 +18,7 @@ services:
       nginx:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "test", "-f", "/var/run/nginx.pid"]
+      test: "curl -fskL http://localhost/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3

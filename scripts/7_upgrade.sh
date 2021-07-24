@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/utils.sh"
@@ -75,7 +76,6 @@ function update_config_if_need() {
   migrate_config_v1_5_to_v2_0
   migrate_config_v2_5_v2_6
   upgrade_config
-  echo_done
 }
 
 function backup_db() {
@@ -134,16 +134,15 @@ function db_migrations() {
   fi
 }
 
-function clear_images() {
+function clean_images() {
   if [[ "${current_version}" != "${to_version}" ]]; then
     confirm="n"
     read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
-      docker images | grep "jumpserver/" | grep "${current_version}" | awk '{print $3}' | xargs docker rmi -f
       echo
+      docker images | grep "jumpserver/" | grep "${current_version}" | awk '{print $3}' | xargs docker rmi -f
     fi
   fi
-  echo_done
 }
 
 function main() {
@@ -176,7 +175,7 @@ function main() {
   db_migrations
 
   echo_yellow "\n6. $(gettext 'Cleanup Image')"
-  clear_images
+  clean_images
 
   echo_yellow "\n7. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "cd ${PROJECT_DIR}"
