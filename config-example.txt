@@ -1,7 +1,7 @@
 # 以下设置如果为空系统会自动生成随机字符串填入
 ## 迁移请修改 SECRET_KEY 和 BOOTSTRAP_TOKEN 为原来的设置
 ## 完整参数文档 https://docs.jumpserver.org/zh/master/admin-guide/env/
-
+#Demo
 ## 安装配置, 可以使用华为云加速下载, arm64 用户需要注释掉 DOCKER_IMAGE_PREFIX
 # DOCKER_IMAGE_PREFIX=swr.cn-south-1.myhuaweicloud.com
 VOLUME_DIR=/opt/jumpserver
