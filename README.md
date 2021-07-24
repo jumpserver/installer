@@ -7,6 +7,9 @@ installer 可以安装、部署、更新 管理 JumpServer
 ## 环境依赖
   - CentOS 7
 
+
+
+
 ### 修改系统设置如 最大打开文件数
 
 ```
