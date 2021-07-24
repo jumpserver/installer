@@ -25,7 +25,7 @@ function check_config_file() {
     ln -s "${CONFIG_FILE}" .env
   fi
 }
-
+##
 function pre_check() {
   check_config_file || return 3
 }
