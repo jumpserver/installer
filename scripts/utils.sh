@@ -346,8 +346,8 @@ function prepare_set_redhat_firewalld() {
         fi
       fi
       if [[ "$flag" ]]; then
-          firewall-cmd --reload >/dev/null
-          unset flag
+        firewall-cmd --reload >/dev/null
+        unset flag
       fi
     fi
   fi
@@ -476,6 +476,7 @@ function check_container_if_need() {
 }
 
 function perform_db_migrations() {
+  volume_dir=$(get_config VOLUME_DIR)
   docker run -i --rm --network=jms_net \
     --env-file=/opt/jumpserver/config/config.txt \
     -v "${volume_dir}/core/data":/opt/jumpserver/data \
