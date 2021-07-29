@@ -135,6 +135,7 @@ function db_migrations() {
 }
 
 function clean_images() {
+  current_version=$(get_config CURRENT_VERSION)
   if [[ "${current_version}" != "${to_version}" ]]; then
     confirm="n"
     read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
