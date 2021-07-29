@@ -118,10 +118,11 @@ function restart() {
 }
 
 function check_update() {
-  current_version="${VERSION}"
+  current_version=$(get_current_version)
   latest_version=$(get_latest_version)
   if [[ "${current_version}" == "${latest_version}" ]]; then
-    echo "$(gettext 'The current version is up to date')"
+    echo_green "$(gettext 'The current version is up to date'): ${latest_version}"
+    echo
     return
   fi
   if [[ -n "${latest_version}" ]] && [[ ${latest_version} =~ v.* ]]; then
@@ -149,6 +150,7 @@ function check_update() {
   cd "${Install_DIR}/jumpserver-installer-${latest_version}" || exit 1
   echo
   ./jmsctl.sh upgrade "${latest_version}"
+  ln -sf /usr/bin/jmsctl "${PROJECT_DIR}/jmsctl.sh"
 }
 
 function main() {
@@ -240,6 +242,9 @@ function main() {
     ;;
   raw)
     ${EXE} "${args[@]:1}"
+    ;;
+  version)
+    get_current_version
     ;;
   help)
     usage
