@@ -514,8 +514,11 @@ function pull_image() {
   DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
   IMAGE_PULL_POLICY=${IMAGE_PULL_POLICY-"Always"}
 
-  docker image inspect -f '{{ .Id }}' "$image" &> /dev/null
-  exits=$?
+  if docker image inspect -f '{{ .Id }}' "$image" &> /dev/null; then
+    exits=0
+  else
+    exits=1
+  fi
 
   if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]];then
     echo "Image exist, pass"
