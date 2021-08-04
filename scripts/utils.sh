@@ -125,7 +125,7 @@ function get_mysql_images() {
 }
 
 function get_images() {
-  USE_XPACK=$(get_config_or_env '0')
+  USE_XPACK=$(get_config_or_env USE_XPACK)
   scope="public"
   if [[ "$USE_XPACK" == "1" ]];then
     scope="all"
