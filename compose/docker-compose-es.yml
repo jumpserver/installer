@@ -3,6 +3,9 @@ version: '2.4'
     image: jumpserver/elasticsearch:7.12.1
     container_name: jms_es
     restart: always
+    ports:
+      - 9200:9200
+      - 9300:9300
     volumes:
       - ${VOLUME_DIR}/elasticsearch/data:/usr/share/elasticsearch/data
       - ${VOLUME_DIR}/elasticsearch/logs:/usr/share/elasticsearch/logs
