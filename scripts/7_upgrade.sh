@@ -94,7 +94,7 @@ function backup_db() {
 
 function db_migrations() {
   if docker ps | grep jumpserver >/dev/null; then
-    confirm="n"
+    confirm="y"
     read_from_input confirm "$(gettext 'Detected that the JumpServer container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       echo
@@ -137,7 +137,7 @@ function db_migrations() {
 function clean_images() {
   current_version=$(get_config CURRENT_VERSION)
   if [[ "${current_version}" != "${to_version}" ]]; then
-    confirm="n"
+    confirm="y"
     read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       echo
@@ -147,7 +147,7 @@ function clean_images() {
 }
 
 function main() {
-  confirm="n"
+  confirm="y"
   to_version="${VERSION}"
   if [[ -n "${target}" ]]; then
     to_version="${target}"
