@@ -1,6 +1,6 @@
 version: '2.4'
 
 services:
-  koko:
+  nginx:
     ports:
-      - ${SSH_PORT}:2222
+      - ${HTTP_PORT}:80
