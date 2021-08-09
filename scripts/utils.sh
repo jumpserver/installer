@@ -258,7 +258,7 @@ function get_docker_compose_services() {
 
 function get_docker_compose_cmd_line() {
   ignore_db="$1"
-  cmd="docker-compose -f ./compose/docker-compose-app.yml"
+  cmd="docker-compose -f ./compose/docker-compose-app.yml -f ./compose/docker-compose-external.yml"
   use_ipv6=$(get_config USE_IPV6)
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f ./compose/docker-compose-network.yml"
@@ -283,15 +283,10 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f ./compose/docker-compose-lb.yml"
   else
-    cmd="${cmd} -f ./compose/docker-compose-external.yml"
+    cmd="${cmd} -f ./compose/docker-compose-nginx-external.yml"
   fi
   if [[ "${services}" =~ xpack ]]; then
-      cmd="${cmd} -f ./compose/docker-compose-xpack.yml"
-      if [[ "${services}" =~ lb ]]; then
-        cmd="${cmd} -f ./compose/docker-compose-lb-xpack.yml"
-      else
-        cmd="${cmd} -f ./compose/docker-compose-xpack-external.yml"
-      fi
+      cmd="${cmd} -f ./compose/docker-compose-xpack.yml -f ./compose/docker-compose-xpack-external.yml"
   fi
   echo "${cmd}"
 }
