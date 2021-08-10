@@ -507,11 +507,7 @@ function perform_db_migrations() {
   fi
 
   if ! docker run -i --rm --network=jms_net --env-file=/opt/jumpserver/config/config.txt ${volume} jumpserver/core:"${VERSION}" upgrade_db; then
-    docker stop jms_redis >/dev/null 2>&1
-    docker rm jms_redis >/dev/null 2>&1
-    if [[ "${use_xpack}" == "1" ]]; then
-      remove_container_if_need
-    fi
+    remove_container_if_need
     exit 1
   fi
   remove_container_if_need
