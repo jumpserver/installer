@@ -146,7 +146,6 @@ function get_images() {
     echo "${image}"
   done
   if [[ "${scope}" == "all" ]]; then
-    echo "registry.fit2cloud.com/jumpserver/xpack:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
   fi
@@ -251,7 +250,7 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" xpack omnidb xrdp"
+    services+=" omnidb xrdp"
   fi
   echo "${services}"
 }
@@ -455,9 +454,6 @@ function check_container_if_need() {
   volume_dir=$(get_config VOLUME_DIR)
 
   cmd="docker-compose -f ./compose/docker-compose-redis.yml"
-  if [[ "${use_xpack}" == "1" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-init-xpack.yml"
-  fi
   if [[ "${use_external_mysql}" == "0" ]]; then
     cmd="${cmd} -f ./compose/docker-compose-init-mysql.yml"
     if [[ "$(uname -m)" == "aarch64" ]]; then
@@ -477,17 +473,11 @@ function check_container_if_need() {
 function remove_container_if_need() {
   docker stop jms_redis >/dev/null 2>&1
   docker rm jms_redis >/dev/null 2>&1
-  if [[ "${use_xpack}" == "1" ]]; then
-    docker stop jms_xpack >/dev/null 2>&1
-    docker rm jms_xpack >/dev/null 2>&1
-    docker volume rm jms_share-volume &>/dev/null
-  fi
 }
 
 function perform_db_migrations() {
   volume_dir=$(get_config VOLUME_DIR)
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  use_xpack=$(get_config USE_XPACK)
 
   check_container_if_need || exit 1
 
@@ -501,12 +491,7 @@ function perform_db_migrations() {
     sleep 5s
   done
 
-  volume="-v "${volume_dir}/core/data":/opt/jumpserver/data"
-  if [[ "${use_xpack}" == "1" ]]; then
-    volume="${volume} -v jms_share-volume:/opt/jumpserver/apps/xpack"
-  fi
-
-  if ! docker run -i --rm --network=jms_net --env-file=/opt/jumpserver/config/config.txt ${volume} jumpserver/core:"${VERSION}" upgrade_db; then
+  if ! docker run -i --rm --network=jms_net --env-file=/opt/jumpserver/config/config.txt -v "${volume_dir}/core/data":/opt/jumpserver/data jumpserver/core:"${VERSION}" upgrade_db; then
     remove_container_if_need
     exit 1
   fi

@@ -66,7 +66,7 @@ function migrate_config_v2_5_v2_6() {
   if [[ -d "$BASE_DIR/images" ]]; then
     image_files=$(ls "$BASE_DIR"/images)
   fi
-  if [[ "${image_files}" =~ xpack ]]; then
+  if [[ "${image_files}" =~ omnidb ]]; then
     set_config "USE_XPACK" 1
   fi
 }

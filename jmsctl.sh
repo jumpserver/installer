@@ -89,7 +89,6 @@ function stop() {
   for i in ${services}; do
     ${EXE} rm -f "${i}" >/dev/null
   done
-  docker volume rm jms_share-volume &>/dev/null
 }
 
 function close() {
