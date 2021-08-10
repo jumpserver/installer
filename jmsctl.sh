@@ -89,7 +89,6 @@ function stop() {
   for i in ${services}; do
     ${EXE} rm -f "${i}" >/dev/null
   done
-  docker volume rm jms_share-volume &>/dev/null
 }
 
 function close() {
@@ -239,6 +238,9 @@ function main() {
     ;;
   show_services)
     get_docker_compose_services
+    ;;
+  init_db)
+    perform_db_migrations
     ;;
   raw)
     ${EXE} "${args[@]:1}"

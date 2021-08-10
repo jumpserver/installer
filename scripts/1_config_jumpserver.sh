@@ -206,25 +206,10 @@ function set_service_port() {
 
 function init_db() {
   echo_yellow "\n7. $(gettext 'Init JumpServer Database')"
-  check_container_if_need
-
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  if [[ "${use_external_mysql}" == "0" ]]; then
-    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
-      sleep 5s
-    done
-    if ! docker ps | grep jms_redis >/dev/null; then
-      check_container_if_need
-    fi
-  fi
-
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
   fi
-
-  docker stop jms_redis >/dev/null 2>&1
-  docker rm jms_redis >/dev/null 2>&1
 }
 
 function main() {

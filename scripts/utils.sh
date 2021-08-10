@@ -146,7 +146,6 @@ function get_images() {
     echo "${image}"
   done
   if [[ "${scope}" == "all" ]]; then
-    echo "registry.fit2cloud.com/jumpserver/xpack:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
   fi
@@ -251,7 +250,7 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" xpack omnidb xrdp"
+    services+=" omnidb xrdp"
   fi
   echo "${services}"
 }
@@ -448,9 +447,10 @@ function image_has_prefix() {
   fi
 }
 
-function check_container_if_need() {
+function start_db_migrate_required_containers() {
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
   use_ipv6=$(get_config USE_IPV6)
+  use_xpack=$(get_config USE_XPACK)
   volume_dir=$(get_config VOLUME_DIR)
 
   cmd="docker-compose -f ./compose/docker-compose-redis.yml"
@@ -470,12 +470,32 @@ function check_container_if_need() {
   ${cmd} up -d
 }
 
+function remove_db_migrate_containers() {
+  docker stop jms_redis >/dev/null 2>&1
+  docker rm jms_redis >/dev/null 2>&1
+}
+
 function perform_db_migrations() {
   volume_dir=$(get_config VOLUME_DIR)
-  docker run -i --rm --network=jms_net \
-    --env-file=/opt/jumpserver/config/config.txt \
-    -v "${volume_dir}/core/data":/opt/jumpserver/data \
-    jumpserver/core:"${VERSION}" upgrade_db
+  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+
+  start_db_migrate_required_containers || exit 1
+
+  if [[ "${use_external_mysql}" == "0" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+      sleep 5s
+    done
+  fi
+
+  while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
+    sleep 5s
+  done
+
+  if ! docker run -i --rm --network=jms_net --env-file=/opt/jumpserver/config/config.txt -v "${volume_dir}/core/data":/opt/jumpserver/data jumpserver/core:"${VERSION}" upgrade_db; then
+    remove_db_migrate_containers
+    exit 1
+  fi
+  remove_db_migrate_containers
 }
 
 function check_ipv6_iptables_if_need() {

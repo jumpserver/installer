@@ -1,32 +1,6 @@
 version: '2.4'
 
 services:
-  core:
-    volumes:
-    - share-volume:/opt/jumpserver/apps/xpack
-    depends_on:
-      - xpack
-  celery:
-    volumes:
-      - share-volume:/opt/jumpserver/apps/xpack
-    depends_on:
-      - xpack
-      
-  xpack:
-    image: registry.fit2cloud.com/jumpserver/xpack:${VERSION}
-    container_name: jms_xpack
-    restart: always
-    volumes:
-      - share-volume:/opt/xpack
-    healthcheck:
-      test: "ls -d /opt/xpack/"
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - net
-
   omnidb:
     image: registry.fit2cloud.com/jumpserver/omnidb:${VERSION}
     container_name: jms_omnidb
@@ -66,6 +40,3 @@ services:
       start_period: 10s
     networks:
       - net
-
-volumes:
-  share-volume:
