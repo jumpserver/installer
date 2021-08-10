@@ -24,7 +24,7 @@ function main() {
   mysql_images=$(get_mysql_images)
 
   if ! docker network ls | grep jms_net >/dev/null; then
-    check_container_if_need
+    start_db_migrate_required_containers
     flag=1
   fi
 
@@ -36,7 +36,7 @@ function main() {
   fi
 
   if [[ "$flag" ]]; then
-    remove_container_if_need
+    remove_db_migrate_containers
     unset flag
   fi
 }
