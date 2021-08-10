@@ -38,8 +38,7 @@ function main() {
   fi
 
   if [[ "$flag" ]]; then
-    docker stop jms_redis >/dev/null 2>&1
-    docker rm jms_redis >/dev/null 2>&1
+    remove_container_if_need
     unset flag
   fi
 }

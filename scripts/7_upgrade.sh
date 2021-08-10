@@ -106,22 +106,6 @@ function db_migrations() {
       exit 1
     fi
   fi
-
-  check_container_if_need
-
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  use_xpack=$(get_config USE_XPACK)
-
-  if [[ "${use_external_mysql}" == "0" ]]; then
-    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
-      sleep 5s
-    done
-  fi
-
-  while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
-    sleep 5s
-  done
-
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     confirm="n"
@@ -129,15 +113,6 @@ function db_migrations() {
     if [[ "${confirm}" != "y" ]]; then
       exit 1
     fi
-  fi
-
-  docker stop jms_redis >/dev/null 2>&1
-  docker rm jms_redis >/dev/null 2>&1
-
-  if [[ "${use_xpack}" == "1" ]]; then
-    docker stop jms_xpack >/dev/null 2>&1
-    docker rm jms_xpack >/dev/null 2>&1
-    docker volume rm jms_xpack_data >/dev/null 2>&1
   fi
 }
 

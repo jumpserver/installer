@@ -474,18 +474,47 @@ function check_container_if_need() {
   ${cmd} up -d
 }
 
+function remove_container_if_need() {
+  docker stop jms_redis >/dev/null 2>&1
+  docker rm jms_redis >/dev/null 2>&1
+  if [[ "${use_xpack}" == "1" ]]; then
+    docker stop jms_xpack >/dev/null 2>&1
+    docker rm jms_xpack >/dev/null 2>&1
+    docker volume rm jms_share-volume &>/dev/null
+  fi
+}
+
 function perform_db_migrations() {
-  use_xpack=$(get_config USE_XPACK)
   volume_dir=$(get_config VOLUME_DIR)
+  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  use_xpack=$(get_config USE_XPACK)
+
+  check_container_if_need || exit 1
+
+  if [[ "${use_external_mysql}" == "0" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+      sleep 5s
+    done
+  fi
+
+  while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
+    sleep 5s
+  done
+
   volume="-v "${volume_dir}/core/data":/opt/jumpserver/data"
   if [[ "${use_xpack}" == "1" ]]; then
     volume="${volume} -v jms_share-volume:/opt/jumpserver/apps/xpack"
   fi
 
-  docker run -i --rm --network=jms_net \
-    --env-file=/opt/jumpserver/config/config.txt \
-    ${volume} \
-    jumpserver/core:"${VERSION}" upgrade_db
+  if ! docker run -i --rm --network=jms_net --env-file=/opt/jumpserver/config/config.txt ${volume} jumpserver/core:"${VERSION}" upgrade_db; then
+    docker stop jms_redis >/dev/null 2>&1
+    docker rm jms_redis >/dev/null 2>&1
+    if [[ "${use_xpack}" == "1" ]]; then
+      remove_container_if_need
+    fi
+    exit 1
+  fi
+  remove_container_if_need
 }
 
 function check_ipv6_iptables_if_need() {
