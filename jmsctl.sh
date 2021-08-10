@@ -241,6 +241,9 @@ function main() {
   show_services)
     get_docker_compose_services
     ;;
+  init_db)
+    perform_db_migrations
+    ;;
   raw)
     ${EXE} "${args[@]:1}"
     ;;
