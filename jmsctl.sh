@@ -197,6 +197,7 @@ function main() {
   down)
     if [[ -z "${target}" ]]; then
       ${EXE} down -v
+      docker volume rm jms_share-volume &>/dev/null
     else
       ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     fi

@@ -1,0 +1,25 @@
+version: '2.4'
+
+services:
+  redis:
+    depends_on:
+      xpack:
+        condition: service_healthy
+
+  xpack:
+    image: registry.fit2cloud.com/jumpserver/xpack:${VERSION}
+    container_name: jms_xpack
+    restart: always
+    volumes:
+      - share-volume:/opt/xpack
+    healthcheck:
+      test: "ls -d /opt/xpack/"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
+
+volumes:
+  share-volume:

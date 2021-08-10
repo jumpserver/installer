@@ -451,9 +451,13 @@ function image_has_prefix() {
 function check_container_if_need() {
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
   use_ipv6=$(get_config USE_IPV6)
+  use_xpack=$(get_config USE_XPACK)
   volume_dir=$(get_config VOLUME_DIR)
 
   cmd="docker-compose -f ./compose/docker-compose-redis.yml"
+  if [[ "${use_xpack}" == "1" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-init-xpack.yml"
+  fi
   if [[ "${use_external_mysql}" == "0" ]]; then
     cmd="${cmd} -f ./compose/docker-compose-init-mysql.yml"
     if [[ "$(uname -m)" == "aarch64" ]]; then
@@ -471,10 +475,16 @@ function check_container_if_need() {
 }
 
 function perform_db_migrations() {
+  use_xpack=$(get_config USE_XPACK)
   volume_dir=$(get_config VOLUME_DIR)
+  volume="-v "${volume_dir}/core/data":/opt/jumpserver/data"
+  if [[ "${use_xpack}" == "1" ]]; then
+    volume="${volume} -v jms_share-volume:/opt/jumpserver/apps/xpack"
+  fi
+
   docker run -i --rm --network=jms_net \
     --env-file=/opt/jumpserver/config/config.txt \
-    -v "${volume_dir}/core/data":/opt/jumpserver/data \
+    ${volume} \
     jumpserver/core:"${VERSION}" upgrade_db
 }
 

@@ -1,4 +1,6 @@
 version: '2.4'
+
+services:
   es:
     image: jumpserver/elasticsearch:7.12.1
     container_name: jms_es

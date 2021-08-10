@@ -93,7 +93,7 @@ function backup_db() {
 }
 
 function db_migrations() {
-  if docker ps | grep jumpserver >/dev/null; then
+  if docker ps | grep -E "core|koko|lion" >/dev/null; then
     confirm="y"
     read_from_input confirm "$(gettext 'Detected that the JumpServer container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
@@ -107,16 +107,20 @@ function db_migrations() {
     fi
   fi
 
+  check_container_if_need
+
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  if [[ "${use_external_mysql}" != "1" ]]; then
-    if ! docker ps | grep jms_redis >/dev/null; then
-      check_container_if_need
-      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
-        sleep 5s
-      done
-      flag=1
-    fi
+  use_xpack=$(get_config USE_XPACK)
+
+  if [[ "${use_external_mysql}" == "0" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+      sleep 5s
+    done
   fi
+
+  while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
+    sleep 5s
+  done
 
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
@@ -127,10 +131,13 @@ function db_migrations() {
     fi
   fi
 
-  if [[ "$flag" ]]; then
-    docker stop jms_redis >/dev/null 2>&1
-    docker rm jms_redis >/dev/null 2>&1
-    unset flag
+  docker stop jms_redis >/dev/null 2>&1
+  docker rm jms_redis >/dev/null 2>&1
+
+  if [[ "${use_xpack}" == "1" ]]; then
+    docker stop jms_xpack >/dev/null 2>&1
+    docker rm jms_xpack >/dev/null 2>&1
+    docker volume rm jms_xpack_data >/dev/null 2>&1
   fi
 }
 
