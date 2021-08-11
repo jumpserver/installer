@@ -20,6 +20,10 @@ function upgrade_config() {
     docker stop jms_luna &>/dev/null
     docker rm jms_luna &>/dev/null
   fi
+  if docker ps -a | grep jms_nginx &>/dev/null; then
+    docker stop jms_nginx &>/dev/null
+    docker rm jms_nginx &>/dev/null
+  fi
   rdp_port=$(get_config RDP_PORT)
   if [[ -z "${rdp_port}" ]]; then
     RDP_PORT=3389

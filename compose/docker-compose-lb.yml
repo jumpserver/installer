@@ -12,7 +12,7 @@ services:
       - ${VOLUME_DIR}/lb/log:/var/log/nginx
       - ${CONFIG_DIR}/nginx/cert:/etc/nginx/cert
     depends_on:
-      nginx:
+      web:
         condition: service_healthy
     healthcheck:
       test: "curl -fskL http://localhost/ > /dev/null"
