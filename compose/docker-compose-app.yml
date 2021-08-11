@@ -65,9 +65,9 @@ services:
     networks:
       - net
 
-  nginx:
-    image: jumpserver/nginx:${VERSION}
-    container_name: jms_nginx
+  web:
+    image: jumpserver/web:${VERSION}
+    container_name: jms_web
     restart: always
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data

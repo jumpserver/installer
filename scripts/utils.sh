@@ -137,7 +137,7 @@ function get_images() {
     "jumpserver/nginx:alpine2"
     "jumpserver/redis:6-alpine"
     "${mysql_images}"
-    "jumpserver/nginx:${VERSION}"
+    "jumpserver/web:${VERSION}"
     "jumpserver/core:${VERSION}"
     "jumpserver/koko:${VERSION}"
     "jumpserver/lion:${VERSION}"
@@ -231,7 +231,7 @@ function log_error() {
 
 function get_docker_compose_services() {
   ignore_db="$1"
-  services="core koko lion nginx"
+  services="core koko lion web"
   use_task=$(get_config USE_TASK)
   if [[ "${use_task}" != "0" ]]; then
     services+=" celery"
@@ -282,7 +282,7 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f ./compose/docker-compose-lb.yml"
   else
-    cmd="${cmd} -f ./compose/docker-compose-nginx-external.yml"
+    cmd="${cmd} -f ./compose/docker-compose-web-external.yml"
   fi
   if [[ "${services}" =~ xpack ]]; then
       cmd="${cmd} -f ./compose/docker-compose-xpack.yml -f ./compose/docker-compose-xpack-external.yml"

@@ -71,7 +71,7 @@ function prepare_image_files() {
     pull_image "$image"
 
     filename=$(basename "${image}").tar
-    component=$(basename "${image}")
+    component=$(echo "${filename}" | awk -F: '{ print $1 }')
     md5_filename=$(basename "${image}").md5
     md5_path=${IMAGE_DIR}/${md5_filename}
 
