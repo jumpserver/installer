@@ -489,20 +489,18 @@ function create_db_ops_env() {
 
 function down_db_ops_env() {
   cmd=$(get_db_migrate_compose_cmd)
-  ${cmd} down
+  ${cmd} down -v
 }
 
 function perform_db_migrations() {
   create_db_ops_env
 
-  docker exec -it jms_core bash -c './jms upgrade_db'
+  docker exec -i jms_core bash -c './jms upgrade_db'
   ret=$?
 
-  down_db_ops_env || true
-  if [[ "$ret" == "0" ]]; then
-    echo "完成数据库升级，清理容器"
-  else
-    echo "初始化数据失败"
+  down_db_ops_env
+  if [[ "$ret" != "0" ]]; then
+    log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
   fi
 }
