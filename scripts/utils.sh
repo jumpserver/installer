@@ -459,7 +459,6 @@ function get_db_migrate_compose_cmd() {
   use_external_redis=$(get_config USE_EXTERNAL_REDIS)
   use_ipv6=$(get_config USE_IPV6)
 
-  docker rm -f jms_init_db &> /dev/null || true
   cmd="docker-compose -f ./compose/docker-compose-init-db.yml"
   if [[ "${use_external_mysql}" == "0" ]]; then
     if [[ "$(uname -m)" == "aarch64" ]]; then
@@ -505,7 +504,7 @@ function perform_db_migrations() {
   cmd=$(get_db_migrate_compose_cmd)
   ${cmd} up -d &> /dev/null || true
 
-  docker exec -it jms_init_db bash -c './jms upgrade_db'
+  docker exec -it jms_core bash -c './jms upgrade_db'
   ret=$?
 
   ${cmd} down &> /dev/null || true
