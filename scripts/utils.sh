@@ -481,25 +481,21 @@ function get_db_migrate_compose_cmd() {
   echo "$cmd"
 }
 
-function start_db_migrate_required_containers() {
-  ${cmd} up -d
-}
-
-function remove_db_migrate_containers() {
-  echo
-}
 
 function perform_db_migrations() {
   cmd=$(get_db_migrate_compose_cmd)
   ${cmd} up -d
 
-  if ! docker exec -it jms_init_db bash -c './jms upgrade_db'; then
+  docker exec -it jms_init_db bash -c './jms upgrade_db'
+  ret=$?
+
+  ${cmd} down
+  if [[ "$ret" == "0" ]]; then
+    echo "完成数据库升级，清理容器"
+  else
     echo "初始化数据失败"
     exit 1
   fi
-
-  echo "完成数据库升级，清理容器"
-  ${cmd} down
 }
 
 function check_ipv6_iptables_if_need() {
