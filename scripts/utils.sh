@@ -386,7 +386,7 @@ function prepare_config() {
           if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
             \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
           else
-            echo -e "${CONFIG_DIR}/${d}/${f}  [\033[32m √ \033[0m]"
+            echo_check "${CONFIG_DIR}/${d}/${f}"
           fi
         fi
       done
@@ -405,7 +405,7 @@ function prepare_config() {
       if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
         \cp -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" "${nginx_cert_dir}"
       else
-        echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
+        echo_check "${nginx_cert_dir}/${f} "
       fi
     fi
   done
