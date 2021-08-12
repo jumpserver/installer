@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/utils.sh"
@@ -18,6 +19,10 @@ function upgrade_config() {
   if docker ps -a | grep jms_luna &>/dev/null; then
     docker stop jms_luna &>/dev/null
     docker rm jms_luna &>/dev/null
+  fi
+  if docker ps -a | grep jms_nginx &>/dev/null; then
+    docker stop jms_nginx &>/dev/null
+    docker rm jms_nginx &>/dev/null
   fi
   rdp_port=$(get_config RDP_PORT)
   if [[ -z "${rdp_port}" ]]; then
@@ -65,7 +70,7 @@ function migrate_config_v2_5_v2_6() {
   if [[ -d "$BASE_DIR/images" ]]; then
     image_files=$(ls "$BASE_DIR"/images)
   fi
-  if [[ "${image_files}" =~ xpack ]]; then
+  if [[ "${image_files}" =~ omnidb ]]; then
     set_config "USE_XPACK" 1
   fi
 }
@@ -75,7 +80,6 @@ function update_config_if_need() {
   migrate_config_v1_5_to_v2_0
   migrate_config_v2_5_v2_6
   upgrade_config
-  echo_done
 }
 
 function backup_db() {
@@ -93,8 +97,8 @@ function backup_db() {
 }
 
 function db_migrations() {
-  if docker ps | grep jumpserver >/dev/null; then
-    confirm="n"
+  if docker ps | grep -E "core|koko|lion" >/dev/null; then
+    confirm="y"
     read_from_input confirm "$(gettext 'Detected that the JumpServer container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       echo
@@ -106,18 +110,6 @@ function db_migrations() {
       exit 1
     fi
   fi
-
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  if [[ "${use_external_mysql}" != "1" ]]; then
-    if ! docker ps | grep jms_redis >/dev/null; then
-      check_container_if_need
-      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
-        sleep 5s
-      done
-      flag=1
-    fi
-  fi
-
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     confirm="n"
@@ -126,28 +118,22 @@ function db_migrations() {
       exit 1
     fi
   fi
-
-  if [[ "$flag" ]]; then
-    docker stop jms_redis >/dev/null 2>&1
-    docker rm jms_redis >/dev/null 2>&1
-    unset flag
-  fi
 }
 
-function clear_images() {
+function clean_images() {
+  current_version=$(get_config CURRENT_VERSION)
   if [[ "${current_version}" != "${to_version}" ]]; then
-    confirm="n"
+    confirm="y"
     read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
-      docker images | grep "jumpserver/" | grep "${current_version}" | awk '{print $3}' | xargs docker rmi -f
       echo
+      docker images | grep "jumpserver/" | grep "${current_version}" | awk '{print $3}' | xargs docker rmi -f
     fi
   fi
-  echo_done
 }
 
 function main() {
-  confirm="n"
+  confirm="y"
   to_version="${VERSION}"
   if [[ -n "${target}" ]]; then
     to_version="${target}"
@@ -176,7 +162,7 @@ function main() {
   db_migrations
 
   echo_yellow "\n6. $(gettext 'Cleanup Image')"
-  clear_images
+  clean_images
 
   echo_yellow "\n7. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "cd ${PROJECT_DIR}"

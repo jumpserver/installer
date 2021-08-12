@@ -1,8 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/utils.sh"
-BACKUP_DIR=/opt/jumpserver/db_backup
+
+VOLUME_DIR=$(get_config VOLUME_DIR)
+BACKUP_DIR="${VOLUME_DIR}/db_backup"
 CURRENT_VERSION=$(get_config CURRENT_VERSION)
 
 HOST=$(get_config DB_HOST)
@@ -21,7 +24,7 @@ function main() {
   mysql_images=$(get_mysql_images)
 
   if ! docker network ls | grep jms_net >/dev/null; then
-    check_container_if_need
+    create_jms_network
     flag=1
   fi
 
@@ -34,9 +37,8 @@ function main() {
     log_success "$(gettext 'Backup succeeded! The backup file has been saved to'): ${DB_FILE}"
   fi
 
-  if [[ "$flag" ]]; then
-    docker stop jms_redis >/dev/null 2>&1
-    docker rm jms_redis >/dev/null 2>&1
+  if [[ -n "$flag" ]]; then
+    down_jms_network
     unset flag
   fi
 }

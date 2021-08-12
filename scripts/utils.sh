@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+#
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/const.sh"
@@ -22,10 +22,10 @@ function random_str() {
   if command -v dmidecode &>/dev/null; then
     uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len})
   fi
-  if [[ "$(echo "$uuid" | wc -L)" == "${len}" ]]; then
+  if [[ "${#uuid}" == "${len}" ]]; then
     echo "${uuid}"
   else
-    cat < /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
+    head -c100 < /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c ${len}; echo
   fi
 }
 
@@ -40,7 +40,37 @@ function has_config() {
 
 function get_config() {
   key=$1
+  default=${2-''}
   value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }')
+  if [[ -z "$value" ]];then
+    value="$default"
+  fi
+  echo "${value}"
+}
+
+function get_env_value() {
+  key=$1
+  default=${2-''}
+  value=$(env | grep "$key=" | awk -F= '{ print $2 }')
+
+  echo "${value}"
+}
+
+function get_config_or_env() {
+  key=$1
+  value=''
+  default=${2-''}
+  if [[ -f "${CONFIG_FILE}" ]];then
+    value=$(get_config "$key")
+  fi
+
+  if [[ -z "$value" ]];then
+    value=$(get_env_value "$key")
+  fi
+
+  if [[ -z "$value" ]];then
+    value="$default"
+  fi
   echo "${value}"
 }
 
@@ -95,17 +125,19 @@ function get_mysql_images() {
 }
 
 function get_images() {
-  scope="all"
-  if [[ -n "$1" ]]; then
-    scope="$1"
+  USE_XPACK=$(get_config_or_env USE_XPACK)
+  scope="public"
+  if [[ "$USE_XPACK" == "1" ]];then
+    scope="all"
   fi
 
   mysql_images=$(get_mysql_images)
 
   images=(
+    "jumpserver/nginx:alpine2"
     "jumpserver/redis:6-alpine"
     "${mysql_images}"
-    "jumpserver/nginx:${VERSION}"
+    "jumpserver/web:${VERSION}"
     "jumpserver/core:${VERSION}"
     "jumpserver/koko:${VERSION}"
     "jumpserver/lion:${VERSION}"
@@ -114,9 +146,8 @@ function get_images() {
     echo "${image}"
   done
   if [[ "${scope}" == "all" ]]; then
-    echo "registry.jumpserver.org/jumpserver/xpack:${VERSION}"
-    echo "registry.jumpserver.org/jumpserver/omnidb:${VERSION}"
-    echo "registry.jumpserver.org/jumpserver/xrdp:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
   fi
 }
 
@@ -182,6 +213,10 @@ function echo_done() {
   echo "$(gettext 'complete')"
 }
 
+function echo_check() {
+  echo -e "$1  [\033[32m √ \033[0m]"
+}
+
 function echo_failed() {
   echo_red "$(gettext 'fail')"
 }
@@ -200,7 +235,7 @@ function log_error() {
 
 function get_docker_compose_services() {
   ignore_db="$1"
-  services="core koko lion nginx"
+  services="core koko lion web"
   use_task=$(get_config USE_TASK)
   if [[ "${use_task}" != "0" ]]; then
     services+=" celery"
@@ -219,7 +254,7 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" xpack omnidb xrdp"
+    services+=" omnidb xrdp"
   fi
   echo "${services}"
 }
@@ -238,7 +273,6 @@ function get_docker_compose_cmd_line() {
     cmd="${cmd} -f ./compose/docker-compose-task.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-mysql-internal.yml"
     if [[ "$(uname -m)" == "aarch64" ]]; then
       cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
     else
@@ -246,20 +280,16 @@ function get_docker_compose_cmd_line() {
     fi
   fi
   if [[ "${services}" =~ redis ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-redis.yml -f ./compose/docker-compose-redis-internal.yml"
+    cmd="${cmd} -f ./compose/docker-compose-redis.yml"
   fi
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f ./compose/docker-compose-lb.yml"
   else
-    cmd="${cmd} -f ./compose/docker-compose-external.yml"
+    cmd="${cmd} -f ./compose/docker-compose-web-external.yml"
   fi
-  if [[ "${services}" =~ xpack ]]; then
+  use_xpack=$(get_config USE_XPACK)
+  if [[ "${use_xpack}" == '1' ]]; then
       cmd="${cmd} -f ./compose/docker-compose-xpack.yml"
-      if [[ "${services}" =~ lb ]]; then
-        cmd="${cmd} -f ./compose/docker-compose-lb-xpack.yml"
-      else
-        cmd="${cmd} -f ./compose/docker-compose-xpack-external.yml"
-      fi
   fi
   echo "${cmd}"
 }
@@ -314,8 +344,8 @@ function prepare_set_redhat_firewalld() {
         fi
       fi
       if [[ "$flag" ]]; then
-          firewall-cmd --reload >/dev/null
-          unset flag
+        firewall-cmd --reload >/dev/null
+        unset flag
       fi
     fi
   fi
@@ -323,6 +353,12 @@ function prepare_set_redhat_firewalld() {
 
 function prepare_config() {
   cd "${PROJECT_DIR}" || exit 1
+  if [[ "$OS" != 'Darwin' ]];then
+    echo -e "#!/usr/bin/env bash\n#" > /usr/bin/jmsctl
+    echo -e "cd ${PROJECT_DIR}" >> /usr/bin/jmsctl
+    echo -e './jmsctl.sh $@' >> /usr/bin/jmsctl
+    chmod 755 /usr/bin/jmsctl
+  fi
 
   echo_yellow "1. $(gettext 'Check Configuration File')"
   echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"
@@ -333,7 +369,7 @@ function prepare_config() {
   if [[ ! -f ${CONFIG_FILE} ]]; then
     cp config-example.txt "${CONFIG_FILE}"
   else
-    echo -e "${CONFIG_FILE}  [\033[32m √ \033[0m]"
+    echo_check "${CONFIG_FILE}"
   fi
   if [[ ! -f .env ]]; then
     ln -s "${CONFIG_FILE}" .env
@@ -342,14 +378,14 @@ function prepare_config() {
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
 
-  for d in $(ls "${PROJECT_DIR}/config_init"); do
+  for d in "${PROJECT_DIR}"/config_init/*; do
     if [[ -d "${PROJECT_DIR}/config_init/${d}" ]]; then
-      for f in $(ls "${PROJECT_DIR}/config_init/${d}"); do
+      for f in "${PROJECT_DIR}"/config_init/"${d}"/*; do
         if [[ -f "${PROJECT_DIR}/config_init/${d}/${f}" ]]; then
           if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
             \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
           else
-            echo -e "${CONFIG_DIR}/${d}/${f}  [\033[32m √ \033[0m]"
+            echo_check "${CONFIG_DIR}/${d}/${f}"
           fi
         fi
       done
@@ -362,16 +398,17 @@ function prepare_config() {
     \cp -rf "${PROJECT_DIR}/config_init/nginx/cert" "${CONFIG_DIR}/nginx"
   fi
 
-  for f in $(ls "${PROJECT_DIR}/config_init/nginx/cert"); do
+  for f in "${PROJECT_DIR}"/config_init/nginx/cert/*; do
     if [[ -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" ]]; then
       if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
         \cp -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" "${nginx_cert_dir}"
       else
-        echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
+        echo_check "${nginx_cert_dir}/${f} "
       fi
     fi
   done
-  chmod 644 -R "${CONFIG_DIR}"
+  find "${CONFIG_DIR}" -type d -exec chmod 755 {} \;
+  find "${CONFIG_DIR}" -type f -exec chmod 644 {} \;
   echo_done
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
@@ -417,33 +454,66 @@ function image_has_prefix() {
   fi
 }
 
-function check_container_if_need() {
+function get_db_migrate_compose_cmd() {
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
   use_ipv6=$(get_config USE_IPV6)
-  volume_dir=$(get_config VOLUME_DIR)
 
-  cmd="docker-compose -f ./compose/docker-compose-redis.yml"
+  cmd="docker-compose -f ./compose/docker-compose-init-db.yml"
   if [[ "${use_external_mysql}" == "0" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-init-mysql.yml"
     if [[ "$(uname -m)" == "aarch64" ]]; then
       cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
     else
       cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
     fi
   fi
+
+  if [[ "${use_external_redis}" == "0" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-redis.yml"
+  fi
+
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
   else
     cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
   fi
+  echo "$cmd"
+}
+
+function get_jms_net_compose_cmd() {
+  cmd="docker-compose -f ./compose/docker-compose-init-db.yml"
+  if [[ "${use_ipv6}" != "1" ]]; then
+    cmd="${cmd} -f compose/docker-compose-network.yml"
+  else
+    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
+  fi
+  echo "$cmd"
+}
+
+function create_jms_network() {
+  cmd=$(get_jms_net_compose_cmd)
   ${cmd} up -d
 }
 
+function down_jms_network() {
+  cmd=$(get_jms_net_compose_cmd)
+  ${cmd} down
+}
+
 function perform_db_migrations() {
-  docker run -i --rm --network=jms_net \
-    --env-file=/opt/jumpserver/config/config.txt \
-    -v "${volume_dir}/core/data":/opt/jumpserver/data \
-    jumpserver/core:"${VERSION}" upgrade_db
+  cmd=$(get_db_migrate_compose_cmd)
+  ${cmd} up -d &> /dev/null || true
+
+  docker exec -it jms_core bash -c './jms upgrade_db'
+  ret=$?
+
+  ${cmd} down &> /dev/null || true
+  if [[ "$ret" == "0" ]]; then
+    echo "完成数据库升级，清理容器"
+  else
+    echo "初始化数据失败"
+    exit 1
+  fi
 }
 
 function check_ipv6_iptables_if_need() {
@@ -457,9 +527,52 @@ function check_ipv6_iptables_if_need() {
   fi
 }
 
-function set_current_version(){
+function set_current_version() {
   current_version=$(get_config CURRENT_VERSION)
   if [ "${current_version}" != "${VERSION}" ]; then
     set_config CURRENT_VERSION "${VERSION}"
   fi
+}
+
+function get_current_version() {
+  current_version=$(get_config CURRENT_VERSION)
+  if [ -z "${current_version}" ]; then
+    current_version="${VERSION}"
+  fi
+  echo "${current_version}"
+}
+
+function pull_image() {
+  image=$1
+  DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
+  IMAGE_PULL_POLICY=${IMAGE_PULL_POLICY-"Always"}
+
+  if docker image inspect -f '{{ .Id }}' "$image" &> /dev/null; then
+    exits=0
+  else
+    exits=1
+  fi
+
+  if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]];then
+    echo "Image exist, pass"
+    return
+  fi
+
+  if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
+    docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
+    docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
+    docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
+  else
+    docker pull "${image}"
+  fi
+  echo ""
+}
+
+function pull_images() {
+  images_to=$(get_images)
+
+  for image in ${images_to}; do
+    echo "[${image}]"
+    pull_image "$image"
+  done
 }

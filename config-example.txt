@@ -10,7 +10,7 @@ SECRET_KEY=
 BOOTSTRAP_TOKEN=
 LOG_LEVEL=ERROR
 
-##  MySQL 配置, USE_EXTERNAL_MYSQL=1 表示使用外置数据库, 请输入正确的 MySQL 信息
+##  MySQL 配置, USE_EXTERNAL_MYSQL=1 表示使用外置 MySQL, 请输入正确的 MySQL 信息
 USE_EXTERNAL_MYSQL=0
 DB_HOST=mysql
 DB_PORT=3306
@@ -18,7 +18,7 @@ DB_USER=root
 DB_PASSWORD=
 DB_NAME=jumpserver
 
-##  Redis 配置, USE_EXTERNAL_REDIS=1 表示使用外置数据库, 请输入正确的 Redis 信息
+##  Redis 配置, USE_EXTERNAL_REDIS=1 表示使用外置 Redis, 请输入正确的 Redis 信息
 USE_EXTERNAL_REDIS=0
 REDIS_HOST=redis
 REDIS_PORT=6379

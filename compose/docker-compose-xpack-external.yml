@@ -1,8 +1,0 @@
-version: '2.4'
-
-services:
-  nginx:
-    ports:
-      - ${RDP_PORT}:3389
-    volumes:
-      - ${CONFIG_DIR}/nginx/lb_rdp_server.conf:/etc/nginx/stream.d/rdp_server.conf

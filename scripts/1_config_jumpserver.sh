@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
@@ -40,10 +40,7 @@ function set_secret_key() {
 
 function set_volume_dir() {
   echo_yellow "\n3. $(gettext 'Configure Persistent Directory')"
-  volume_dir=$(get_config VOLUME_DIR)
-  if [[ -z "${volume_dir}" ]]; then
-    volume_dir="/opt/jumpserver"
-  fi
+  volume_dir=$(get_config VOLUME_DIR "/opt/jumpserver")
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need custom persistent store, will use the default directory') ${volume_dir}?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
@@ -209,25 +206,10 @@ function set_service_port() {
 
 function init_db() {
   echo_yellow "\n7. $(gettext 'Init JumpServer Database')"
-  check_container_if_need
-
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  if [[ "${use_external_mysql}" == "0" ]]; then
-    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
-      sleep 5s
-    done
-    if ! docker ps | grep jms_redis >/dev/null; then
-      check_container_if_need
-    fi
-  fi
-
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
   fi
-
-  docker stop jms_redis >/dev/null 2>&1
-  docker rm jms_redis >/dev/null 2>&1
 }
 
 function main() {

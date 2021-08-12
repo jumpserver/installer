@@ -1,5 +1,5 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
+#
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${PROJECT_DIR}/scripts/utils.sh"
@@ -59,7 +59,7 @@ function usage() {
   echo "  restore_db [file] $(gettext 'Data recovery through database backup file')"
   echo "  raw               $(gettext 'Execute the original docker-compose command')"
   echo "  tail [service]    $(gettext 'View log')"
-
+  echo
 }
 
 function service_to_docker_name() {
@@ -89,7 +89,6 @@ function stop() {
   for i in ${services}; do
     ${EXE} rm -f "${i}" >/dev/null
   done
-  docker volume rm jms_share-volume &>/dev/null
 }
 
 function close() {
@@ -118,15 +117,39 @@ function restart() {
 }
 
 function check_update() {
-  current_version="${VERSION}"
+  current_version=$(get_current_version)
   latest_version=$(get_latest_version)
   if [[ "${current_version}" == "${latest_version}" ]]; then
-    echo "$(gettext 'The current version is up to date')"
+    echo_green "$(gettext 'The current version is up to date'): ${latest_version}"
+    echo
     return
   fi
-  echo "$(gettext 'The latest version is'): ${latest_version}"
-  echo "$(gettext 'The current version is'): ${current_version}"
-  bash "${SCRIPT_DIR}/7_upgrade.sh" "${latest_version}"
+  if [[ -n "${latest_version}" ]] && [[ ${latest_version} =~ v.* ]]; then
+    echo -e "\033[32m$(gettext 'The latest version is'): ${latest_version}\033[0m"
+  else
+    exit 1
+  fi
+  echo -e "$(gettext 'The current version is'): ${current_version}"
+  Install_DIR="$(cd "$(dirname "${PROJECT_DIR}")" >/dev/null 2>&1 && pwd)"
+  if [[ ! -d "${Install_DIR}/jumpserver-installer-${latest_version}" ]]; then
+    if [[ ! -f "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" ]]; then
+      timeout 60s wget -qO "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" "https://github.com/jumpserver/installer/releases/download/${latest_version}/jumpserver-installer-${latest_version}.tar.gz" || {
+        rm -f "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz"
+        timeout 60s wget -qO "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" "https://demo.jumpserver.org/download/installer/${latest_version}/jumpserver-installer-${latest_version}.tar.gz" || {
+          rm -f "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz"
+          exit 1
+        }
+      }
+    fi
+    tar -xf "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" -C "${Install_DIR}" || {
+      rm -rf "${Install_DIR}/jumpserver-installer-${latest_version}" "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz"
+      exit 1
+    }
+  fi
+  cd "${Install_DIR}/jumpserver-installer-${latest_version}" || exit 1
+  echo
+  ./jmsctl.sh upgrade "${latest_version}"
+  ln -sf /usr/bin/jmsctl "${PROJECT_DIR}/jmsctl.sh"
 }
 
 function main() {
@@ -189,6 +212,9 @@ function main() {
   load_image)
     bash "${SCRIPT_DIR}/3_load_images.sh"
     ;;
+  pull_images)
+    pull_images
+    ;;
   cmd)
     echo "${EXE}"
     ;;
@@ -213,8 +239,14 @@ function main() {
   show_services)
     get_docker_compose_services
     ;;
+  init_db)
+    perform_db_migrations
+    ;;
   raw)
     ${EXE} "${args[@]:1}"
+    ;;
+  version)
+    get_current_version
     ;;
   help)
     usage

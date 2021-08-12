@@ -1,11 +1,11 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
+#
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/utils.sh"
-IMAGE_DIR=images
 
 cd "${BASE_DIR}" || return
+IMAGE_DIR="images"
 
 function load_image_files() {
   images=$(get_images)
@@ -40,31 +40,11 @@ function load_image_files() {
   done
 }
 
-function pull_image() {
-  images=$(get_images public)
-  DOCKER_IMAGE_PREFIX=$(get_config DOCKER_IMAGE_PREFIX)
-  i=1
-  for image in ${images}; do
-    echo "[${image}]"
-    if ! docker images | grep "${image%:*}" | grep "${image#*:}" >/dev/null; then
-      if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
-        docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
-        docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
-        docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
-      else
-        docker pull "${image}"
-      fi
-    fi
-    echo ""
-    ((i++)) || true
-  done
-}
-
 function main() {
   if [[ -d "${IMAGE_DIR}" && -f "${IMAGE_DIR}/redis:6-alpine.tar" ]]; then
     load_image_files
   else
-    pull_image
+    pull_images
   fi
   echo_done
 }

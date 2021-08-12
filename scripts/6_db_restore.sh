@@ -1,6 +1,5 @@
-#!/bin/bash
-# coding: utf-8
-
+#!/usr/bin/env bash
+#
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/utils.sh"
@@ -25,7 +24,7 @@ function main() {
   mysql_images=$(get_mysql_images)
 
   if ! docker network ls | grep jms_net >/dev/null; then
-    check_container_if_need
+    create_jms_network
     flag=1
   fi
 
@@ -37,8 +36,7 @@ function main() {
   fi
 
   if [[ "$flag" ]]; then
-    docker stop jms_redis >/dev/null 2>&1
-    docker rm jms_redis >/dev/null 2>&1
+    down_jms_network
     unset flag
   fi
 }
