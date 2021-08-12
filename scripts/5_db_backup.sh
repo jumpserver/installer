@@ -24,7 +24,7 @@ function main() {
   mysql_images=$(get_mysql_images)
 
   if ! docker network ls | grep jms_net >/dev/null; then
-    create_jms_network
+    create_db_ops_env
     flag=1
   fi
 
@@ -38,7 +38,7 @@ function main() {
   fi
 
   if [[ -n "$flag" ]]; then
-    down_jms_network
+    down_db_ops_env
     unset flag
   fi
 }
