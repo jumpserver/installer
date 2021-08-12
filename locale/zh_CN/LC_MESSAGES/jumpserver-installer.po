@@ -164,7 +164,7 @@ msgid "More information"
 msgstr "更多信息"
 
 #: scripts/4_install_jumpserver.sh:55
-msgid "Offical Website"
+msgid "Official Website"
 msgstr "我们的官网"
 
 #: scripts/4_install_jumpserver.sh:56
