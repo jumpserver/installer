@@ -248,6 +248,14 @@ function get_docker_compose_services() {
   if [[ "${use_lb}" == "1" ]]; then
     services+=" lb"
   fi
+  use_es=$(get_config USE_ES)
+  if [[ "${use_es}" == "1" ]]; then
+    services+=" es"
+  fi
+  use_minio=$(get_config USE_MINIO)
+  if  [[ "${use_minio}" == "1" ]]; then
+    services+=" minio"
+  fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
     services+=" omnidb xrdp"
@@ -278,6 +286,12 @@ function get_docker_compose_cmd_line() {
   fi
   if [[ "${services}" =~ redis ]]; then
     cmd="${cmd} -f ./compose/docker-compose-redis.yml -f ./compose/docker-compose-redis-internal.yml"
+  fi
+  if [[ "${services}" =~ es ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-es.yml"
+  fi
+  if [[ "${services}" =~ minio ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-minio.yml"
   fi
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f ./compose/docker-compose-lb.yml"
