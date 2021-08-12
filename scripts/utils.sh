@@ -378,9 +378,10 @@ function prepare_config() {
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
 
-  for d in "${PROJECT_DIR}"/config_init/*; do
+  # shellcheck disable=SC2045
+  for d in $(ls "${PROJECT_DIR}/config_init"); do
     if [[ -d "${PROJECT_DIR}/config_init/${d}" ]]; then
-      for f in "${PROJECT_DIR}"/config_init/"${d}"/*; do
+      for f in $(ls "${PROJECT_DIR}/config_init/${d}"); do
         if [[ -f "${PROJECT_DIR}/config_init/${d}/${f}" ]]; then
           if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
             \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
@@ -398,7 +399,8 @@ function prepare_config() {
     \cp -rf "${PROJECT_DIR}/config_init/nginx/cert" "${CONFIG_DIR}/nginx"
   fi
 
-  for f in "${PROJECT_DIR}"/config_init/nginx/cert/*; do
+  # shellcheck disable=SC2045
+  for f in $(ls "${PROJECT_DIR}/config_init/nginx/cert"); do
     if [[ -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" ]]; then
       if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
         \cp -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" "${nginx_cert_dir}"
@@ -480,34 +482,23 @@ function get_db_migrate_compose_cmd() {
   echo "$cmd"
 }
 
-function get_jms_net_compose_cmd() {
-  cmd="docker-compose -f ./compose/docker-compose-init-db.yml"
-  if [[ "${use_ipv6}" != "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-network.yml"
-  else
-    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
-  fi
-  echo "$cmd"
-}
-
-function create_jms_network() {
-  cmd=$(get_jms_net_compose_cmd)
+function create_db_ops_env() {
+  cmd=$(get_db_migrate_compose_cmd)
   ${cmd} up -d
 }
 
-function down_jms_network() {
-  cmd=$(get_jms_net_compose_cmd)
+function down_db_ops_env() {
+  cmd=$(get_db_migrate_compose_cmd)
   ${cmd} down
 }
 
 function perform_db_migrations() {
-  cmd=$(get_db_migrate_compose_cmd)
-  ${cmd} up -d &> /dev/null || true
+  create_db_ops_env
 
   docker exec -it jms_core bash -c './jms upgrade_db'
   ret=$?
 
-  ${cmd} down &> /dev/null || true
+  down_db_ops_env || true
   if [[ "$ret" == "0" ]]; then
     echo "完成数据库升级，清理容器"
   else
