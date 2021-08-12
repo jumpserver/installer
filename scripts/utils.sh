@@ -503,12 +503,12 @@ function down_jms_network() {
 
 function perform_db_migrations() {
   cmd=$(get_db_migrate_compose_cmd)
-  ${cmd} up -d
+  ${cmd} up -d &> /dev/null || true
 
   docker exec -it jms_init_db bash -c './jms upgrade_db'
   ret=$?
 
-  ${cmd} down
+  ${cmd} down &> /dev/null || true
   if [[ "$ret" == "0" ]]; then
     echo "完成数据库升级，清理容器"
   else
