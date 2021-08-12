@@ -36,7 +36,7 @@ function post_install() {
   echo "./jmsctl.sh restart"
   echo "./jmsctl.sh backup"
   echo "./jmsctl.sh upgrade"
-  gettext 'For more commands, you can enter ./jmsctl.sh --help to understand'
+  echo "$(gettext 'For more commands, you can enter ./jmsctl.sh --help to understand')"
 
   echo_yellow "\n3. $(gettext 'Web access')"
   echo "http://${HOST}:${HTTP_PORT}"
