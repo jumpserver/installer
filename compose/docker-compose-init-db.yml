@@ -1,0 +1,16 @@
+version: '2.4'
+
+services:
+  core:
+    image: jumpserver/core:${VERSION}
+    container_name: jms_init_db
+    tty: true
+    command: sleep
+    env_file:
+      - ${CONFIG_FILE}
+    volumes:
+      - ${CONFIG_DIR}/core/config.yml:/opt/jumpserver/config.yml
+      - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
+      - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
+    networks:
+      - net

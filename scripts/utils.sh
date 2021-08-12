@@ -22,10 +22,10 @@ function random_str() {
   if command -v dmidecode &>/dev/null; then
     uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len})
   fi
-  if [[ "$(echo "$uuid" | wc -L)" == "${len}" ]]; then
+  if [[ "${#uuid}" == "${len}" ]]; then
     echo "${uuid}"
   else
-    cat < /dev/urandom | tr -dc A-Za-z0-9 | head -c ${len}; echo
+    head -c100 < /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c ${len}; echo
   fi
 }
 
@@ -213,6 +213,10 @@ function echo_done() {
   echo "$(gettext 'complete')"
 }
 
+function echo_check() {
+  echo -e "$1  [\033[32m √ \033[0m]"
+}
+
 function echo_failed() {
   echo_red "$(gettext 'fail')"
 }
@@ -257,7 +261,7 @@ function get_docker_compose_services() {
 
 function get_docker_compose_cmd_line() {
   ignore_db="$1"
-  cmd="docker-compose -f ./compose/docker-compose-app.yml -f ./compose/docker-compose-external.yml"
+  cmd="docker-compose -f ./compose/docker-compose-app.yml"
   use_ipv6=$(get_config USE_IPV6)
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f ./compose/docker-compose-network.yml"
@@ -269,7 +273,6 @@ function get_docker_compose_cmd_line() {
     cmd="${cmd} -f ./compose/docker-compose-task.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-mysql-internal.yml"
     if [[ "$(uname -m)" == "aarch64" ]]; then
       cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
     else
@@ -277,15 +280,16 @@ function get_docker_compose_cmd_line() {
     fi
   fi
   if [[ "${services}" =~ redis ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-redis.yml -f ./compose/docker-compose-redis-internal.yml"
+    cmd="${cmd} -f ./compose/docker-compose-redis.yml"
   fi
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f ./compose/docker-compose-lb.yml"
   else
     cmd="${cmd} -f ./compose/docker-compose-web-external.yml"
   fi
-  if [[ "${services}" =~ xpack ]]; then
-      cmd="${cmd} -f ./compose/docker-compose-xpack.yml -f ./compose/docker-compose-xpack-external.yml"
+  use_xpack=$(get_config USE_XPACK)
+  if [[ "${use_xpack}" == '1' ]]; then
+      cmd="${cmd} -f ./compose/docker-compose-xpack.yml"
   fi
   echo "${cmd}"
 }
@@ -349,10 +353,12 @@ function prepare_set_redhat_firewalld() {
 
 function prepare_config() {
   cd "${PROJECT_DIR}" || exit 1
-  echo -e "#!/usr/bin/env bash\n#" > /usr/bin/jmsctl
-  echo -e "cd ${PROJECT_DIR}" >> /usr/bin/jmsctl
-  echo -e './jmsctl.sh $@' >> /usr/bin/jmsctl
-  chmod 755 /usr/bin/jmsctl
+  if [[ "$OS" != 'Darwin' ]];then
+    echo -e "#!/usr/bin/env bash\n#" > /usr/bin/jmsctl
+    echo -e "cd ${PROJECT_DIR}" >> /usr/bin/jmsctl
+    echo -e './jmsctl.sh $@' >> /usr/bin/jmsctl
+    chmod 755 /usr/bin/jmsctl
+  fi
 
   echo_yellow "1. $(gettext 'Check Configuration File')"
   echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"
@@ -363,7 +369,7 @@ function prepare_config() {
   if [[ ! -f ${CONFIG_FILE} ]]; then
     cp config-example.txt "${CONFIG_FILE}"
   else
-    echo -e "${CONFIG_FILE}  [\033[32m √ \033[0m]"
+    echo_check "${CONFIG_FILE}"
   fi
   if [[ ! -f .env ]]; then
     ln -s "${CONFIG_FILE}" .env
@@ -372,14 +378,14 @@ function prepare_config() {
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
 
-  for d in $(ls "${PROJECT_DIR}/config_init"); do
+  for d in "${PROJECT_DIR}"/config_init/*; do
     if [[ -d "${PROJECT_DIR}/config_init/${d}" ]]; then
-      for f in $(ls "${PROJECT_DIR}/config_init/${d}"); do
+      for f in "${PROJECT_DIR}"/config_init/"${d}"/*; do
         if [[ -f "${PROJECT_DIR}/config_init/${d}/${f}" ]]; then
           if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
             \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
           else
-            echo -e "${CONFIG_DIR}/${d}/${f}  [\033[32m √ \033[0m]"
+            echo_check "${CONFIG_DIR}/${d}/${f}"
           fi
         fi
       done
@@ -392,16 +398,17 @@ function prepare_config() {
     \cp -rf "${PROJECT_DIR}/config_init/nginx/cert" "${CONFIG_DIR}/nginx"
   fi
 
-  for f in $(ls "${PROJECT_DIR}/config_init/nginx/cert"); do
+  for f in "${PROJECT_DIR}"/config_init/nginx/cert/*; do
     if [[ -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" ]]; then
       if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
         \cp -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" "${nginx_cert_dir}"
       else
-        echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
+        echo_check "${nginx_cert_dir}/${f} "
       fi
     fi
   done
-  chmod 644 -R "${CONFIG_DIR}"
+  find "${CONFIG_DIR}" -type d -exec chmod 755 {} \;
+  find "${CONFIG_DIR}" -type f -exec chmod 644 {} \;
   echo_done
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
@@ -447,55 +454,52 @@ function image_has_prefix() {
   fi
 }
 
-function start_db_migrate_required_containers() {
+function get_db_migrate_compose_cmd() {
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
   use_ipv6=$(get_config USE_IPV6)
-  use_xpack=$(get_config USE_XPACK)
-  volume_dir=$(get_config VOLUME_DIR)
 
-  cmd="docker-compose -f ./compose/docker-compose-redis.yml"
+  docker rm -f jms_init_db &> /dev/null || true
+  cmd="docker-compose -f ./compose/docker-compose-init-db.yml"
   if [[ "${use_external_mysql}" == "0" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-init-mysql.yml"
     if [[ "$(uname -m)" == "aarch64" ]]; then
       cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
     else
       cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
     fi
   fi
+
+  if [[ "${use_external_redis}" == "0" ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-redis.yml"
+  fi
+
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
   else
     cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
   fi
+  echo "$cmd"
+}
+
+function start_db_migrate_required_containers() {
   ${cmd} up -d
 }
 
 function remove_db_migrate_containers() {
-  docker stop jms_redis >/dev/null 2>&1
-  docker rm jms_redis >/dev/null 2>&1
+  echo
 }
 
 function perform_db_migrations() {
-  volume_dir=$(get_config VOLUME_DIR)
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  cmd=$(get_db_migrate_compose_cmd)
+  ${cmd} up -d
 
-  start_db_migrate_required_containers || exit 1
-
-  if [[ "${use_external_mysql}" == "0" ]]; then
-    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
-      sleep 5s
-    done
-  fi
-
-  while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
-    sleep 5s
-  done
-
-  if ! docker run -i --rm --network=jms_net --env-file=/opt/jumpserver/config/config.txt -v "${volume_dir}/core/data":/opt/jumpserver/data jumpserver/core:"${VERSION}" upgrade_db; then
-    remove_db_migrate_containers
+  if ! docker exec -it jms_init_db bash -c './jms upgrade_db'; then
+    echo "初始化数据失败"
     exit 1
   fi
-  remove_db_migrate_containers
+
+  echo "完成数据库升级，清理容器"
+  ${cmd} down
 }
 
 function check_ipv6_iptables_if_need() {

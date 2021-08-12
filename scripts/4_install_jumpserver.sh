@@ -19,7 +19,7 @@ function pre_install() {
 
 function post_install() {
   echo_green "\n>>> $(gettext 'The Installation is Complete')"
-  HOST=$(ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
+  HOST=$(command -v ip &> /dev/null && ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
   if [ ! "$HOST" ]; then
       HOST=$(hostname -I | cut -d ' ' -f1)
   fi
@@ -36,7 +36,7 @@ function post_install() {
   echo "./jmsctl.sh restart"
   echo "./jmsctl.sh backup"
   echo "./jmsctl.sh upgrade"
-  echo "$(gettext 'For more commands, you can enter ./jmsctl.sh --help to understand')"
+  gettext 'For more commands, you can enter ./jmsctl.sh --help to understand'
 
   echo_yellow "\n3. $(gettext 'Web access')"
   echo "http://${HOST}:${HTTP_PORT}"
@@ -52,7 +52,7 @@ function post_install() {
   echo "sftp -P${SSH_PORT} admin@${HOST}"
 
   echo_yellow "\n5. $(gettext 'More information')"
-  echo "$(gettext 'Offical Website'): https://www.jumpserver.org/"
+  echo "$(gettext 'Official Website'): https://www.jumpserver.org/"
   echo "$(gettext 'Documentation'): https://docs.jumpserver.org/"
   echo -e "\n"
 }
