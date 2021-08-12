@@ -481,6 +481,25 @@ function get_db_migrate_compose_cmd() {
   echo "$cmd"
 }
 
+function get_jms_net_compose_cmd() {
+  cmd="docker-compose -f ./compose/docker-compose-init-db.yml"
+  if [[ "${use_ipv6}" != "1" ]]; then
+    cmd="${cmd} -f compose/docker-compose-network.yml"
+  else
+    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
+  fi
+  echo "$cmd"
+}
+
+function create_jms_network() {
+  cmd=$(get_jms_net_compose_cmd)
+  ${cmd} up -d
+}
+
+function down_jms_network() {
+  cmd=$(get_jms_net_compose_cmd)
+  ${cmd} down
+}
 
 function perform_db_migrations() {
   cmd=$(get_db_migrate_compose_cmd)
