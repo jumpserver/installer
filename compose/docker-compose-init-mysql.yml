@@ -1,7 +1,0 @@
-version: '2.4'
-
-services:
-  redis:
-    depends_on:
-      mysql:
-        condition: service_healthy

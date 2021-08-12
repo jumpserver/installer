@@ -1,6 +1,0 @@
-version: '2.4'
-
-services:
-  xrdp:
-    ports:
-      - ${RDP_PORT}:3389
