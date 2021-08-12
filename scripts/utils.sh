@@ -378,14 +378,15 @@ function prepare_config() {
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
 
-  for d in "${PROJECT_DIR}"/config_init/*; do
+  # shellcheck disable=SC2045
+  for d in $(ls "${PROJECT_DIR}/config_init"); do
     if [[ -d "${PROJECT_DIR}/config_init/${d}" ]]; then
-      for f in "${PROJECT_DIR}"/config_init/"${d}"/*; do
+      for f in $(ls "${PROJECT_DIR}/config_init/${d}"); do
         if [[ -f "${PROJECT_DIR}/config_init/${d}/${f}" ]]; then
           if [[ ! -f "${CONFIG_DIR}/${d}/${f}" ]]; then
             \cp -rf "${PROJECT_DIR}/config_init/${d}" "${CONFIG_DIR}"
           else
-            echo_check "${CONFIG_DIR}/${d}/${f}"
+            echo -e "${CONFIG_DIR}/${d}/${f}  [\033[32m √ \033[0m]"
           fi
         fi
       done
@@ -398,12 +399,13 @@ function prepare_config() {
     \cp -rf "${PROJECT_DIR}/config_init/nginx/cert" "${CONFIG_DIR}/nginx"
   fi
 
-  for f in "${PROJECT_DIR}"/config_init/nginx/cert/*; do
+  # shellcheck disable=SC2045
+  for f in $(ls "${PROJECT_DIR}/config_init/nginx/cert"); do
     if [[ -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" ]]; then
       if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
         \cp -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" "${nginx_cert_dir}"
       else
-        echo_check "${nginx_cert_dir}/${f} "
+        echo -e "${nginx_cert_dir}/${f}  [\033[32m √ \033[0m]"
       fi
     fi
   done
