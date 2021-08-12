@@ -54,7 +54,6 @@ function usage() {
   echo
   echo "More Commands: "
   echo "  load_image        $(gettext 'Loading docker image')"
-  echo "  python            $(gettext 'Run python manage.py shell')"
   echo "  backup_db         $(gettext 'Backup database')"
   echo "  restore_db [file] $(gettext 'Data recovery through database backup file')"
   echo "  raw               $(gettext 'Execute the original docker-compose command')"
@@ -149,7 +148,6 @@ function check_update() {
   cd "${Install_DIR}/jumpserver-installer-${latest_version}" || exit 1
   echo
   ./jmsctl.sh upgrade "${latest_version}"
-  ln -sf /usr/bin/jmsctl "${PROJECT_DIR}/jmsctl.sh"
 }
 
 function main() {
@@ -225,16 +223,6 @@ function main() {
       docker_name=$(service_to_docker_name "${target}")
       docker logs -f "${docker_name}" --tail 100
     fi
-    ;;
-  python)
-    docker exec -it jms_core python /opt/jumpserver/apps/manage.py shell
-    ;;
-  db)
-    docker exec -it jms_core python /opt/jumpserver/apps/manage.py dbshell
-    ;;
-  exec)
-    docker_name=$(service_to_docker_name "${target}")
-    docker exec -it "${docker_name}" sh
     ;;
   show_services)
     get_docker_compose_services

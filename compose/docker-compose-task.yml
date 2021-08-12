@@ -17,11 +17,5 @@ services:
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
-    healthcheck:
-      test: "./jms status task | grep stopped && exit 1 || exit 0"
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
     networks:
       - net

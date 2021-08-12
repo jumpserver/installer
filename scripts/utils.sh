@@ -248,6 +248,14 @@ function get_docker_compose_services() {
   if [[ "${use_external_redis}" != "1" && "${ignore_db}" != "ignore_db" ]]; then
     services+=" redis"
   fi
+  use_es=$(get_config USE_ES)
+  if [[ "${use_es}" == "1" ]]; then
+    services+=" es"
+  fi
+  use_minio=$(get_config USE_MINIO)
+  if [[ "${use_minio}" == "1" ]]; then
+    services+=" minio"
+  fi
   use_lb=$(get_config USE_LB)
   if [[ "${use_lb}" == "1" ]]; then
     services+=" lb"
@@ -281,6 +289,12 @@ function get_docker_compose_cmd_line() {
   fi
   if [[ "${services}" =~ redis ]]; then
     cmd="${cmd} -f ./compose/docker-compose-redis.yml"
+  fi
+  if [[ "${services}" =~ es ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-es.yml"
+  fi
+  if [[ "${services}" =~ minio ]]; then
+    cmd="${cmd} -f ./compose/docker-compose-minio.yml"
   fi
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f ./compose/docker-compose-lb.yml"
@@ -488,21 +502,19 @@ function create_db_ops_env() {
 }
 
 function down_db_ops_env() {
-  cmd=$(get_db_migrate_compose_cmd)
-  ${cmd} down
+  docker stop jms_core &>/dev/null
+  docker rm jms_core &>/dev/null
 }
 
 function perform_db_migrations() {
   create_db_ops_env
 
-  docker exec -it jms_core bash -c './jms upgrade_db'
+  docker exec -i jms_core bash -c './jms upgrade_db'
   ret=$?
 
-  down_db_ops_env || true
-  if [[ "$ret" == "0" ]]; then
-    echo "完成数据库升级，清理容器"
-  else
-    echo "初始化数据失败"
+  down_db_ops_env
+  if [[ "$ret" != "0" ]]; then
+    log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
   fi
 }
