@@ -148,7 +148,6 @@ function check_update() {
   cd "${Install_DIR}/jumpserver-installer-${latest_version}" || exit 1
   echo
   ./jmsctl.sh upgrade "${latest_version}"
-  ln -sf /usr/bin/jmsctl "${PROJECT_DIR}/jmsctl.sh"
 }
 
 function main() {
