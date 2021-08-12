@@ -24,7 +24,7 @@ function main() {
   mysql_images=$(get_mysql_images)
 
   if ! docker network ls | grep jms_net >/dev/null; then
-    start_db_migrate_required_containers
+    create_jms_network
     flag=1
   fi
 
@@ -37,8 +37,8 @@ function main() {
     log_success "$(gettext 'Backup succeeded! The backup file has been saved to'): ${DB_FILE}"
   fi
 
-  if [[ "$flag" ]]; then
-    remove_db_migrate_containers
+  if [[ -n "$flag" ]]; then
+    down_jms_network
     unset flag
   fi
 }
