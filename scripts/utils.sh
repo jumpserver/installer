@@ -480,8 +480,17 @@ function get_db_migrate_compose_cmd() {
   echo "$cmd"
 }
 
-function get_jms_net_compose_cmd() {
+function get_db_ops_compose_cmd() {
   cmd="docker-compose -f ./compose/docker-compose-init-db.yml"
+
+  if [[ "${use_external_mysql}" == "0" ]]; then
+    if [[ "$(uname -m)" == "aarch64" ]]; then
+      cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
+    else
+      cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
+    fi
+  fi
+
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
   else
@@ -490,19 +499,19 @@ function get_jms_net_compose_cmd() {
   echo "$cmd"
 }
 
-function create_jms_network() {
-  cmd=$(get_jms_net_compose_cmd)
+function create_db_ops_env() {
+  cmd=$(get_db_ops_compose_cmd)
   ${cmd} up -d
 }
 
-function down_jms_network() {
-  cmd=$(get_jms_net_compose_cmd)
+function down_db_ops_env() {
+  cmd=$(get_db_ops_compose_cmd)
   ${cmd} down
 }
 
 function perform_db_migrations() {
   cmd=$(get_db_migrate_compose_cmd)
-  ${cmd} up -d &> /dev/null || true
+  ${cmd} up -d
 
   docker exec -it jms_core bash -c './jms upgrade_db'
   ret=$?
