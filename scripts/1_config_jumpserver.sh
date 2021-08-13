@@ -16,7 +16,6 @@ function set_network() {
   if [[ "${confirm}" == "y" ]]; then
     set_config USE_IPV6 1
   fi
-  echo_done
 }
 
 function set_secret_key() {
@@ -35,7 +34,6 @@ function set_secret_key() {
     set_config BOOTSTRAP_TOKEN "${bootstrap_key}"
     echo "BOOTSTRAP_TOKEN: ${bootstrap_key}"
   fi
-  echo_done
 }
 
 function set_volume_dir() {
@@ -61,7 +59,6 @@ function set_volume_dir() {
     mkdir -p ${volume_dir}
   fi
   set_config VOLUME_DIR ${volume_dir}
-  echo_done
 }
 
 function set_external_mysql() {
@@ -124,7 +121,6 @@ function set_mysql() {
   else
     set_internal_mysql
   fi
-  echo_done
 }
 
 function set_external_redis() {
@@ -178,7 +174,6 @@ function set_redis() {
   else
     set_internal_redis
   fi
-  echo_done
 }
 
 function set_service_port() {
@@ -201,7 +196,6 @@ function set_service_port() {
       set_config RDP_PORT "${rdp_port}"
     fi
   fi
-  echo_done
 }
 
 function init_db() {
@@ -213,13 +207,27 @@ function init_db() {
 }
 
 function main() {
-  set_network
-  set_secret_key
-  set_volume_dir
-  set_mysql
-  set_redis
-  set_service_port
-  init_db
+  if set_network; then
+    echo_done
+  fi
+  if set_secret_key; then
+    echo_done
+  fi
+  if set_volume_dir; then
+    echo_done
+  fi
+  if set_mysql; then
+    echo_done
+  fi
+  if set_redis; then
+    echo_done
+  fi
+  if set_service_port; then
+    echo_done
+  fi
+  if init_db; then
+    echo_done
+  fi
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
