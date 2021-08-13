@@ -31,7 +31,7 @@ function set_secret_key() {
 
   bootstrap_key=$(get_config BOOTSTRAP_TOKEN)
   if [[ -z "${bootstrap_key}" ]]; then
-    bootstrap_key=$(random_str 16)
+    bootstrap_key=$(random_str 24)
     set_config BOOTSTRAP_TOKEN "${bootstrap_key}"
     echo "BOOTSTRAP_TOKEN: ${bootstrap_key}"
   fi
