@@ -15,9 +15,9 @@ services:
       cluster.name: docker-cluster
       discovery.type: single-node
       network.host: 0.0.0.0
-      TAKE_FILE_OWNERSHIP: "true"
       bootstrap.memory_lock: "true"
       xpack.security.enabled: "true"
+      TAKE_FILE_OWNERSHIP: "true"
       ES_JAVA_OPTS: "-Xms512m -Xmx512m"
       ELASTIC_PASSWORD: $BOOTSTRAP_TOKEN
     ulimits:
