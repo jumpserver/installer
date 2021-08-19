@@ -15,7 +15,7 @@ services:
     environment:
       - SERVER_HOSTNAME=${HOSTNAME}
     healthcheck:
-      test: "sh /opt/jumpserver/utils/check_celery.sh"
+      test: "bash /opt/jumpserver/utils/check_celery.sh"
       interval: 10s
       timeout: 5s
       retries: 3
