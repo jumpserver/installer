@@ -38,6 +38,9 @@ function upgrade_config() {
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"
   fi
+  if grep -q "server nginx" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
+    sed -i "s/server nginx/server web/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
+  fi
 }
 
 function migrate_coco_to_koko_v1_54_to_v1_55() {
