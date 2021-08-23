@@ -16,7 +16,7 @@ services:
       web:
         condition: service_healthy
     healthcheck:
-      test: "curl -fskL http://localhost/ > /dev/null"
+      test: "curl -fs http://localhost/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3
