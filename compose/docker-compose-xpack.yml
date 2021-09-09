@@ -6,6 +6,8 @@ services:
     container_name: jms_omnidb
     env_file:
       - ${CONFIG_FILE}
+    environment:
+      - SERVER_HOSTNAME=${HOSTNAME}
     restart: always
     volumes:
       - ${VOLUME_DIR}/omnidb/data:/opt/omnidb/data
@@ -26,6 +28,8 @@ services:
     container_name: jms_xrdp
     env_file:
       - ${CONFIG_FILE}
+    environment:
+      - SERVER_HOSTNAME=${HOSTNAME}
     restart: always
     ports:
       - ${RDP_PORT}:3389
