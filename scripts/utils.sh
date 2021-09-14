@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 #
+
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/const.sh"
 
+shopt -s expand_aliases
 if [[ $(uname) == 'Darwin' ]]; then
-  sedi='sed -i ""'
+  alias sedi='sed -i ""'
 else
-  sedi='sed -i'
+  alias sedi='sed -i'
 fi
 
 function is_confirm() {
@@ -95,7 +97,7 @@ function set_config() {
     return
   fi
 
-  ${sedi} "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
+  sedi "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
 function test_mysql_connect() {
@@ -430,7 +432,7 @@ function prepare_config() {
   echo_done
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
-    ${sedi} "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
+    sedi "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
   fi
 
   backup_dir="${CONFIG_DIR}/backup"

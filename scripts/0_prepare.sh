@@ -9,7 +9,7 @@ USE_XPACK="${USE_XPACK-0}"
 
 function prepare_config_xpack() {
   if [[ "${USE_XPACK}" == "1" ]]; then
-    ${sedi} 's@USE_XPACK=.*@USE_XPACK=1@g' "${PROJECT_DIR}"/config-example.txt
+    sedi 's@USE_XPACK=.*@USE_XPACK=1@g' "${PROJECT_DIR}"/config-example.txt
   fi
 }
 

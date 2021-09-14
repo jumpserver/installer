@@ -54,12 +54,13 @@ function get_installer() {
 
 function config_installer() {
   cd /opt/jumpserver-installer-${Version} || exit 1
+  shopt -s expand_aliases
   if [[ $(uname) == 'Darwin' ]]; then
-    sedi='sed -i ""'
+    alias sedi='sed -i ""'
   else
-    sedi='sed -i'
+    alias sedi='sed -i'
   fi
-  ${sedi} "s/VERSION=.*/VERSION=${Version}/g" /opt/jumpserver-installer-${Version}/static.env
+  sedi "s/VERSION=.*/VERSION=${Version}/g" /opt/jumpserver-installer-${Version}/static.env
   ./jmsctl.sh install
   ./jmsctl.sh start
 }

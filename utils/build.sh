@@ -29,5 +29,5 @@ fi
 
 # 修改版本号文件
 if [[ -n ${VERSION} ]]; then
-  ${sedi} "s@VERSION=.*@VERSION=\"${VERSION}\"@g" "${to_dir}/static.env"
+  sedi "s@VERSION=.*@VERSION=\"${VERSION}\"@g" "${to_dir}/static.env"
 fi
