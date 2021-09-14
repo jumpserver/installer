@@ -22,12 +22,12 @@ else
 fi
 
 if [[ $(uname) == 'Darwin' ]]; then
-  alias sedi='sed -i ""'
+  sedi='sed -i ""'
 else
-  alias sedi='sed -i'
+  sedi='sed -i'
 fi
 
 # 修改版本号文件
 if [[ -n ${VERSION} ]]; then
-  sedi "s@VERSION=.*@VERSION=\"${VERSION}\"@g" "${to_dir}/static.env"
+  ${sedi} "s@VERSION=.*@VERSION=\"${VERSION}\"@g" "${to_dir}/static.env"
 fi
