@@ -39,7 +39,7 @@ function upgrade_config() {
     set_config CURRENT_VERSION "${VERSION}"
   fi
   if grep -q "server nginx" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
-    sed -i "s/server nginx/server web/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
+    sedi "s/server nginx/server web/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
   fi
 }
 
@@ -153,7 +153,7 @@ function main() {
   fi
 
   if [[ "${to_version}" && "${to_version}" != "${VERSION}" ]]; then
-    sed -i "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
+    sedi "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
     export VERSION=${to_version}
   fi
   echo
