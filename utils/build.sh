@@ -22,9 +22,9 @@ else
 fi
 
 if [[ $(uname) == 'Darwin' ]]; then
-  sedi='sed -i ""'
+  alias sedi='sed -i ""'
 else
-  sedi='sed -i'
+  alias sedi='sed -i'
 fi
 
 # 修改版本号文件
