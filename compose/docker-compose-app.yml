@@ -72,7 +72,7 @@ services:
     container_name: jms_web
     restart: always
     environment:
-      - CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE}
+      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE}
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/nginx/log:/var/log/nginx
