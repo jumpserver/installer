@@ -38,8 +38,21 @@ function upgrade_config() {
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"
   fi
+  client_max_body_size=$(get_config CLIENT_MAX_BODY_SIZE)
+  if [ -z "${client_max_body_size}" ]; then
+    CLIENT_MAX_BODY_SIZE=4096m
+    set_config CLIENT_MAX_BODY_SIZE "${CLIENT_MAX_BODY_SIZE}"
+  fi
+  server_hostname=$(get_config SERVER_HOSTNAME)
+  if [ -z "${server_hostname}" ]; then
+    SERVER_HOSTNAME='${HOSTNAME}'
+    set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
+  fi
   if grep -q "server nginx" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
     sedi "s/server nginx/server web/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
+  fi
+  if grep -q "sticky name=jms_route;" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
+    sedi "s/sticky name=jms_route;/ip_hash;/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
   fi
 }
 

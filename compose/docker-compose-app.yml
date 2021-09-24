@@ -9,8 +9,6 @@ services:
     command: start web
     env_file:
       - ${CONFIG_FILE}
-    environment:
-        - SERVER_HOSTNAME=${HOSTNAME}
     volumes:
       - ${CONFIG_DIR}/core/config.yml:/opt/jumpserver/config.yml
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
@@ -31,8 +29,6 @@ services:
     tty: true
     env_file:
       - ${CONFIG_FILE}
-    environment:
-      - SERVER_HOSTNAME=${HOSTNAME}
     ports:
       - ${SSH_PORT}:2222
     volumes:
@@ -56,8 +52,6 @@ services:
     container_name: jms_lion
     env_file:
       - ${CONFIG_FILE}
-    environment:
-      - SERVER_HOSTNAME=${HOSTNAME}
     restart: always
     volumes:
       - ${VOLUME_DIR}/lion/data:/opt/lion/data
@@ -77,6 +71,8 @@ services:
     image: jumpserver/web:${VERSION}
     container_name: jms_web
     restart: always
+    environment:
+      - CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE}
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/nginx/log:/var/log/nginx

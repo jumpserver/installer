@@ -12,8 +12,6 @@ services:
         condition: service_healthy
     env_file:
       - ${CONFIG_FILE}
-    environment:
-      - SERVER_HOSTNAME=${HOSTNAME}
     healthcheck:
       test: "bash /opt/jumpserver/utils/check_celery.sh"
       interval: 10s
