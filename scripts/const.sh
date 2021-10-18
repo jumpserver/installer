@@ -18,7 +18,7 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 
 export OS=$(uname -s)
 export DOCKER_VERSION=18.06.3-ce
-export DOCKER_MIRROR="https://download.docker.com/linux/static/stable"
+export DOCKER_MIRROR="https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable"
 DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
 export DOCKER_BIN_URL
 if [[ "$(uname -m)" == "aarch64" ]]; then
