@@ -138,7 +138,6 @@ function get_images() {
   mysql_images=$(get_mysql_images)
 
   images=(
-    "jumpserver/nginx:alpine2"
     "jumpserver/redis:6-alpine"
     "${mysql_images}"
     "jumpserver/web:${VERSION}"
@@ -511,7 +510,16 @@ function down_db_ops_env() {
 }
 
 function perform_db_migrations() {
-  create_db_ops_env
+  if ! create_db_ops_env; then
+    use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+    if [[ "${use_external_mysql}" == "0" ]]; then
+      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+        sleep 5s
+      done
+    fi
+    create_db_ops_env
+    sleep 5s
+  fi
 
   docker exec -i jms_core bash -c './jms upgrade_db'
   ret=$?
@@ -542,10 +550,7 @@ function set_current_version() {
 }
 
 function get_current_version() {
-  current_version=$(get_config CURRENT_VERSION)
-  if [ -z "${current_version}" ]; then
-    current_version="${VERSION}"
-  fi
+  current_version=$(get_config CURRENT_VERSION "${VERSION}")
   echo "${current_version}"
 }
 
