@@ -9,13 +9,13 @@ services:
     image: jumpserver/redis:6-alpine
     container_name: jms_redis
     restart: always
-    volumes:
-      - ${VOLUME_DIR}/redis/data:/data
-      - ${CONFIG_DIR}/redis/redis.conf:/etc/redis.conf
     command: ["redis-server", "/etc/redis.conf", "--requirepass", "$REDIS_PASSWORD"]
     environment:
       REDIS_PORT: $REDIS_PORT
       REDIS_PASSWORD: $REDIS_PASSWORD
+    volumes:
+      - ${VOLUME_DIR}/redis/data:/data
+      - ${CONFIG_DIR}/redis/redis.conf:/etc/redis.conf
     healthcheck:
       test: "redis-cli -h 127.0.0.1 -p $$REDIS_PORT -a $$REDIS_PASSWORD info Replication"
       interval: 10s
