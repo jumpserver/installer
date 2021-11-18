@@ -531,17 +531,6 @@ function perform_db_migrations() {
   fi
 }
 
-function check_ipv6_iptables_if_need() {
-  # 检查 IPv6
-  use_ipv6=$(get_config USE_IPV6)
-  subnet_ipv6=$(get_config DOCKER_SUBNET_IPV6)
-  if [[ "${use_ipv6}" == "1" ]]; then
-    if ! ip6tables -t nat -L | grep "${subnet_ipv6}" >/dev/null; then
-      ip6tables -t nat -A POSTROUTING -s "${subnet_ipv6}" -j MASQUERADE
-    fi
-  fi
-}
-
 function set_current_version() {
   current_version=$(get_config CURRENT_VERSION)
   if [ "${current_version}" != "${VERSION}" ]; then
