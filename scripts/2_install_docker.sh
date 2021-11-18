@@ -148,6 +148,9 @@ function config_docker() {
 
   set_docker_config registry-mirrors '["https://hub-mirror.c.163.com", "http://f1361db2.m.daocloud.io"]'
   set_docker_config live-restore "true"
+  set_docker_config ipv6 "true"
+  set_docker_config experimental "true"
+  set_docker_config ip6tables "true"
   set_docker_config data-root "${docker_storage_path}"
   set_docker_config log-driver "json-file"
   set_docker_config log-opts '{"max-size": "10m", "max-file": "3"}'
