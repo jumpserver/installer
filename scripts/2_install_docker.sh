@@ -60,18 +60,6 @@ function install_compose() {
 
 function check_docker_install() {
   command -v docker >/dev/null || {
-    if command -v dnf >/dev/null; then
-      if [[ -f "/etc/redhat-release" ]]; then
-        if ! command -v docker >/dev/null; then
-          yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine >/dev/null 2>&1
-          yum install -q -y yum-utils
-          yum-config-manager -y --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-          yum install -q -y docker-ce docker-ce-cli containerd.io
-          systemctl enable docker >/dev/null
-          return
-        fi
-      fi
-    fi
     install_docker
   }
 }
@@ -149,6 +137,7 @@ function config_docker() {
   set_docker_config registry-mirrors '["https://hub-mirror.c.163.com", "http://f1361db2.m.daocloud.io"]'
   set_docker_config live-restore "true"
   set_docker_config ipv6 "true"
+  set_docker_config fixed-cidr-v6 "fc00:100::/24"
   set_docker_config experimental "true"
   set_docker_config ip6tables "true"
   set_docker_config data-root "${docker_storage_path}"

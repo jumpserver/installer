@@ -315,7 +315,7 @@ function install_required_pkg() {
   required_pkg=$1
   if command -v dnf >/dev/null; then
     if [ "$required_pkg" == "python" ]; then
-      dnf -q -y install python2
+      dnf -q -y install python2 tar
     else
       dnf -q -y install "$required_pkg"
     fi
