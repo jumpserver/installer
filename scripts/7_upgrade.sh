@@ -48,6 +48,10 @@ function upgrade_config() {
     SERVER_HOSTNAME='${HOSTNAME}'
     set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
   fi
+  font_smoothing=$(get_config JUMPSERVER_ENABLE_FONT_SMOOTHING)
+  if [ -z "${font_smoothing}" ]; then
+    set_config JUMPSERVER_ENABLE_FONT_SMOOTHING "true"
+  fi
   if grep -q "server nginx" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
     sedi "s/server nginx/server web/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
   fi
