@@ -2,7 +2,7 @@ version: '2.4'
 
 services:
   es:
-    image: elasticsearch:7.14.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.16.0
     container_name: jms_es
     restart: always
     ports:
@@ -18,7 +18,7 @@ services:
       bootstrap.memory_lock: "true"
       xpack.security.enabled: "true"
       TAKE_FILE_OWNERSHIP: "true"
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m -Dlog4j2.formatMsgNoLookups=true"
       ELASTIC_PASSWORD: $BOOTSTRAP_TOKEN
     ulimits:
       memlock:
