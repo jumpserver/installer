@@ -8,20 +8,6 @@ installer 可以安装、部署、更新 管理 JumpServer
   - Linux x86_64
   - Kernel 大于 4.0
 
-### 修改系统设置如 最大打开文件数
-
-```
-$ vim /etc/security/limits.d/20-nproc.conf
-
-*     soft   nofile    65535
-*     hard   nofile    65535
-*     soft   nproc     65535
-*     hard   nproc     65535
-root  soft   nproc     unlimited
-
-$ reboot  # 重启服务器
-```
-
 ## 安装部署
 
 ```bash
