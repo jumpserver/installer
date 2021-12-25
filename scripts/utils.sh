@@ -311,38 +311,12 @@ function get_docker_compose_cmd_line() {
   echo "${cmd}"
 }
 
-function install_required_pkg() {
-  required_pkg=$1
-  if command -v dnf >/dev/null; then
-    if [ "$required_pkg" == "python" ]; then
-      dnf -q -y install python2 tar
-    else
-      dnf -q -y install "$required_pkg"
-    fi
-  elif command -v yum >/dev/null; then
-    yum -q -y install "$required_pkg"
-  elif command -v apt >/dev/null; then
-    apt-get -qq -y install "$required_pkg"
-  elif command -v zypper >/dev/null; then
-    zypper -q -n install "$required_pkg"
-  elif command -v apk >/dev/null; then
-    if [ "$required_pkg" == "python" ]; then
-      apk add -q python2
-    else
-      apk add -q "$required_pkg"
-    fi
-    command -v gettext >/dev/null || {
-      apk add -q gettext-dev
+function prepare_check_required_pkg() {
+  for i in curl wget tar; do
+    command -v $i >/dev/null || {
+        echo_red "$(gettext 'Please install it first') $i"
+        exit 1
     }
-  else
-    echo_red "$(gettext 'Please install it first') $required_pkg"
-    exit 1
-  fi
-}
-
-function prepare_online_install_required_pkg() {
-  for i in curl wget zip python; do
-    command -v $i >/dev/null || install_required_pkg $i
   done
 }
 
