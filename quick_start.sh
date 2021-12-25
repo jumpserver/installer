@@ -5,12 +5,7 @@ Version=dev
 
 function install_soft() {
     if command -v dnf > /dev/null; then
-      if [ "$1" == "python" ]; then
-        dnf -q -y install python2
-        ln -s /usr/bin/python2 /usr/bin/python
-      else
-        dnf -q -y install "$1"
-      fi
+      dnf -q -y install "$1"
     elif command -v yum > /dev/null; then
       yum -q -y install "$1"
     elif command -v apt > /dev/null; then
@@ -20,7 +15,7 @@ function install_soft() {
     elif command -v apk > /dev/null; then
       apk add -q "$1"
       command -v gettext >/dev/null || {
-      apk add -q gettext-dev
+      apk add -q gettext-dev python2
     }
     else
       echo -e "[\033[31m ERROR \033[0m] Please install it first (请先安装) $1 "
@@ -29,7 +24,7 @@ function install_soft() {
 }
 
 function prepare_install() {
-  for i in curl wget zip python; do
+  for i in curl wget tar; do
     command -v $i &>/dev/null || install_soft $i
   done
 }

@@ -113,41 +113,38 @@ f.close()
 
 function config_docker() {
   docker_storage_path=$(get_config DOCKER_DIR "/var/lib/docker")
-  confirm="n"
-  read_from_input confirm "$(gettext 'Do you need custom docker root dir, will use the default directory') ${docker_storage_path}?" "y/n" "${confirm}"
-
-  if [[ "${confirm}" == "y" ]]; then
-    echo
-    echo "$(gettext 'Modify the default storage directory of Docker image, you can select your largest disk and create a directory in it, such as') /opt/docker"
-    df -h | grep -Ev "map|devfs|tmpfs|overlay|shm"
-    echo
-    read_from_input docker_storage_path "$(gettext 'Docker image storage directory')" '' "${docker_storage_path}"
-    if [[ "${docker_storage_path}" == "y" ]]; then
-      echo_failed
-      echo
-      config_docker
-    fi
-  fi
-
   if [[ ! -d "${docker_storage_path}" ]]; then
     mkdir -p "${docker_storage_path}"
   fi
-  set_config DOCKER_DIR "${docker_storage_path}"
 
   set_docker_config registry-mirrors '["https://hub-mirror.c.163.com", "http://f1361db2.m.daocloud.io"]'
   set_docker_config live-restore "true"
-  set_docker_config ipv6 "true"
-  set_docker_config fixed-cidr-v6 "fc00:1010:1111:100::/64"
-  set_docker_config experimental "true"
-  set_docker_config ip6tables "true"
   set_docker_config data-root "${docker_storage_path}"
   set_docker_config log-driver "json-file"
   set_docker_config log-opts '{"max-size": "10m", "max-file": "3"}'
 }
 
+function set_network() {
+  # IPv6 支持
+  use_ipv6=$(get_config USE_IPV6)
+  confirm="n"
+  if [[ "${use_ipv6}" == "1" ]]; then
+    confirm="y"
+  fi
+  read_from_input confirm "$(gettext 'Do you want to support IPv6')?" "y/n" "${confirm}"
+  if [[ "${confirm}" == "y" ]]; then
+    set_docker_config ipv6 "true"
+    set_docker_config fixed-cidr-v6 "fc00:1010:1111:100::/64"
+    set_docker_config experimental "true"
+    set_docker_config ip6tables "true"
+    set_config USE_IPV6 1
+  fi
+}
+
 function check_docker_config() {
   if [[ ! -f "/etc/docker/daemon.json" ]]; then
     config_docker
+    set_network
   fi
   echo_done
 }

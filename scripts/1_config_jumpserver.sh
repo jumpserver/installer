@@ -4,22 +4,8 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/utils.sh"
 
-function set_network() {
-  # IPv6 支持
-  echo_yellow "1. $(gettext 'Configure Network')"
-  use_ipv6=$(get_config USE_IPV6)
-  confirm="n"
-  if [[ "${use_ipv6}" == "1" ]]; then
-    confirm="y"
-  fi
-  read_from_input confirm "$(gettext 'Do you want to support IPv6')?" "y/n" "${confirm}"
-  if [[ "${confirm}" == "y" ]]; then
-    set_config USE_IPV6 1
-  fi
-}
-
 function set_secret_key() {
-  echo_yellow "\n2. $(gettext 'Configure Private Key')"
+  echo_yellow "1. $(gettext 'Configure Private Key')"
   # 生成随机的 SECRET_KEY 和 BOOTSTRAP_KEY
   secret_key=$(get_config SECRET_KEY)
   if [[ -z "${secret_key}" ]]; then
@@ -37,7 +23,7 @@ function set_secret_key() {
 }
 
 function set_volume_dir() {
-  echo_yellow "\n3. $(gettext 'Configure Persistent Directory')"
+  echo_yellow "\n2. $(gettext 'Configure Persistent Directory')"
   volume_dir=$(get_config VOLUME_DIR "/opt/jumpserver")
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need custom persistent store, will use the default directory') ${volume_dir}?" "y/n" "${confirm}"
@@ -108,7 +94,7 @@ function set_internal_mysql() {
 }
 
 function set_mysql() {
-  echo_yellow "\n4. $(gettext 'Configure MySQL')"
+  echo_yellow "\n3. $(gettext 'Configure MySQL')"
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
   confirm="n"
   if [[ "${use_external_mysql}" == "1" ]]; then
@@ -162,7 +148,7 @@ function set_internal_redis() {
 }
 
 function set_redis() {
-  echo_yellow "\n5. $(gettext 'Configure Redis')"
+  echo_yellow "\n4. $(gettext 'Configure Redis')"
   use_external_redis=$(get_config USE_EXTERNAL_REDIS)
   confirm="n"
   if [[ "${use_external_redis}" == "1" ]]; then
@@ -177,7 +163,7 @@ function set_redis() {
 }
 
 function set_service_port() {
-  echo_yellow "\n6. $(gettext 'Configure External Port')"
+  echo_yellow "\n5. $(gettext 'Configure External Port')"
   http_port=$(get_config HTTP_PORT)
   ssh_port=$(get_config SSH_PORT)
   rdp_port=$(get_config RDP_PORT)
@@ -199,7 +185,7 @@ function set_service_port() {
 }
 
 function init_db() {
-  echo_yellow "\n7. $(gettext 'Init JumpServer Database')"
+  echo_yellow "\n6. $(gettext 'Init JumpServer Database')"
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
@@ -207,9 +193,6 @@ function init_db() {
 }
 
 function main() {
-  if set_network; then
-    echo_done
-  fi
   if set_secret_key; then
     echo_done
   fi
