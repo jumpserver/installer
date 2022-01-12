@@ -76,7 +76,7 @@ services:
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE}
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
-      - ${VOLUME_DIR}/nginx/log:/var/log/nginx
+      - ${VOLUME_DIR}/nginx/data/logs:/var/log/nginx
     depends_on:
       core:
         condition: service_healthy

@@ -5,50 +5,19 @@
 installer 可以安装、部署、更新 管理 JumpServer
 
 ## 环境依赖
-  - CentOS 7
-
-### 修改系统设置如 最大打开文件数
-
-```
-$ vim /etc/security/limits.d/20-nproc.conf
-
-*     soft   nofile    65535
-*     hard   nofile    65535
-*     soft   nproc     65535
-*     hard   nproc     65535
-root  soft   nproc     unlimited
-
-$ reboot  # 重启服务器
-```
+  - Linux x86_64
+  - Kernel 大于 4.0
 
 ## 安装部署
 
 ```bash
 # 安装，版本是在 static.env 指定的
 $ ./jmsctl.sh install
-
-# 可以设置 国内加速源来安装
-$ export DOCKER_IMAGE_PREFIX=hub-mirror.c.163.com
-$ ./jmsctl.sh install
-
-# 检查更新
-$ ./jmsctl.sh check_update
-
-# 升级到 static.env 中的版本
-$ ./jmsctl.sh upgrade
-
-# 升级到指定版本
-$ ./jmsctl.sh upgrade v2.6.1
 ```
 
 ## 离线安装
-```bash
-# 生成离线包
-$ cd scripts && bash 0_prepare.sh
 
-# 完成以后将这个包压缩，复制到想安装的机器，直接安装即可
-$ ./jmsctl.sh install
-```
+[从社区下载离线安装包](https://community.fit2cloud.com/#/products/jumpserver/downloads)
 
 
 ## 管理
@@ -74,26 +43,12 @@ $ ./jmsctl.sh tail
 
 ```
 
-## IPV6 支持
-
-```
-# 添加IPV6 转发规则
-$ ip6tables -t nat -A POSTROUTING -s 2001:db8:1::/64 -j MASQUERADE
-$ firewall-cmd --permanent --zone=public --add-masquerade
-
-# 修改配置文件支持 IPv6
-$ vim /opt/jumpserver/config/config.txt
-...
-USE_IPV6=1
-...
-```
-
 ## 配置文件说明
 
 配置文件将会放在 /opt/jumpserver/config 中
 
 ```
-[root@jumpserver-qa config]# tree .
+[root@localhost config]# tree .
 .
 ├── config.txt      # 主配置文件
 ├── core
