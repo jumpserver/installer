@@ -325,8 +325,8 @@ function prepare_set_redhat_firewalld() {
     if firewall-cmd --state >/dev/null 2>&1; then
       docker_subnet=$(get_config DOCKER_SUBNET)
       if ! firewall-cmd --list-rich-rule | grep "${docker_subnet}" >/dev/null; then
+        firewall-cmd --zone=public --add-rich-rule="rule family=ipv4 source address=${docker_subnet} accept" >/dev/null
         firewall-cmd --permanent --zone=public --add-rich-rule="rule family=ipv4 source address=${docker_subnet} accept" >/dev/null
-        firewall-cmd --reload >/dev/null
       fi
     fi
   fi
