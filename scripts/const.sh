@@ -17,14 +17,14 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=20.10.11
+export DOCKER_VERSION=20.10.12
 export DOCKER_MIRROR="https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable"
 DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
 export DOCKER_BIN_URL
 if [[ "$(uname -m)" == "aarch64" ]]; then
-  export DOCKER_MD5=1e90552320ee41f3a07827ffd85bde18
+  export DOCKER_MD5=0bbdde854f92d48628f0fa9ccf02af1e
 else
-  export DOCKER_MD5=5819cbe9b18070c79d721ae66661c997
+  export DOCKER_MD5=69550f1543c66cfd3f2de9352070e9b8
 fi
 
 export DOCKER_COMPOSE_VERSION=1.29.2
