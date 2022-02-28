@@ -10,6 +10,9 @@ services:
       - ${HTTPS_PORT}:443
     environment:
       USE_IPV6: ${USE_IPV6}
+      SERVER_NAME: ${SERVER_NAME}
+      SSL_CERTIFICATE: ${SSL_CERTIFICATE}
+      SSL_CERTIFICATE_KEY: ${SSL_CERTIFICATE_KEY}
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE}
     volumes:
       - ${VOLUME_DIR}/lb/log:/var/log/nginx

@@ -31,6 +31,7 @@ services:
       - ${RDP_PORT}:3389
     volumes:
       - ${VOLUME_DIR}/xrdp/data:/opt/xrdp/data
+      - ${CONFIG_DIR}/nginx/cert:/opt/xrdp/cert
     depends_on:
       core:
         condition: service_healthy
