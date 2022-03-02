@@ -4,7 +4,10 @@ services:
   lb:
     image: jumpserver/web:${VERSION}
     container_name: jms_lb
+    ulimits:
+      core: 0
     restart: always
+    tty: true
     ports:
       - ${HTTP_PORT}:80
       - ${HTTPS_PORT}:443
