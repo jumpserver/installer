@@ -4,6 +4,8 @@ services:
   core:
     image: jumpserver/core:${VERSION}
     container_name: jms_core
+    ulimits:
+      core: 0
     restart: always
     tty: true
     command: start web
@@ -25,6 +27,8 @@ services:
   koko:
     image: jumpserver/koko:${VERSION}
     container_name: jms_koko
+    ulimits:
+      core: 0
     restart: always
     tty: true
     env_file:
@@ -50,9 +54,12 @@ services:
   lion:
     image: jumpserver/lion:${VERSION}
     container_name: jms_lion
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
     env_file:
       - ${CONFIG_FILE}
-    restart: always
     volumes:
       - ${VOLUME_DIR}/lion/data:/opt/lion/data
     depends_on:
@@ -70,7 +77,10 @@ services:
   web:
     image: jumpserver/web:${VERSION}
     container_name: jms_web
+    ulimits:
+      core: 0
     restart: always
+    tty: true
     environment:
       USE_IPV6: ${USE_IPV6}
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE}
