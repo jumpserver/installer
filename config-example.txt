@@ -34,13 +34,17 @@ DOCKER_SUBNET=192.168.250.0/24
 USE_IPV6=0
 DOCKER_SUBNET_IPV6=fc00:1010:1111:200::/64
 
-## Nginx 配置, USE_LB=1 表示开启, 为 0 的情况下, HTTPS_PORT 定义不生效
+## Nginx 配置
 HTTP_PORT=80
 SSH_PORT=2222
 RDP_PORT=3389
 
-USE_LB=0
-HTTPS_PORT=443
+## HTTPS 配置, 参考 https://docs.jumpserver.org/zh/master/admin-guide/proxy/ 配置
+# USE_LB=1
+# HTTPS_PORT=443
+# SERVER_NAME=your_domain_name
+# SSL_CERTIFICATE=your_cert
+# SSL_CERTIFICATE_KEY=your_cert_key
 
 ## Task 配置, 是否启动 jms_celery 容器, 单节点必须开启
 USE_TASK=1

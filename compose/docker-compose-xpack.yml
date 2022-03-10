@@ -4,9 +4,12 @@ services:
   omnidb:
     image: registry.fit2cloud.com/jumpserver/omnidb:${VERSION}
     container_name: jms_omnidb
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
     env_file:
       - ${CONFIG_FILE}
-    restart: always
     volumes:
       - ${VOLUME_DIR}/omnidb/data:/opt/omnidb/data
     depends_on:
@@ -24,13 +27,17 @@ services:
   xrdp:
     image: registry.fit2cloud.com/jumpserver/xrdp:${VERSION}
     container_name: jms_xrdp
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
     env_file:
       - ${CONFIG_FILE}
-    restart: always
     ports:
       - ${RDP_PORT}:3389
     volumes:
       - ${VOLUME_DIR}/xrdp/data:/opt/xrdp/data
+      - ${CONFIG_DIR}/nginx/cert:/opt/xrdp/cert
     depends_on:
       core:
         condition: service_healthy
