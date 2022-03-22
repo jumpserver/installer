@@ -48,6 +48,7 @@ function upgrade_config() {
     SERVER_HOSTNAME='${HOSTNAME}'
     set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
   fi
+  # 字体平滑
   font_smoothing=$(get_config JUMPSERVER_ENABLE_FONT_SMOOTHING)
   if [ -z "${font_smoothing}" ]; then
     set_config JUMPSERVER_ENABLE_FONT_SMOOTHING "true"
@@ -57,6 +58,17 @@ function upgrade_config() {
   fi
   if grep -q "sticky name=jms_route;" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
     sedi "s/sticky name=jms_route;/ip_hash;/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
+  fi
+  # MAGNUS 数据库
+  magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
+  if [ -z "${magnus_mysql_port}" ]; then
+    MAGNUS_MYSQL_PORT=33060
+    set_config MAGNUS_MYSQL_PORT "${MAGNUS_MYSQL_PORT}"
+  fi
+  magnus_postgre_port=$(get_config MAGNUS_POSTGRE_PORT)
+  if [ -z "${magnus_postgre_port}" ]; then
+    MAGNUS_POSTGRE_PORT=54320
+    set_config MAGNUS_POSTGRE_PORT "${MAGNUS_POSTGRE_PORT}"
   fi
 }
 

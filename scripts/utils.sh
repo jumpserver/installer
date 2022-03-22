@@ -144,6 +144,7 @@ function get_images() {
     "jumpserver/core:${VERSION}"
     "jumpserver/koko:${VERSION}"
     "jumpserver/lion:${VERSION}"
+    "jumpserver/magnus:${VERSION}"
   )
   for image in "${images[@]}"; do
     echo "${image}"
@@ -238,7 +239,7 @@ function log_error() {
 
 function get_docker_compose_services() {
   ignore_db="$1"
-  services="core koko lion web"
+  services="core koko lion magnus web"
   use_task=$(get_config USE_TASK)
   if [[ "${use_task}" != "0" ]]; then
     services+=" celery"
