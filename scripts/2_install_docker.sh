@@ -144,8 +144,7 @@ function set_network() {
 function check_docker_config() {
   if [[ ! -f "/etc/docker/daemon.json" ]]; then
     config_docker
-    # 由于 docker ipv6 nat 属于实验性质的功能, 暂时不使用, 等待后续 docker 官方合并
-    # set_network
+    set_network
   fi
   echo_done
 }
