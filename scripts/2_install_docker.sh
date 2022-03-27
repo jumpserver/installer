@@ -131,8 +131,7 @@ function set_network() {
   if [[ "${use_ipv6}" == "1" ]]; then
     confirm="y"
   fi
-  # 由于 docker ipv6 nat 属于实验性质的功能, 暂时不使用, 等待后续 docker 官方合并
-  # read_from_input confirm "$(gettext 'Do you want to support IPv6')?" "y/n" "${confirm}"
+  read_from_input confirm "$(gettext 'Do you want to support IPv6')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
     set_docker_config ipv6 "true"
     set_docker_config fixed-cidr-v6 "fc00:1010:1111:100::/64"
@@ -145,7 +144,8 @@ function set_network() {
 function check_docker_config() {
   if [[ ! -f "/etc/docker/daemon.json" ]]; then
     config_docker
-    set_network
+    # 由于 docker ipv6 nat 属于实验性质的功能, 暂时不使用, 等待后续 docker 官方合并
+    # set_network
   fi
   echo_done
 }
