@@ -76,4 +76,4 @@ $ ./jmsctl.sh tail
 
 config.txt 文件是环境变量式配置文件，会挂在到各个容器中，这样可以不必为 koko，core，lion 单独设置配置文件
 
-config-example.conf 有说明，可以参考 [JumpServer 参数说明文档](https://docs.jumpserver.org/zh/master/admin-guide/env/)
+config-example.txt 有说明，可以参考 [JumpServer 参数说明文档](https://docs.jumpserver.org/zh/master/admin-guide/env/)
