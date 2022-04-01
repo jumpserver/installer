@@ -10,13 +10,7 @@ export TEXTDOMAINDIR=$PROJECT_DIR/locale
 export TEXTDOMAIN=jumpserver-installer
 
 export CONFIG_DIR='/opt/jumpserver/config'
-export CONFIG_FILE=$CONFIG_DIR/config.conf
-
-if [[ -f "${CONFIG_DIR}/config.txt" ]]; then
-  mv "${CONFIG_DIR}/config.txt" "${CONFIG_FILE}"
-  ln -sf "${CONFIG_FILE}" ${PROJECT_DIR}/.env
-  ln -sf "${CONFIG_FILE}" ${PROJECT_DIR}/compose/.env
-fi
+export CONFIG_FILE=$CONFIG_DIR/config.txt
 
 STATIC_ENV=${PROJECT_DIR}/static.env
 # shellcheck source=../static.env

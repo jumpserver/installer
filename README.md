@@ -50,7 +50,7 @@ $ ./jmsctl.sh tail
 ```
 [root@localhost config]# tree .
 .
-├── config.conf      # 主配置文件
+├── config.txt       # 主配置文件
 ├── core
 │   └── config.yml   # core yml 格式配置文件，可以留空，使用 config.txt 设置
 ├── koko
@@ -66,7 +66,7 @@ $ ./jmsctl.sh tail
 │   ├── lb_http_server.conf
 │   └── lb_ssh_server.conf
 ├── README.md
-└── redis           
+└── redis
     └── redis.conf  # redis 配置文件
 
 6 directories, 11 files
