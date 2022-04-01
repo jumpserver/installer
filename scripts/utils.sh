@@ -313,7 +313,7 @@ function get_docker_compose_cmd_line() {
 }
 
 function prepare_check_required_pkg() {
-  for i in curl wget tar iptables; do
+  for i in curl wget tar iptables gettext; do
     command -v $i >/dev/null || {
         echo_red "$i: $(gettext 'command not found, Please install it first') $i"
         exit 1
