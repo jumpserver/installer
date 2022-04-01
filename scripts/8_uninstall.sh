@@ -22,7 +22,6 @@ function remove_jumpserver() {
       rm -rf "${CONFIG_DIR}"
       echo -e "$(gettext 'Cleaning up') /usr/bin/jmsctl"
       rm -f /usr/bin/jmsctl
-      echo_done
     fi
   fi
   echo
@@ -31,7 +30,24 @@ function remove_jumpserver() {
   if [[ "${confirm}" == "y" ]]; then
     for image in ${images}; do
       docker rmi "${image}"
+      echo
     done
+  fi
+  if [ -f "/etc/systemd/system/docker.service" ]; then
+    echo
+    confirm="n"
+    read_from_input confirm "$(gettext 'Do you need to clean up the Docker binaries')?" "y/n" "${confirm}"
+    if [[ "${confirm}" == "y" ]]; then
+      systemctl stop docker
+      systemctl disable docker
+      systemctl daemon-reload
+      rm -f /usr/local/bin/docker*
+      rm -f /usr/local/bin/container*
+      rm -f /usr/local/bin/ctr
+      rm -f /usr/local/bin/runc
+      rm -f /etc/systemd/system/docker.service
+    fi
+    echo
   fi
   echo_green "$(gettext 'Cleanup complete')!"
 }

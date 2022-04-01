@@ -11,7 +11,7 @@ docker_copy_failed=0
 cd "${BASE_DIR}" || exit 1
 
 function copy_docker() {
-  \cp -f ./docker/* /usr/bin/
+  \cp -f ./docker/* /usr/local/bin/
   \cp -f ./docker.service /etc/systemd/system/
 }
 
@@ -26,10 +26,10 @@ function install_docker() {
 
   docker_exist=1
   docker_version_match=1
-  old_docker_md5=$(get_file_md5 /usr/bin/dockerd)
+  old_docker_md5=$(get_file_md5 /usr/local/bin/dockerd)
   new_docker_md5=$(get_file_md5 ./docker/dockerd)
 
-  if [[ ! -f "/usr/bin/dockerd" ]]; then
+  if [[ ! -f "/usr/local/bin/dockerd" ]]; then
     docker_exist=0
   elif [[ "${old_docker_md5}" != "${new_docker_md5}" ]]; then
     docker_version_match=0
@@ -50,11 +50,11 @@ function install_compose() {
   if [[ ! -f ./docker/docker-compose ]]; then
     prepare_compose_bin
   fi
-  old_docker_compose_md5=$(get_file_md5 /usr/bin/docker-compose)
+  old_docker_compose_md5=$(get_file_md5 /usr/local/bin/docker-compose)
   new_docker_compose_md5=$(get_file_md5 ./docker/docker-compose)
-  if [[ ! -f "/usr/bin/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
-    \cp -f ./docker/docker-compose /usr/bin/
-    chmod +x /usr/bin/docker-compose
+  if [[ ! -f "/usr/local/bin/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
+    \cp -f ./docker/docker-compose /usr/local/bin/
+    chmod +x /usr/local/bin/docker-compose
   fi
 }
 
@@ -177,10 +177,6 @@ function check_docker_compose() {
 }
 
 function main() {
-  if [[ "${OS}" == 'Darwin' ]]; then
-    echo "$(gettext 'Skip docker installation on MacOS')"
-    return
-  fi
   echo_yellow "1. $(gettext 'Install Docker')"
   check_docker_install
   check_compose_install

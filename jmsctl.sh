@@ -2,6 +2,8 @@
 #
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
+cd "${PROJECT_DIR}" || exit 1
+
 . "${PROJECT_DIR}/scripts/utils.sh"
 
 action=${1-}
@@ -150,6 +152,19 @@ function check_update() {
 }
 
 function main() {
+  if [[ "${OS}" == 'Darwin' ]]; then
+    echo
+    echo "$(gettext 'Unsupported Operating System Error')"
+    echo "$(gettext 'macOS installer please see'): https://github.com/jumpserver/Dockerfile"
+    exit 0
+  fi
+  if [[ "${OS}" =~ MINGW.* ]]; then
+    echo
+    echo "$(gettext 'Unsupported Operating System Error')"
+    echo "$(gettext 'Windows installer please see'): https://github.com/jumpserver/Dockerfile"
+    exit 0
+  fi
+
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""
   elif [[ "${action}" == "install" || "${action}" == "reconfig" ]]; then
