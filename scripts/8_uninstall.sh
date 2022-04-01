@@ -39,6 +39,7 @@ function remove_jumpserver() {
     read_from_input confirm "$(gettext 'Do you need to clean up the Docker binaries')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       systemctl stop docker
+      systemctl disable docker
       systemctl daemon-reload
       rm -f /usr/local/bin/docker*
       rm -f /usr/local/bin/container*
