@@ -65,6 +65,11 @@ function upgrade_config() {
     MAGNUS_MYSQL_PORT=33060
     set_config MAGNUS_MYSQL_PORT "${MAGNUS_MYSQL_PORT}"
   fi
+  magnus_mariadb_port=$(get_config MAGNUS_MARIADB_PORT)
+  if [ -z "${magnus_mariadb_port}" ]; then
+    MAGNUS_MARIADB_PORT=33061
+    set_config MAGNUS_MARIADB_PORT "${MAGNUS_MARIADB_PORT}"
+  fi
   magnus_postgre_port=$(get_config MAGNUS_POSTGRE_PORT)
   if [ -z "${magnus_postgre_port}" ]; then
     MAGNUS_POSTGRE_PORT=54320

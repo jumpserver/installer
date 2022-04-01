@@ -85,6 +85,7 @@ services:
       - ${CONFIG_FILE}
     ports:
       - ${MAGNUS_MYSQL_PORT:-3306}:33060
+      - ${MAGNUS_MARIADB_PORT:-3307}:33061
       - ${MAGNUS_POSTGRE_PORT:-5432}:54320
     volumes:
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
