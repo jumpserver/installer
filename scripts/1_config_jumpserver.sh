@@ -27,10 +27,10 @@ function set_volume_dir() {
   read_from_input confirm "$(gettext 'Do you need custom persistent store, will use the default directory') ${volume_dir}?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
     echo
-    echo "$(gettext 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /opt/jumpserver"
+    echo "$(gettext 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /data/jumpserver"
     echo "$(gettext 'Note: you can not change it after installation, otherwise the database may be lost')"
     echo
-    df -h | grep -Ev "map|devfs|tmpfs|overlay|shm"
+    df -h | grep -Ev "map|devfs|tmpfs|overlay|shm|snap|boot"
     echo
     read_from_input volume_dir "$(gettext 'Persistent storage directory')" "" "${volume_dir}"
     if [[ "${volume_dir}" == "y" ]]; then
