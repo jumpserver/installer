@@ -41,6 +41,7 @@ function set_volume_dir() {
   fi
   if [[ ! -d "${volume_dir}" ]]; then
     mkdir -p ${volume_dir}
+    chmod 700 ${volume_dir}
   fi
   set_config VOLUME_DIR ${volume_dir}
 }
