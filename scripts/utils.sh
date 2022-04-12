@@ -273,49 +273,49 @@ function get_docker_compose_services() {
 
 function get_docker_compose_cmd_line() {
   ignore_db="$1"
-  cmd="docker-compose -f ./compose/docker-compose-app.yml"
+  cmd="docker-compose -f compose/docker-compose-app.yml"
   use_ipv6=$(get_config USE_IPV6)
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-network.yml"
+    cmd="${cmd} -f compose/docker-compose-network.yml"
   else
-    cmd="${cmd} -f ./compose/docker-compose-network_ipv6.yml"
+    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
   fi
   services=$(get_docker_compose_services "$ignore_db")
   if [[ "${services}" =~ celery ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-task.yml"
+    cmd="${cmd} -f compose/docker-compose-task.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
     if [[ "$(uname -m)" == "aarch64" ]]; then
-      cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
+      cmd="${cmd} -f compose/docker-compose-mariadb.yml"
     else
-      cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
+      cmd="${cmd} -f compose/docker-compose-mysql.yml"
     fi
   fi
   if [[ "${services}" =~ redis ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-redis.yml"
+    cmd="${cmd} -f compose/docker-compose-redis.yml"
   fi
   if [[ "${services}" =~ es ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-es.yml"
+    cmd="${cmd} -f compose/docker-compose-es.yml"
   fi
   if [[ "${services}" =~ minio ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-minio.yml"
+    cmd="${cmd} -f compose/docker-compose-minio.yml"
   fi
   if [[ "${services}" =~ lb ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-lb.yml"
+    cmd="${cmd} -f compose/docker-compose-lb.yml"
   else
-    cmd="${cmd} -f ./compose/docker-compose-web-external.yml"
+    cmd="${cmd} -f compose/docker-compose-web-external.yml"
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == '1' ]]; then
-      cmd="${cmd} -f ./compose/docker-compose-xpack.yml"
+      cmd="${cmd} -f compose/docker-compose-xpack.yml"
   fi
   echo "${cmd}"
 }
 
 function prepare_check_required_pkg() {
-  for i in curl wget tar; do
+  for i in curl wget tar iptables gettext; do
     command -v $i >/dev/null || {
-        echo_red "$(gettext 'Please install it first') $i"
+        echo_red "$i: $(gettext 'command not found, Please install it first') $i"
         exit 1
     }
   done
@@ -393,19 +393,10 @@ function prepare_config() {
   done
   find "${CONFIG_DIR}" -type d -exec chmod 755 {} \;
   find "${CONFIG_DIR}" -type f -exec chmod 644 {} \;
-  echo_done
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
     sedi "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
   fi
-
-  backup_dir="${CONFIG_DIR}/backup"
-  mkdir -p "${backup_dir}"
-  now=$(date +'%Y-%m-%d_%H-%M-%S')
-  backup_config_file="${backup_dir}/config.txt.${now}"
-  echo_yellow "\n2. $(gettext 'Backup Configuration File')"
-  cp "${CONFIG_FILE}" "${backup_config_file}"
-  echo "$(gettext 'Back up to') ${backup_config_file}"
   echo_done
 }
 
@@ -443,17 +434,17 @@ function get_db_migrate_compose_cmd() {
   use_external_redis=$(get_config USE_EXTERNAL_REDIS)
   use_ipv6=$(get_config USE_IPV6)
 
-  cmd="docker-compose -f ./compose/docker-compose-init-db.yml"
+  cmd="docker-compose -f compose/docker-compose-init-db.yml"
   if [[ "${use_external_mysql}" == "0" ]]; then
     if [[ "$(uname -m)" == "aarch64" ]]; then
-      cmd="${cmd} -f ./compose/docker-compose-mariadb.yml"
+      cmd="${cmd} -f compose/docker-compose-mariadb.yml"
     else
-      cmd="${cmd} -f ./compose/docker-compose-mysql.yml"
+      cmd="${cmd} -f compose/docker-compose-mysql.yml"
     fi
   fi
 
   if [[ "${use_external_redis}" == "0" ]]; then
-    cmd="${cmd} -f ./compose/docker-compose-redis.yml"
+    cmd="${cmd} -f compose/docker-compose-redis.yml"
   fi
 
   if [[ "${use_ipv6}" != "1" ]]; then

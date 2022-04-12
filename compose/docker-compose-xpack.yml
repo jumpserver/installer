@@ -49,3 +49,7 @@ services:
       start_period: 10s
     networks:
       - net
+
+  magnus:
+    ports:
+      - ${MAGNUS_POSTGRE_PORT:-5432}:54320

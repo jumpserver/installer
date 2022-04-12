@@ -124,6 +124,18 @@ function update_config_if_need() {
   upgrade_config
 }
 
+function backup_config() {
+  VOLUME_DIR=$(get_config VOLUME_DIR)
+  BACKUP_DIR="${VOLUME_DIR}/db_backup"
+  CURRENT_VERSION=$(get_config CURRENT_VERSION)
+  backup_config_file="${BACKUP_DIR}/config-${CURRENT_VERSION}-$(date +%F_%T).conf"
+  if [[ ! -d ${BACKUP_DIR} ]]; then
+    mkdir -p ${BACKUP_DIR}
+  fi
+  cp "${CONFIG_FILE}" "${backup_config_file}"
+  echo "$(gettext 'Back up to') ${backup_config_file}"
+}
+
 function backup_db() {
   if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
     if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
@@ -193,11 +205,14 @@ function main() {
   echo
   update_config_if_need
 
-  echo_yellow "\n3. $(gettext 'Loading Docker Image')"
+  echo_yellow "\n2. $(gettext 'Loading Docker Image')"
   bash "${BASE_DIR}/3_load_images.sh"
 
-  echo_yellow "\n4. $(gettext 'Backup database')"
+  echo_yellow "\n3. $(gettext 'Backup database')"
   backup_db
+
+  echo_yellow "\n4. $(gettext 'Backup Configuration File')"
+  backup_config
 
   echo_yellow "\n5. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
