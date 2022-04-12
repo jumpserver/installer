@@ -391,8 +391,10 @@ function prepare_config() {
       fi
     fi
   done
-  find "${CONFIG_DIR}" -type d -exec chmod 755 {} \;
-  find "${CONFIG_DIR}" -type f -exec chmod 644 {} \;
+  chmod 700 "${CONFIG_DIR}/../"
+  find "${CONFIG_DIR}" -type d -exec chmod 700 {} \;
+  find "${CONFIG_DIR}" -type f -exec chmod 600 {} \;
+  chmod 644 "${CONFIG_DIR}/redis/redis.conf"
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
     sedi "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
