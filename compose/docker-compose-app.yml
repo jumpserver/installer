@@ -74,6 +74,32 @@ services:
     networks:
       - net
 
+  magnus:
+    image: jumpserver/magnus:${VERSION}
+    container_name: jms_magnus
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
+    env_file:
+      - ${CONFIG_FILE}
+    ports:
+      - ${MAGNUS_MYSQL_PORT:-3306}:33060
+      - ${MAGNUS_MARIADB_PORT:-3307}:33061
+    volumes:
+      - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: "ps axu | grep -v 'grep' | grep magnus"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
+
   web:
     image: jumpserver/web:${VERSION}
     container_name: jms_web
@@ -83,7 +109,7 @@ services:
     tty: true
     environment:
       USE_IPV6: ${USE_IPV6}
-      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE}
+      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-4096m}
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/nginx/data/logs:/var/log/nginx

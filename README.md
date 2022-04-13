@@ -50,21 +50,23 @@ $ ./jmsctl.sh tail
 ```
 [root@localhost config]# tree .
 .
-├── config.txt      # 主配置文件
+├── config.txt       # 主配置文件
 ├── core
-│   └── config.yml  # core yml 格式配置文件，可以留空，使用 config.txt 设置
+│   └── config.yml   # core yml 格式配置文件，可以留空，使用 config.txt 设置
 ├── koko
-│   └── config.yml  # koko yml 格式配置文件，可以留空，使用 config.txt 设置
+│   └── config.yml   # koko yml 格式配置文件，可以留空，使用 config.txt 设置
 ├── mysql
-│   └── my.cnf      # mysql 配置文件
-├── nginx           # nginx 配置文件
+│   └── my.cnf       # mysql 配置文件
+|── mariadb
+|   └── mariadb.cnf  # mariadb 配置文件
+├── nginx            # nginx 配置文件
 │   ├── cert
 │   │   ├── server.crt
 │   │   └── server.key
 │   ├── lb_http_server.conf
 │   └── lb_ssh_server.conf
 ├── README.md
-└── redis           
+└── redis
     └── redis.conf  # redis 配置文件
 
 6 directories, 11 files
@@ -74,4 +76,4 @@ $ ./jmsctl.sh tail
 
 config.txt 文件是环境变量式配置文件，会挂在到各个容器中，这样可以不必为 koko，core，lion 单独设置配置文件
 
-config-example.txt 有说明，可以参考
+config-example.txt 有说明，可以参考 [JumpServer 参数说明文档](https://docs.jumpserver.org/zh/master/admin-guide/env/)

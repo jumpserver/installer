@@ -48,6 +48,7 @@ function upgrade_config() {
     SERVER_HOSTNAME='${HOSTNAME}'
     set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
   fi
+  # 字体平滑
   font_smoothing=$(get_config JUMPSERVER_ENABLE_FONT_SMOOTHING)
   if [ -z "${font_smoothing}" ]; then
     set_config JUMPSERVER_ENABLE_FONT_SMOOTHING "true"
@@ -57,6 +58,22 @@ function upgrade_config() {
   fi
   if grep -q "sticky name=jms_route;" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
     sedi "s/sticky name=jms_route;/ip_hash;/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
+  fi
+  # MAGNUS 数据库
+  magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
+  if [ -z "${magnus_mysql_port}" ]; then
+    MAGNUS_MYSQL_PORT=33060
+    set_config MAGNUS_MYSQL_PORT "${MAGNUS_MYSQL_PORT}"
+  fi
+  magnus_mariadb_port=$(get_config MAGNUS_MARIADB_PORT)
+  if [ -z "${magnus_mariadb_port}" ]; then
+    MAGNUS_MARIADB_PORT=33061
+    set_config MAGNUS_MARIADB_PORT "${MAGNUS_MARIADB_PORT}"
+  fi
+  magnus_postgre_port=$(get_config MAGNUS_POSTGRE_PORT)
+  if [ -z "${magnus_postgre_port}" ]; then
+    MAGNUS_POSTGRE_PORT=54320
+    set_config MAGNUS_POSTGRE_PORT "${MAGNUS_POSTGRE_PORT}"
   fi
 }
 
@@ -105,6 +122,18 @@ function update_config_if_need() {
   migrate_config_v1_5_to_v2_0
   migrate_config_v2_5_v2_6
   upgrade_config
+}
+
+function backup_config() {
+  VOLUME_DIR=$(get_config VOLUME_DIR)
+  BACKUP_DIR="${VOLUME_DIR}/db_backup"
+  CURRENT_VERSION=$(get_config CURRENT_VERSION)
+  backup_config_file="${BACKUP_DIR}/config-${CURRENT_VERSION}-$(date +%F_%T).conf"
+  if [[ ! -d ${BACKUP_DIR} ]]; then
+    mkdir -p ${BACKUP_DIR}
+  fi
+  cp "${CONFIG_FILE}" "${backup_config_file}"
+  echo "$(gettext 'Back up to') ${backup_config_file}"
 }
 
 function backup_db() {
@@ -176,11 +205,14 @@ function main() {
   echo
   update_config_if_need
 
-  echo_yellow "\n3. $(gettext 'Loading Docker Image')"
+  echo_yellow "\n2. $(gettext 'Loading Docker Image')"
   bash "${BASE_DIR}/3_load_images.sh"
 
-  echo_yellow "\n4. $(gettext 'Backup database')"
+  echo_yellow "\n3. $(gettext 'Backup database')"
   backup_db
+
+  echo_yellow "\n4. $(gettext 'Backup Configuration File')"
+  backup_config
 
   echo_yellow "\n5. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
