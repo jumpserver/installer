@@ -47,9 +47,10 @@ function has_config() {
 }
 
 function get_config() {
+  . "${CONFIG_FILE}"
   key=$1
   default=${2-''}
-  value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }')
+  value="${!key}"
   if [[ -z "$value" ]];then
     value="$default"
   fi
@@ -59,8 +60,7 @@ function get_config() {
 function get_env_value() {
   key=$1
   default=${2-''}
-  value=$(env | grep "$key=" | awk -F= '{ print $2 }')
-
+  value="${!key}"
   echo "${value}"
 }
 
