@@ -60,11 +60,7 @@ function set_external_mysql() {
   read_from_input mysql_user "$(gettext 'Please enter MySQL username')" "" "${mysql_user}"
   mysql_password=$(get_config DB_PASSWORD)
   read_from_input mysql_pass "$(gettext 'Please enter MySQL password')" "" "${mysql_password}"
-  if ! test_mysql_connect "${mysql_host}" "${mysql_port}" "${mysql_user}" "${mysql_password}" "${mysql_db}"; then
-    echo_red "$(gettext 'Failed to connect to database, please reset')"
-    echo
-    set_mysql
-  fi
+
   set_config DB_HOST "${mysql_host}"
   set_config DB_PORT "${mysql_port}"
   set_config DB_USER "${mysql_user}"
@@ -114,11 +110,7 @@ function set_external_redis() {
   read_from_input redis_port "$(gettext 'Please enter Redis server port')" "" "${redis_port}"
   redis_password=$(get_config REDIS_PASSWORD)
   read_from_input redis_password "$(gettext 'Please enter Redis password')" "" "${redis_password}"
-  if ! test_redis_connect "${redis_host}" "${redis_port}" "${redis_password}"; then
-    echo_red "$(gettext 'Failed to connect to redis, please reset')"
-    echo
-    set_redis
-  fi
+
   set_config REDIS_HOST "${redis_host}"
   set_config REDIS_PORT "${redis_port}"
   set_config REDIS_PASSWORD "${redis_password}"

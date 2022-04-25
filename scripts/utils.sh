@@ -100,25 +100,6 @@ function set_config() {
   sedi "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
-function test_mysql_connect() {
-  host=$1
-  port=$2
-  user=$3
-  password=$4
-  db=$5
-  command="CREATE TABLE IF NOT EXISTS test(id INT); DROP TABLE test;"
-
-  mysql_images=$(get_mysql_images)
-  docker run -i --rm "${mysql_images}" mysql -h"${host}" -P"${port}" -u"${user}" -p"${password}" "${db}" -e "${command}" 2>/dev/null
-}
-
-function test_redis_connect() {
-  host=$1
-  port=$2
-  password=$3
-  docker run -i --rm jumpserver/redis:6-alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" 2>/dev/null
-}
-
 function get_mysql_images() {
   if [[ "$(uname -m)" == "aarch64" ]]; then
     mysql_images=jumpserver/mariadb:10
