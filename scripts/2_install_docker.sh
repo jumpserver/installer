@@ -2,7 +2,6 @@
 #
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
-. "${BASE_DIR}/utils.sh"
 . "${BASE_DIR}/0_prepare.sh"
 
 DOCKER_CONFIG="/etc/docker/daemon.json"
@@ -35,14 +34,8 @@ function install_docker() {
     docker_version_match=0
   fi
 
-  if [[ "${docker_exist}" != "1" ]]; then
+  if [[ "${docker_exist}" != "1" ]] || [[ "${docker_version_match}" != "1" ]]; then
     copy_docker
-  elif [[ "${docker_version_match}" != "1" ]]; then
-    confirm="n"
-    read_from_input confirm "$(gettext 'There are updates available currently. Do you want to update')?" "y/n" "${confirm}"
-    if [[ "${confirm}" == "y" ]]; then
-      copy_docker
-    fi
   fi
 }
 

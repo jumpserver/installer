@@ -21,6 +21,7 @@ else
   mv /tmp/jumpserver/* "${to_dir}"
 fi
 
+shopt -s expand_aliases
 if [[ $(uname) == 'Darwin' ]]; then
   alias sedi='sed -i ""'
 else

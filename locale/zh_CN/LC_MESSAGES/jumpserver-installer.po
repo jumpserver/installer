@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-03-25 12:33+0800\n"
+"POT-Creation-Date: 2022-04-28 04:49+0000\n"
 "PO-Revision-Date: 2021-01-21 19:15+0800\n"
 "Last-Translator: Bai <jiangjiebai@jiangjiedembp.lan>\n"
 "Language-Team: Language locale/zh\n"
@@ -15,256 +15,6 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-
-#: jmsctl.sh:15
-msgid "Configuration file not found"
-msgstr "配置文件没有发现"
-
-#: jmsctl.sh:16
-msgid "If you are upgrading from v1.5.x, please copy the config.txt To"
-msgstr "如果你是从 v1.5.x 升级的, 请 copy 之前目录中的 config.txt 到"
-
-#: jmsctl.sh:21
-msgid "There is a problem with the soft connection, Please update it again"
-msgstr "软连接存在问题, 重新更新"
-
-#: jmsctl.sh:36
-msgid "JumpServer Deployment Management Script"
-msgstr "JumpServer 部署管理脚本"
-
-#: jmsctl.sh:43
-msgid "Install JumpServer"
-msgstr "安装 JumpServer"
-
-#: jmsctl.sh:44
-msgid "Upgrade JumpServer"
-msgstr "升级 JumpServer"
-
-#: jmsctl.sh:45
-msgid "Check for updates JumpServer"
-msgstr "检查 JumpServer"
-
-#: jmsctl.sh:46
-msgid "Reconfiguration JumpServer"
-msgstr "重新配置 JumpServer"
-
-#: jmsctl.sh:49
-msgid "Start   JumpServer"
-msgstr "启动 JumpServer"
-
-#: jmsctl.sh:50
-msgid "Stop    JumpServer"
-msgstr "停止 JumpServer"
-
-#: jmsctl.sh:51
-msgid "Close   JumpServer"
-msgstr "关闭 JumpServer"
-
-#: jmsctl.sh:52
-msgid "Restart JumpServer"
-msgstr "重启 JumpServer"
-
-#: jmsctl.sh:53
-msgid "Check   JumpServer"
-msgstr "检查 JumpServer"
-
-#: jmsctl.sh:54
-msgid "Offline JumpServer"
-msgstr "下线 JumpServer"
-
-#: jmsctl.sh:55 scripts/8_uninstall.sh:52
-msgid "Uninstall JumpServer"
-msgstr "卸载 JumpServer"
-
-#: jmsctl.sh:58
-msgid "Loading docker image"
-msgstr "加载 Docker 镜像"
-
-#: jmsctl.sh:59 scripts/7_upgrade.sh:206
-msgid "Backup database"
-msgstr "备份数据库"
-
-#: jmsctl.sh:60
-msgid "Data recovery through database backup file"
-msgstr "通过数据库备份文件恢复数据"
-
-#: jmsctl.sh:61
-msgid "Execute the original docker-compose command"
-msgstr "执行原始 docker-compose 命令"
-
-#: jmsctl.sh:62
-msgid "View log"
-msgstr "查看日志"
-
-#: jmsctl.sh:123
-msgid "The current version is up to date"
-msgstr "当前版本已是最新"
-
-#: jmsctl.sh:128
-msgid "The latest version is"
-msgstr "最新版本是"
-
-#: jmsctl.sh:132
-msgid "The current version is"
-msgstr "当前版本是"
-
-#: jmsctl.sh:157 jmsctl.sh:163
-msgid "Unsupported Operating System Error"
-msgstr "错误: 不支持的操作系统"
-
-#: jmsctl.sh:158
-msgid "macOS installer please see"
-msgstr "macOS 安装请参考"
-
-#: jmsctl.sh:164
-msgid "Windows installer please see"
-msgstr "Windows 安装请参考"
-
-#: scripts/8_uninstall.sh:8
-msgid "Make sure you have a backup of data, this operation is not reversible"
-msgstr "请确认已经备份好相关数据, 此操作不可逆"
-
-#: scripts/8_uninstall.sh:12
-msgid "Are you clean up JumpServer files"
-msgstr "确认清理 JumpServer 相关文件"
-
-#: scripts/8_uninstall.sh:19 scripts/8_uninstall.sh:21
-#: scripts/8_uninstall.sh:23
-msgid "Cleaning up"
-msgstr "正在清理"
-
-#: scripts/8_uninstall.sh:30
-msgid "Do you need to clean up the Docker image"
-msgstr "是否清理 Docker 镜像"
-
-#: scripts/8_uninstall.sh:38
-msgid "Do you need to clean up the Docker binaries"
-msgstr "是否清理 Docker binaries"
-
-#: scripts/8_uninstall.sh:48
-msgid "Cleanup complete"
-msgstr "清理完成"
-
-#: scripts/0_prepare.sh:21
-msgid "Starting to download Docker engine"
-msgstr "开始下载 Docker 程序"
-
-#: scripts/0_prepare.sh:23
-msgid "Download docker fails, check the network is normal"
-msgstr "下载 docker 失败, 请检查网络是否正常"
-
-#: scripts/0_prepare.sh:28
-msgid "Using Docker cache"
-msgstr "使用 Docker 缓存文件"
-
-#: scripts/0_prepare.sh:43
-msgid "Starting to download Docker Compose binary"
-msgstr "开始下载 Docker Compose 程序"
-
-#: scripts/0_prepare.sh:45
-msgid "Download docker-compose fails, check the network is normal"
-msgstr "下载 docker-compose 失败, 请检查网络是否正常"
-
-#: scripts/0_prepare.sh:50
-msgid "Using Docker Compose cache"
-msgstr "使用 Docker Compose 缓存文件"
-
-#: scripts/0_prepare.sh:63
-msgid "Docker is not running, please install and start"
-msgstr "Docker 没有运行, 请安装并启动"
-
-#: scripts/0_prepare.sh:89
-msgid "Save image"
-msgstr "保存镜像"
-
-#: scripts/0_prepare.sh:92
-msgid "The image has been saved, skipping"
-msgstr "已保存过该镜像, 跳过"
-
-#: scripts/0_prepare.sh:102
-msgid "Preparing Docker offline package"
-msgstr "准备 Docker 离线包"
-
-#: scripts/0_prepare.sh:106
-msgid "Preparing image offline package"
-msgstr "准备镜像离线包"
-
-#: scripts/2_install_docker.sh:23
-msgid "Docker program does not exist"
-msgstr "Docker 程序不存在"
-
-#: scripts/2_install_docker.sh:42
-msgid "There are updates available currently. Do you want to update"
-msgstr "检测到 Docker 版本有更新, 是否更新"
-
-#: scripts/2_install_docker.sh:134
-msgid "Do you want to support IPv6"
-msgstr "是否需要支持 IPv6"
-
-#: scripts/2_install_docker.sh:180
-msgid "Install Docker"
-msgstr "安装 Docker"
-
-#: scripts/2_install_docker.sh:183
-msgid "Configure Docker"
-msgstr "配置 Docker"
-
-#: scripts/2_install_docker.sh:185
-msgid "Start Docker"
-msgstr "启动 Docker"
-
-#: scripts/utils.sh:167
-msgid "no default"
-msgstr "无默认值"
-
-#: scripts/utils.sh:169
-msgid "default"
-msgstr "默认为"
-
-#: scripts/utils.sh:217
-msgid "complete"
-msgstr "完成"
-
-#: scripts/utils.sh:225
-msgid "fail"
-msgstr "失败"
-
-#: scripts/utils.sh:318
-msgid "command not found, Please install it first"
-msgstr "未找到命令, 请先安装"
-
-#: scripts/utils.sh:345
-msgid "Check Configuration File"
-msgstr "检查配置文件"
-
-#: scripts/utils.sh:346
-msgid "Path to Configuration file"
-msgstr "配置文件位置"
-
-#: scripts/utils.sh:485 scripts/7_upgrade.sh:163
-#: scripts/1_config_jumpserver.sh:176
-msgid "Failed to change the table structure"
-msgstr "表结构变更失败"
-
-#: scripts/3_load_images.sh:20
-msgid "Docker image not found"
-msgstr "镜像文件没有发现"
-
-#: scripts/3_load_images.sh:38
-msgid "Docker image loaded, skipping"
-msgstr "镜像已加载, 跳过"
-
-#: scripts/5_db_backup.sh:22
-msgid "Backing up"
-msgstr "正在备份"
-
-#: scripts/5_db_backup.sh:33
-msgid "Backup failed"
-msgstr "备份失败"
-
-#: scripts/5_db_backup.sh:37
-msgid "Backup succeeded! The backup file has been saved to"
-msgstr "备份成功! 备份文件已存放至"
 
 #: scripts/6_db_restore.sh:16
 msgid "Start restoring database"
@@ -292,59 +42,45 @@ msgstr "格式错误"
 msgid "The backup file does not exist"
 msgstr "备份文件不存在"
 
-#: scripts/7_upgrade.sh:131
-msgid "Back up to"
-msgstr "备份至"
+#: scripts/2_install_docker.sh:22
+msgid "Docker program does not exist"
+msgstr "Docker 程序不存在"
 
-#: scripts/7_upgrade.sh:138
-msgid "Failed to backup the database. Continue to upgrade"
-msgstr "备份数据库失败, 继续升级吗"
+#: scripts/2_install_docker.sh:127
+msgid "Do you want to support IPv6"
+msgstr "是否需要支持 IPv6"
 
-#: scripts/7_upgrade.sh:144
-msgid "Skip database backup"
-msgstr "跳过备份数据库"
+#: scripts/2_install_docker.sh:173
+msgid "Install Docker"
+msgstr "安装 Docker"
 
-#: scripts/7_upgrade.sh:151
-msgid ""
-"Detected that the JumpServer container is running. Do you want to close the "
-"container and continue to upgrade"
-msgstr "检测到 JumpServer 正在运行, 是否需要关闭并继续升级"
+#: scripts/2_install_docker.sh:176
+msgid "Configure Docker"
+msgstr "配置 Docker"
 
-#: scripts/7_upgrade.sh:165
-msgid "Failed to change the table structure. Continue to upgrade"
-msgstr "表结构变更失败, 是否继续"
+#: scripts/2_install_docker.sh:178
+msgid "Start Docker"
+msgstr "启动 Docker"
 
-#: scripts/7_upgrade.sh:176
-msgid "Do you need to clean up the old version image"
-msgstr "是否需要清理旧版本镜像文件"
+#: scripts/3_load_images.sh:20
+msgid "Docker image not found"
+msgstr "镜像文件没有发现"
 
-#: scripts/7_upgrade.sh:191
-msgid "Are you sure you want to update the current version to"
-msgstr "是否将版本更新至"
+#: scripts/3_load_images.sh:38
+msgid "Docker image loaded, skipping"
+msgstr "镜像已加载, 跳过"
 
-#: scripts/7_upgrade.sh:203 scripts/4_install_jumpserver.sh:69
-msgid "Loading Docker Image"
-msgstr "加载 Docker 镜像"
+#: scripts/5_db_backup.sh:22
+msgid "Backing up"
+msgstr "正在备份"
 
-#: scripts/7_upgrade.sh:209
-msgid "Backup Configuration File"
-msgstr "备份配置文件"
+#: scripts/5_db_backup.sh:33
+msgid "Backup failed"
+msgstr "备份失败"
 
-#: scripts/7_upgrade.sh:212
-msgid "Apply database changes"
-msgstr "进行数据库变更"
-
-#: scripts/7_upgrade.sh:213
-msgid "Changing database schema may take a while, please wait patiently"
-msgstr "表结构变更可能需要一段时间, 请耐心等待"
-
-#: scripts/7_upgrade.sh:216
-msgid "Cleanup Image"
-msgstr "清理镜像"
-
-#: scripts/7_upgrade.sh:219
-msgid "Upgrade successfully. You can now restart the program"
-msgstr "升级成功, 可以重新启动程序了"
+#: scripts/5_db_backup.sh:37
+msgid "Backup succeeded! The backup file has been saved to"
+msgstr "备份成功! 备份文件已存放至"
 
 #: scripts/4_install_jumpserver.sh:10
 msgid ""
@@ -409,9 +145,84 @@ msgstr "我们的文档"
 msgid "Install and Configure Docker"
 msgstr "安装配置 Docker"
 
+#: scripts/4_install_jumpserver.sh:69 scripts/7_upgrade.sh:245
+msgid "Loading Docker Image"
+msgstr "加载 Docker 镜像"
+
 #: scripts/4_install_jumpserver.sh:73
 msgid "Install and Configure JumpServer"
 msgstr "安装配置 JumpServer"
+
+#: scripts/7_upgrade.sh:137
+msgid "Back up to"
+msgstr "备份至"
+
+#: scripts/7_upgrade.sh:144
+msgid "Failed to backup the database. Continue to upgrade"
+msgstr "备份数据库失败, 继续升级吗"
+
+#: scripts/7_upgrade.sh:150
+msgid "Skip database backup"
+msgstr "跳过备份数据库"
+
+#: scripts/7_upgrade.sh:157
+msgid ""
+"Detected that the JumpServer container is running. Do you want to close the "
+"container and continue to upgrade"
+msgstr "检测到 JumpServer 正在运行, 是否需要关闭并继续升级"
+
+#: scripts/7_upgrade.sh:169 scripts/1_config_jumpserver.sh:169
+#: scripts/utils.sh:461
+msgid "Failed to change the table structure"
+msgstr "表结构变更失败"
+
+#: scripts/7_upgrade.sh:171
+msgid "Failed to change the table structure. Continue to upgrade"
+msgstr "表结构变更失败, 是否继续"
+
+#: scripts/7_upgrade.sh:182
+msgid "Do you need to clean up the old version image"
+msgstr "是否需要清理旧版本镜像文件"
+
+#: scripts/7_upgrade.sh:196
+msgid "Do you need upgrade Docker binaries"
+msgstr "是否升级 Docker binaries"
+
+#: scripts/7_upgrade.sh:216
+msgid "Do you need upgrade Docker Compose"
+msgstr "是否升级 Docker Compose"
+
+#: scripts/7_upgrade.sh:233
+msgid "Are you sure you want to update the current version to"
+msgstr "是否将版本更新至"
+
+#: scripts/7_upgrade.sh:248 jmsctl.sh:59
+msgid "Backup database"
+msgstr "备份数据库"
+
+#: scripts/7_upgrade.sh:251
+msgid "Backup Configuration File"
+msgstr "备份配置文件"
+
+#: scripts/7_upgrade.sh:254
+msgid "Apply database changes"
+msgstr "进行数据库变更"
+
+#: scripts/7_upgrade.sh:255
+msgid "Changing database schema may take a while, please wait patiently"
+msgstr "表结构变更可能需要一段时间, 请耐心等待"
+
+#: scripts/7_upgrade.sh:258
+msgid "Cleanup Image"
+msgstr "清理镜像"
+
+#: scripts/7_upgrade.sh:261
+msgid "Upgrade Docker"
+msgstr "升级 Docker"
+
+#: scripts/7_upgrade.sh:264
+msgid "Upgrade successfully. You can now restart the program"
+msgstr "升级成功, 可以重新启动程序了"
 
 #: scripts/1_config_jumpserver.sh:8
 msgid "Configure Private Key"
@@ -441,82 +252,280 @@ msgstr "注意：安装后不能更改，否则数据库可能会丢失"
 msgid "Persistent storage directory"
 msgstr "持久化存储目录"
 
-#: scripts/1_config_jumpserver.sh:50
+#: scripts/1_config_jumpserver.sh:51
 msgid "Please enter MySQL server IP"
 msgstr "请输入 mysql 的主机地址"
 
-#: scripts/1_config_jumpserver.sh:55
+#: scripts/1_config_jumpserver.sh:56
 msgid "Please enter MySQL server port"
 msgstr "请输入 mysql 的端口"
 
-#: scripts/1_config_jumpserver.sh:57
+#: scripts/1_config_jumpserver.sh:58
 msgid "Please enter MySQL database name"
 msgstr "请输入 mysql 的数据库"
 
-#: scripts/1_config_jumpserver.sh:59
+#: scripts/1_config_jumpserver.sh:60
 msgid "Please enter MySQL username"
 msgstr "请输入 mysql 的用户名"
 
-#: scripts/1_config_jumpserver.sh:61
+#: scripts/1_config_jumpserver.sh:62
 msgid "Please enter MySQL password"
 msgstr "请输入 mysql 的密码"
 
-#: scripts/1_config_jumpserver.sh:63
-msgid "Failed to connect to database, please reset"
-msgstr "测试连接数据库失败, 请重新设置"
-
-#: scripts/1_config_jumpserver.sh:92
+#: scripts/1_config_jumpserver.sh:89
 msgid "Configure MySQL"
 msgstr "配置 MySQL"
 
-#: scripts/1_config_jumpserver.sh:98
+#: scripts/1_config_jumpserver.sh:95
 msgid "Do you want to use external MySQL"
 msgstr "是否使用外部 MySQL"
 
-#: scripts/1_config_jumpserver.sh:108
+#: scripts/1_config_jumpserver.sh:105
 msgid "Please enter Redis server IP"
 msgstr "请输入 Redis 的主机地址"
 
-#: scripts/1_config_jumpserver.sh:113
+#: scripts/1_config_jumpserver.sh:110
 msgid "Please enter Redis server port"
 msgstr "请输入 Redis 的端口"
 
-#: scripts/1_config_jumpserver.sh:115
+#: scripts/1_config_jumpserver.sh:112
 msgid "Please enter Redis password"
 msgstr "请输入 Redis 的密码"
 
-#: scripts/1_config_jumpserver.sh:117
-msgid "Failed to connect to redis, please reset"
-msgstr "测试连接 Redis 失败, 请重新设置"
-
-#: scripts/1_config_jumpserver.sh:139
+#: scripts/1_config_jumpserver.sh:132
 msgid "Configure Redis"
 msgstr "配置 Redis"
 
-#: scripts/1_config_jumpserver.sh:145
+#: scripts/1_config_jumpserver.sh:138
 msgid "Do you want to use external Redis"
 msgstr "是否使用外部 Redis"
 
-#: scripts/1_config_jumpserver.sh:154
+#: scripts/1_config_jumpserver.sh:147
 msgid "Configure External Port"
 msgstr "配置对外端口"
 
-#: scripts/1_config_jumpserver.sh:160
+#: scripts/1_config_jumpserver.sh:153
 msgid "Do you need to customize the JumpServer external port"
 msgstr "是否需要配置 JumpServer 对外访问端口"
 
-#: scripts/1_config_jumpserver.sh:162
+#: scripts/1_config_jumpserver.sh:155
 msgid "JumpServer web port"
 msgstr "JumpServer web 端口"
 
-#: scripts/1_config_jumpserver.sh:164
+#: scripts/1_config_jumpserver.sh:157
 msgid "JumpServer ssh port"
 msgstr "JumpServer ssh 端口"
 
-#: scripts/1_config_jumpserver.sh:167
+#: scripts/1_config_jumpserver.sh:160
 msgid "JumpServer rdp port"
 msgstr "JumpServer rdp 端口"
 
-#: scripts/1_config_jumpserver.sh:174
+#: scripts/1_config_jumpserver.sh:167
 msgid "Init JumpServer Database"
 msgstr "初始化数据库"
+
+#: scripts/8_uninstall.sh:8
+msgid "Make sure you have a backup of data, this operation is not reversible"
+msgstr "请确认已经备份好相关数据, 此操作不可逆"
+
+#: scripts/8_uninstall.sh:12
+msgid "Are you clean up JumpServer files"
+msgstr "确认清理 JumpServer 相关文件"
+
+#: scripts/8_uninstall.sh:19 scripts/8_uninstall.sh:21
+#: scripts/8_uninstall.sh:23
+msgid "Cleaning up"
+msgstr "正在清理"
+
+#: scripts/8_uninstall.sh:29
+msgid "Do you need to clean up the Docker image"
+msgstr "是否清理 Docker 镜像"
+
+#: scripts/8_uninstall.sh:39
+msgid "Do you need to clean up the Docker binaries"
+msgstr "是否清理 Docker binaries"
+
+#: scripts/8_uninstall.sh:52
+msgid "Cleanup complete"
+msgstr "清理完成"
+
+#: scripts/8_uninstall.sh:56 jmsctl.sh:55
+msgid "Uninstall JumpServer"
+msgstr "卸载 JumpServer"
+
+#: scripts/0_prepare.sh:21
+msgid "Starting to download Docker engine"
+msgstr "开始下载 Docker 程序"
+
+#: scripts/0_prepare.sh:23
+msgid "Download docker fails, check the network is normal"
+msgstr "下载 docker 失败, 请检查网络是否正常"
+
+#: scripts/0_prepare.sh:28
+msgid "Using Docker cache"
+msgstr "使用 Docker 缓存文件"
+
+#: scripts/0_prepare.sh:43
+msgid "Starting to download Docker Compose binary"
+msgstr "开始下载 Docker Compose 程序"
+
+#: scripts/0_prepare.sh:45
+msgid "Download docker-compose fails, check the network is normal"
+msgstr "下载 docker-compose 失败, 请检查网络是否正常"
+
+#: scripts/0_prepare.sh:50
+msgid "Using Docker Compose cache"
+msgstr "使用 Docker Compose 缓存文件"
+
+#: scripts/0_prepare.sh:63
+msgid "Docker is not running, please install and start"
+msgstr "Docker 没有运行, 请安装并启动"
+
+#: scripts/0_prepare.sh:89
+msgid "Save image"
+msgstr "保存镜像"
+
+#: scripts/0_prepare.sh:92
+msgid "The image has been saved, skipping"
+msgstr "已保存过该镜像, 跳过"
+
+#: scripts/0_prepare.sh:102
+msgid "Preparing Docker offline package"
+msgstr "准备 Docker 离线包"
+
+#: scripts/0_prepare.sh:106
+msgid "Preparing image offline package"
+msgstr "准备镜像离线包"
+
+#: scripts/utils.sh:141
+msgid "no default"
+msgstr "无默认值"
+
+#: scripts/utils.sh:143
+msgid "default"
+msgstr "默认为"
+
+#: scripts/utils.sh:191
+msgid "complete"
+msgstr "完成"
+
+#: scripts/utils.sh:199
+msgid "fail"
+msgstr "失败"
+
+#: scripts/utils.sh:292
+msgid "command not found, Please install it first"
+msgstr "未找到命令, 请先安装"
+
+#: scripts/utils.sh:319
+msgid "Check Configuration File"
+msgstr "检查配置文件"
+
+#: scripts/utils.sh:320
+msgid "Path to Configuration file"
+msgstr "配置文件位置"
+
+#: jmsctl.sh:15
+msgid "Configuration file not found"
+msgstr "配置文件没有发现"
+
+#: jmsctl.sh:16
+msgid "If you are upgrading from v1.5.x, please copy the config.txt To"
+msgstr "如果你是从 v1.5.x 升级的, 请 copy 之前目录中的 config.txt 到"
+
+#: jmsctl.sh:21
+msgid "There is a problem with the soft connection, Please update it again"
+msgstr "软连接存在问题, 重新更新"
+
+#: jmsctl.sh:36
+msgid "JumpServer Deployment Management Script"
+msgstr "JumpServer 部署管理脚本"
+
+#: jmsctl.sh:43
+msgid "Install JumpServer"
+msgstr "安装 JumpServer"
+
+#: jmsctl.sh:44
+msgid "Upgrade JumpServer"
+msgstr "升级 JumpServer"
+
+#: jmsctl.sh:45
+msgid "Check for updates JumpServer"
+msgstr "检查 JumpServer"
+
+#: jmsctl.sh:46
+msgid "Reconfiguration JumpServer"
+msgstr "重新配置 JumpServer"
+
+#: jmsctl.sh:49
+msgid "Start   JumpServer"
+msgstr "启动 JumpServer"
+
+#: jmsctl.sh:50
+msgid "Stop    JumpServer"
+msgstr "停止 JumpServer"
+
+#: jmsctl.sh:51
+msgid "Close   JumpServer"
+msgstr "关闭 JumpServer"
+
+#: jmsctl.sh:52
+msgid "Restart JumpServer"
+msgstr "重启 JumpServer"
+
+#: jmsctl.sh:53
+msgid "Check   JumpServer"
+msgstr "检查 JumpServer"
+
+#: jmsctl.sh:54
+msgid "Offline JumpServer"
+msgstr "下线 JumpServer"
+
+#: jmsctl.sh:58
+msgid "Loading docker image"
+msgstr "加载 Docker 镜像"
+
+#: jmsctl.sh:60
+msgid "Data recovery through database backup file"
+msgstr "通过数据库备份文件恢复数据"
+
+#: jmsctl.sh:61
+msgid "Execute the original docker-compose command"
+msgstr "执行原始 docker-compose 命令"
+
+#: jmsctl.sh:62
+msgid "View log"
+msgstr "查看日志"
+
+#: jmsctl.sh:123
+msgid "The current version is up to date"
+msgstr "当前版本已是最新"
+
+#: jmsctl.sh:128
+msgid "The latest version is"
+msgstr "最新版本是"
+
+#: jmsctl.sh:132
+msgid "The current version is"
+msgstr "当前版本是"
+
+#: jmsctl.sh:157 jmsctl.sh:163
+msgid "Unsupported Operating System Error"
+msgstr "错误: 不支持的操作系统"
+
+#: jmsctl.sh:158
+msgid "macOS installer please see"
+msgstr "macOS 安装请参考"
+
+#: jmsctl.sh:164
+msgid "Windows installer please see"
+msgstr "Windows 安装请参考"
+
+#~ msgid "There are updates available currently. Do you want to update"
+#~ msgstr "检测到 Docker 版本有更新, 是否更新"
+
+#~ msgid "Failed to connect to database, please reset"
+#~ msgstr "测试连接数据库失败, 请重新设置"
+
+#~ msgid "Failed to connect to redis, please reset"
+#~ msgstr "测试连接 Redis 失败, 请重新设置"

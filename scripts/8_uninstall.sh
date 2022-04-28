@@ -41,10 +41,12 @@ function remove_jumpserver() {
       systemctl stop docker
       systemctl disable docker
       systemctl daemon-reload
+      echo -e "$(gettext 'Cleaning up') /usr/local/bin/docker"
       rm -f /usr/local/bin/docker*
       rm -f /usr/local/bin/container*
       rm -f /usr/local/bin/ctr
       rm -f /usr/local/bin/runc
+      echo -e "$(gettext 'Cleaning up') /etc/systemd/system/docker.service"
       rm -f /etc/systemd/system/docker.service
     fi
     echo
