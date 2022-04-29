@@ -2,12 +2,13 @@
 #
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
-. "${BASE_DIR}/utils.sh"
+. "${BASE_DIR}/2_install_docker.sh"
 
 target=$1
 
 function upgrade_config() {
   # 如果配置文件有更新, 则添加到新的配置文件
+  check_docker_start
   if docker ps -a | grep jms_guacamole &>/dev/null; then
     docker stop jms_guacamole &>/dev/null
     docker rm jms_guacamole &>/dev/null
@@ -54,10 +55,10 @@ function upgrade_config() {
     set_config JUMPSERVER_ENABLE_FONT_SMOOTHING "true"
   fi
   if grep -q "server nginx" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
-    sedi "s/server nginx/server web/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
+    sed -i "s/server nginx/server web/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
   fi
   if grep -q "sticky name=jms_route;" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
-    sedi "s/sticky name=jms_route;/ip_hash;/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
+    sed -i "s/sticky name=jms_route;/ip_hash;/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
   fi
   # MAGNUS 数据库
   magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
@@ -186,6 +187,42 @@ function clean_images() {
   fi
 }
 
+function upgrade_docker() {
+  if [[ -f "/usr/local/bin/docker" ]]; then
+    if [[ ! "$(/usr/local/bin/docker -v | grep ${DOCKER_VERSION})" ]]; then
+      echo -e "$(docker -v) \033[33m-->\033[0m Docker version \033[32m${DOCKER_VERSION}\033[0m"
+      confirm="n"
+      read_from_input confirm "$(gettext 'Do you need upgrade Docker binaries')?" "y/n" "${confirm}"
+      if [[ "${confirm}" == "y" ]]; then
+        echo
+        cd "${PROJECT_DIR}" || exit 1
+        bash ./jmsctl.sh down
+        sleep 2s
+        echo
+        systemctl stop docker
+        cd "${BASE_DIR}" || exit 1
+        install_docker
+        check_docker_install
+        check_docker_start
+      fi
+    fi
+  fi
+  if [[ -f "/usr/local/bin/docker-compose" ]]; then
+    if [[ ! "$(/usr/local/bin/docker-compose -v | grep ${DOCKER_COMPOSE_VERSION})" ]]; then
+      echo
+      echo -e "$(docker-compose -v) \033[33m-->\033[0m docker-compose version \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
+      confirm="n"
+      read_from_input confirm "$(gettext 'Do you need upgrade Docker Compose')?" "y/n" "${confirm}"
+      if [[ "${confirm}" == "y" ]]; then
+        echo
+        cd "${BASE_DIR}" || exit 1
+        install_compose
+        check_compose_install
+      fi
+    fi
+  fi
+}
+
 function main() {
   confirm="y"
   to_version="${VERSION}"
@@ -199,7 +236,7 @@ function main() {
   fi
 
   if [[ "${to_version}" && "${to_version}" != "${VERSION}" ]]; then
-    sedi "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
+    sed -i "s@VERSION=.*@VERSION=${to_version}@g" "${PROJECT_DIR}/static.env"
     export VERSION=${to_version}
   fi
   echo
@@ -221,7 +258,10 @@ function main() {
   echo_yellow "\n6. $(gettext 'Cleanup Image')"
   clean_images
 
-  echo_yellow "\n7. $(gettext 'Upgrade successfully. You can now restart the program')"
+  echo_yellow "\n7. $(gettext 'Upgrade Docker')"
+  upgrade_docker
+
+  echo_yellow "\n8. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "cd ${PROJECT_DIR}"
   echo "./jmsctl.sh start"
   echo -e "\n"

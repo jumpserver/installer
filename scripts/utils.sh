@@ -5,13 +5,6 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/const.sh"
 
-shopt -s expand_aliases
-if [[ $(uname) == 'Darwin' ]]; then
-  alias sedi='sed -i ""'
-else
-  alias sedi='sed -i'
-fi
-
 function is_confirm() {
   read -r confirmed
   if [[ "${confirmed}" == "y" || "${confirmed}" == "Y" || ${confirmed} == "" ]]; then
@@ -97,7 +90,7 @@ function set_config() {
     return
   fi
 
-  sedi "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
+  sed -i "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
 function get_mysql_images() {
@@ -199,7 +192,7 @@ function echo_done() {
 }
 
 function echo_check() {
-  echo -e "$1  [\033[32m √ \033[0m]"
+  echo -e "$1 \t [\033[32m √ \033[0m]"
 }
 
 function echo_failed() {
@@ -378,7 +371,7 @@ function prepare_config() {
   chmod 644 "${CONFIG_DIR}/redis/redis.conf"
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
-    sedi "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
+    sed -i "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
   fi
   echo_done
 }
