@@ -59,7 +59,7 @@ function set_external_mysql() {
   mysql_user=$(get_config DB_USER)
   read_from_input mysql_user "$(gettext 'Please enter MySQL username')" "" "${mysql_user}"
   mysql_password=$(get_config DB_PASSWORD)
-  read_from_input mysql_pass "$(gettext 'Please enter MySQL password')" "" "${mysql_password}"
+  read_from_input mysql_password "$(gettext 'Please enter MySQL password')" "" "${mysql_password}"
 
   set_config DB_HOST "${mysql_host}"
   set_config DB_PORT "${mysql_port}"
