@@ -10,6 +10,9 @@ docker_copy_failed=0
 cd "${BASE_DIR}" || exit 1
 
 function copy_docker() {
+  if [[ ! -d "/usr/local/bin" ]]; then
+    mkdir -p /usr/local/bin
+  fi
   \cp -f ./docker/* /usr/local/bin/
   \cp -f ./docker.service /etc/systemd/system/
 }
