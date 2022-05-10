@@ -22,6 +22,7 @@ function remove_jumpserver() {
       rm -rf "${CONFIG_DIR}"
       echo -e "$(gettext 'Cleaning up') /usr/bin/jmsctl"
       rm -f /usr/bin/jmsctl
+      rm -f .env compose/.env
     fi
   fi
   echo
