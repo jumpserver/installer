@@ -30,7 +30,7 @@ function set_volume_dir() {
     echo "$(gettext 'To modify the persistent directory such as logs video, you can select your largest disk and create a directory in it, such as') /data/jumpserver"
     echo "$(gettext 'Note: you can not change it after installation, otherwise the database may be lost')"
     echo
-    df -h | grep -Ev "map|devfs|tmpfs|overlay|shm|snap|boot"
+    df -h | grep -Ev "devfs|tmpfs|overlay|shm|snap|boot"
     echo
     read_from_input volume_dir "$(gettext 'Persistent storage directory')" "" "${volume_dir}"
     if [[ "${volume_dir}" == "y" ]]; then
@@ -59,12 +59,8 @@ function set_external_mysql() {
   mysql_user=$(get_config DB_USER)
   read_from_input mysql_user "$(gettext 'Please enter MySQL username')" "" "${mysql_user}"
   mysql_password=$(get_config DB_PASSWORD)
-  read_from_input mysql_pass "$(gettext 'Please enter MySQL password')" "" "${mysql_password}"
-  if ! test_mysql_connect "${mysql_host}" "${mysql_port}" "${mysql_user}" "${mysql_password}" "${mysql_db}"; then
-    echo_red "$(gettext 'Failed to connect to database, please reset')"
-    echo
-    set_mysql
-  fi
+  read_from_input mysql_password "$(gettext 'Please enter MySQL password')" "" "${mysql_password}"
+
   set_config DB_HOST "${mysql_host}"
   set_config DB_PORT "${mysql_port}"
   set_config DB_USER "${mysql_user}"
@@ -114,11 +110,7 @@ function set_external_redis() {
   read_from_input redis_port "$(gettext 'Please enter Redis server port')" "" "${redis_port}"
   redis_password=$(get_config REDIS_PASSWORD)
   read_from_input redis_password "$(gettext 'Please enter Redis password')" "" "${redis_password}"
-  if ! test_redis_connect "${redis_host}" "${redis_port}" "${redis_password}"; then
-    echo_red "$(gettext 'Failed to connect to redis, please reset')"
-    echo
-    set_redis
-  fi
+
   set_config REDIS_HOST "${redis_host}"
   set_config REDIS_PORT "${redis_port}"
   set_config REDIS_PASSWORD "${redis_password}"

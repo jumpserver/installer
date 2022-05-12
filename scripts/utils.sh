@@ -5,13 +5,6 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 . "${BASE_DIR}/const.sh"
 
-shopt -s expand_aliases
-if [[ $(uname) == 'Darwin' ]]; then
-  alias sedi='sed -i ""'
-else
-  alias sedi='sed -i'
-fi
-
 function is_confirm() {
   read -r confirmed
   if [[ "${confirmed}" == "y" || "${confirmed}" == "Y" || ${confirmed} == "" ]]; then
@@ -47,9 +40,10 @@ function has_config() {
 }
 
 function get_config() {
+  . "${CONFIG_FILE}"
   key=$1
   default=${2-''}
-  value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }')
+  value="${!key}"
   if [[ -z "$value" ]];then
     value="$default"
   fi
@@ -59,8 +53,7 @@ function get_config() {
 function get_env_value() {
   key=$1
   default=${2-''}
-  value=$(env | grep "$key=" | awk -F= '{ print $2 }')
-
+  value="${!key}"
   echo "${value}"
 }
 
@@ -97,26 +90,7 @@ function set_config() {
     return
   fi
 
-  sedi "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
-}
-
-function test_mysql_connect() {
-  host=$1
-  port=$2
-  user=$3
-  password=$4
-  db=$5
-  command="CREATE TABLE IF NOT EXISTS test(id INT); DROP TABLE test;"
-
-  mysql_images=$(get_mysql_images)
-  docker run -i --rm "${mysql_images}" mysql -h"${host}" -P"${port}" -u"${user}" -p"${password}" "${db}" -e "${command}" 2>/dev/null
-}
-
-function test_redis_connect() {
-  host=$1
-  port=$2
-  password=$3
-  docker run -i --rm jumpserver/redis:6-alpine redis-cli -h "${host}" -p "${port}" -a "${password}" info | grep "redis_version" 2>/dev/null
+  sed -i "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
 function get_mysql_images() {
@@ -218,7 +192,7 @@ function echo_done() {
 }
 
 function echo_check() {
-  echo -e "$1  [\033[32m √ \033[0m]"
+  echo -e "$1 \t [\033[32m √ \033[0m]"
 }
 
 function echo_failed() {
@@ -397,7 +371,7 @@ function prepare_config() {
   chmod 644 "${CONFIG_DIR}/redis/redis.conf"
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
-    sedi "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
+    sed -i "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
   fi
   echo_done
 }

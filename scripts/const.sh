@@ -5,6 +5,10 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 export SCRIPT_DIR="$BASE_DIR"
 PROJECT_DIR=$(dirname "${SCRIPT_DIR}")
 
+if [[ ! "$(echo $PATH | grep /usr/local/bin)" ]]; then
+  export PATH=/usr/local/bin:$PATH
+fi
+
 # 国际化处理
 export TEXTDOMAINDIR=$PROJECT_DIR/locale
 export TEXTDOMAIN=jumpserver-installer

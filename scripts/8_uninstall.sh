@@ -22,6 +22,7 @@ function remove_jumpserver() {
       rm -rf "${CONFIG_DIR}"
       echo -e "$(gettext 'Cleaning up') /usr/bin/jmsctl"
       rm -f /usr/bin/jmsctl
+      rm -f .env compose/.env
     fi
   fi
   echo
@@ -41,10 +42,12 @@ function remove_jumpserver() {
       systemctl stop docker
       systemctl disable docker
       systemctl daemon-reload
+      echo -e "$(gettext 'Cleaning up') /usr/local/bin/docker"
       rm -f /usr/local/bin/docker*
       rm -f /usr/local/bin/container*
       rm -f /usr/local/bin/ctr
       rm -f /usr/local/bin/runc
+      echo -e "$(gettext 'Cleaning up') /etc/systemd/system/docker.service"
       rm -f /etc/systemd/system/docker.service
     fi
     echo
