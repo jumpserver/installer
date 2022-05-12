@@ -32,7 +32,7 @@ function random_str() {
 
 function has_config() {
   key=$1
-  if grep "^${key}=" "${CONFIG_FILE}" &>/dev/null; then
+  if grep "^[ \t]*${key}=" "${CONFIG_FILE}" &>/dev/null; then
     echo "1"
   else
     echo "0"
