@@ -86,6 +86,7 @@ services:
     ports:
       - ${MAGNUS_MYSQL_PORT:-3306}:33060
       - ${MAGNUS_MARIADB_PORT:-3307}:33061
+      - ${MAGNUS_REDIS_PORT:-6379}:63790
     volumes:
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
     depends_on:
