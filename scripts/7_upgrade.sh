@@ -30,11 +30,6 @@ function upgrade_config() {
     docker rm jms_xpack &>/dev/null
     docker volume rm jms_share-volume &>/dev/null
   fi
-  rdp_port=$(get_config RDP_PORT)
-  if [[ -z "${rdp_port}" ]]; then
-    RDP_PORT=3389
-    set_config RDP_PORT "${RDP_PORT}"
-  fi
   current_version=$(get_config CURRENT_VERSION)
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"
@@ -71,10 +66,24 @@ function upgrade_config() {
     MAGNUS_MARIADB_PORT=33061
     set_config MAGNUS_MARIADB_PORT "${MAGNUS_MARIADB_PORT}"
   fi
-  magnus_postgre_port=$(get_config MAGNUS_POSTGRE_PORT)
-  if [ -z "${magnus_postgre_port}" ]; then
-    MAGNUS_POSTGRE_PORT=54320
-    set_config MAGNUS_POSTGRE_PORT "${MAGNUS_POSTGRE_PORT}"
+  magnus_redis_port=$(get_config MAGNUS_REDIS_PORT)
+  if [ -z "${magnus_redis_port}" ]; then
+    MAGNUS_REDIS_PORT=63790
+    set_config MAGNUS_REDIS_PORT "${MAGNUS_REDIS_PORT}"
+  fi
+  # XPACK
+  use_xpack=$(get_config USE_XPACK)
+  if [[ "${use_xpack}" == "1" ]]; then
+    rdp_port=$(get_config RDP_PORT)
+    if [[ -z "${rdp_port}" ]]; then
+      RDP_PORT=3389
+      set_config RDP_PORT "${RDP_PORT}"
+    fi
+    magnus_postgre_port=$(get_config MAGNUS_POSTGRE_PORT)
+    if [ -z "${magnus_postgre_port}" ]; then
+      MAGNUS_POSTGRE_PORT=54320
+      set_config MAGNUS_POSTGRE_PORT "${MAGNUS_POSTGRE_PORT}"
+    fi
   fi
 }
 
