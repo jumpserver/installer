@@ -90,7 +90,7 @@ function set_config() {
     return
   fi
 
-  sed -i "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
+  sed -r -i "s,^[ \t]+${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
 function get_mysql_images() {
