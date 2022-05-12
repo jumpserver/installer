@@ -39,6 +39,7 @@ HTTP_PORT=80
 SSH_PORT=2222
 MAGNUS_MYSQL_PORT=33060
 MAGNUS_MARIADB_PORT=33061
+MAGNUS_REDIS_PORT=63790
 
 ## HTTPS 配置, 参考 https://docs.jumpserver.org/zh/master/admin-guide/proxy/ 配置
 # USE_LB=1
