@@ -32,7 +32,7 @@ function random_str() {
 
 function has_config() {
   key=$1
-  if grep "^${key}=" "${CONFIG_FILE}" &>/dev/null; then
+  if grep "^[ \t]*${key}=" "${CONFIG_FILE}" &>/dev/null; then
     echo "1"
   else
     echo "0"
@@ -90,7 +90,7 @@ function set_config() {
     return
   fi
 
-  sed -i "s,^${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
+  sed -i "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
 function get_mysql_images() {
