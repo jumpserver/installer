@@ -30,6 +30,10 @@ function upgrade_config() {
     docker rm jms_xpack &>/dev/null
     docker volume rm jms_share-volume &>/dev/null
   fi
+  if docker ps -a | grep jms_xrdp &>/dev/null; then
+    docker stop jms_xrdp &>/dev/null
+    docker rm jms_xrdp &>/dev/null
+  fi
   current_version=$(get_config CURRENT_VERSION)
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"

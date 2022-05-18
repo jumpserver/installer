@@ -125,7 +125,7 @@ function get_images() {
   done
   if [[ "${scope}" == "all" ]]; then
     echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
   fi
 }
 
@@ -240,7 +240,7 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" omnidb xrdp"
+    services+=" omnidb razor"
   fi
   echo "${services}"
 }
