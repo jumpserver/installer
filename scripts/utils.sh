@@ -122,6 +122,9 @@ function get_mysql_images_file() {
 }
 
 function get_images() {
+  if [[ ! -f "${CONFIG_FILE}" ]]; then
+    return
+  fi
   USE_XPACK=$(get_config_or_env USE_XPACK)
   scope="public"
   if [[ "$USE_XPACK" == "1" ]];then
