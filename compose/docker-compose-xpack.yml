@@ -42,7 +42,7 @@ services:
       core:
         condition: service_healthy
     healthcheck:
-      test: "ps axu | grep -v 'grep' | grep 'freerdp-proxy'"
+      test: "ps axu | grep -v 'grep' | grep 'razor'"
       interval: 10s
       timeout: 5s
       retries: 3
