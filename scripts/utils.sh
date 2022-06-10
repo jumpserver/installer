@@ -93,13 +93,32 @@ function set_config() {
   sed -i "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
+function check_mysql_data() {
+   volume_dir=$(get_config VOLUME_DIR)
+   db_name=$(get_config DB_NAME)
+   if [[ -d "${volume_dir}/mysql/data/${db_name}" ]]; then
+     echo "1"
+   fi
+}
+
 function get_mysql_images() {
-  if [[ "$(uname -m)" == "aarch64" ]]; then
-    mysql_images=jumpserver/mariadb:10
+  mysql_data_exists=$(check_mysql_data)
+  if [[ "${mysql_data_exists}" == "1" ]]; then
+    mysql_images=mysql:5.7
   else
-    mysql_images=jumpserver/mysql:5
+    mysql_images=mariadb:10.6
   fi
   echo "${mysql_images}"
+}
+
+function get_mysql_images_file() {
+  mysql_data_exists=$(check_mysql_data)
+  if [[ "${mysql_data_exists}" == "1" ]]; then
+    mysql_images_file=compose/docker-compose-mysql.yml
+  else
+    mysql_images_file=compose/docker-compose-mariadb.yml
+  fi
+  echo "${mysql_images_file}"
 }
 
 function get_images() {
@@ -112,7 +131,7 @@ function get_images() {
   mysql_images=$(get_mysql_images)
 
   images=(
-    "jumpserver/redis:6-alpine"
+    "redis:6.2"
     "${mysql_images}"
     "jumpserver/web:${VERSION}"
     "jumpserver/core:${VERSION}"
@@ -259,11 +278,8 @@ function get_docker_compose_cmd_line() {
     cmd="${cmd} -f compose/docker-compose-task.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
-    if [[ "$(uname -m)" == "aarch64" ]]; then
-      cmd="${cmd} -f compose/docker-compose-mariadb.yml"
-    else
-      cmd="${cmd} -f compose/docker-compose-mysql.yml"
-    fi
+    mysql_images_file=$(get_mysql_images_file)
+    cmd="${cmd} -f ${mysql_images_file}"
   fi
   if [[ "${services}" =~ redis ]]; then
     cmd="${cmd} -f compose/docker-compose-redis.yml"
@@ -412,11 +428,8 @@ function get_db_migrate_compose_cmd() {
 
   cmd="docker-compose -f compose/docker-compose-init-db.yml"
   if [[ "${use_external_mysql}" == "0" ]]; then
-    if [[ "$(uname -m)" == "aarch64" ]]; then
-      cmd="${cmd} -f compose/docker-compose-mariadb.yml"
-    else
-      cmd="${cmd} -f compose/docker-compose-mysql.yml"
-    fi
+    mysql_images_file=$(get_mysql_images_file)
+    cmd="${cmd} -f ${mysql_images_file}"
   fi
 
   if [[ "${use_external_redis}" == "0" ]]; then

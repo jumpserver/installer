@@ -6,7 +6,7 @@ services:
       redis:
         condition: service_healthy
   redis:
-    image: jumpserver/redis:6-alpine
+    image: redis:6.2
     container_name: jms_redis
     restart: always
     command: ["redis-server", "/etc/redis.conf", "--requirepass", "$REDIS_PASSWORD"]
