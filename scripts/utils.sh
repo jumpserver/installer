@@ -104,9 +104,9 @@ function check_mysql_data() {
 function get_mysql_images() {
   mysql_data_exists=$(check_mysql_data)
   if [[ "${mysql_data_exists}" == "1" ]]; then
-    mysql_images=mysql:5.7
+    mysql_images=jumpserver/mysql:5.7
   else
-    mysql_images=mariadb:10.6
+    mysql_images=jumpserver/mariadb:10.6
   fi
   echo "${mysql_images}"
 }
@@ -131,7 +131,7 @@ function get_images() {
   mysql_images=$(get_mysql_images)
 
   images=(
-    "redis:6.2"
+    "jumpserver/redis:6.2"
     "${mysql_images}"
     "jumpserver/web:${VERSION}"
     "jumpserver/core:${VERSION}"
