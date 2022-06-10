@@ -94,6 +94,9 @@ function set_config() {
 }
 
 function check_mysql_data() {
+   if [[ ! -f "${CONFIG_FILE}" ]]; then
+     return
+   fi
    volume_dir=$(get_config VOLUME_DIR)
    db_name=$(get_config DB_NAME)
    if [[ -d "${volume_dir}/mysql/data/${db_name}" ]]; then
@@ -122,9 +125,6 @@ function get_mysql_images_file() {
 }
 
 function get_images() {
-  if [[ ! -f "${CONFIG_FILE}" ]]; then
-    return
-  fi
   USE_XPACK=$(get_config_or_env USE_XPACK)
   scope="public"
   if [[ "$USE_XPACK" == "1" ]];then
