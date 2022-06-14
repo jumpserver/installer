@@ -41,7 +41,7 @@ function load_image_files() {
 }
 
 function main() {
-  if [[ -d "${IMAGE_DIR}" && -f "${IMAGE_DIR}/redis:6-alpine.tar" ]]; then
+  if [[ -d "${IMAGE_DIR}" && -f "${IMAGE_DIR}/redis:6.2.tar" ]]; then
     load_image_files
   else
     pull_images

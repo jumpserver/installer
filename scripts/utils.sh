@@ -94,6 +94,10 @@ function set_config() {
 }
 
 function check_mysql_data() {
+   if [[ "$(uname -m)" == "loongarch64" ]]; then
+     echo "1"
+     return
+   fi
    if [[ ! -f "${CONFIG_FILE}" ]]; then
      return
    fi
@@ -309,9 +313,14 @@ function prepare_check_required_pkg() {
   for i in curl wget tar iptables gettext; do
     command -v $i >/dev/null || {
         echo_red "$i: $(gettext 'command not found, Please install it first') $i"
-        exit 1
+        flag=1
     }
   done
+  if [[ "$flag" ]]; then
+    unset flag
+    echo
+    exit 1
+  fi
 }
 
 function prepare_set_redhat_firewalld() {

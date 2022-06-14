@@ -14,6 +14,9 @@ function prepare_config_xpack() {
 }
 
 function prepare_docker_bin() {
+  if [[ "$(uname -m)" == "loongarch64" ]]; then
+    return
+  fi
   md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
   if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
     prepare_check_required_pkg
