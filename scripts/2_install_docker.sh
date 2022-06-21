@@ -18,19 +18,6 @@ function copy_docker() {
 }
 
 function install_docker() {
-  if [[ "$(uname -m)" == "loongarch64" ]]; then
-    command -v dnf >/dev/null && {
-      dnf install -q -y docker-ce
-      return
-    }
-    command -v apt >/dev/null && {
-      apt-get update -qq
-      apt-get install -qq docker-ce
-      return
-    }
-    echo_red "Error: $(gettext 'Docker program does not exist')"
-    exit 1
-  fi
   if [[ ! -f ./docker/dockerd ]]; then
     prepare_docker_bin
   fi
@@ -65,12 +52,12 @@ function install_compose() {
     \cp -f ./docker/docker-compose /usr/local/bin/
     chmod +x /usr/local/bin/docker-compose
   fi
-  if [[ "$(uname -m)" != "loongarch64" ]]; then
-    return
-  fi
-  if ! docker-compose -v >/dev/null 2>&1; then
-    if [ ! -f "/lib64/libcrypt.so.1" ]; then
-      ln -sf /lib64/libcrypto.so.1.1 /lib64/libcrypt.so.1;
+
+  if [[ "$(uname -m)" == "loongarch64" ]]; then
+    if ! docker-compose -v >/dev/null 2>&1; then
+      if [ ! -f "/lib64/libcrypt.so.1" ]; then
+        ln -sf /lib64/libcrypto.so.1.1 /lib64/libcrypt.so.1;
+      fi
     fi
   fi
 }

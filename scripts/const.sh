@@ -21,15 +21,18 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=20.10.14
-export DOCKER_MIRROR="https://mirrors.ustc.edu.cn/docker-ce/linux/static/stable"
+export DOCKER_VERSION=20.10.17
+export DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
 export DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
 
 if [[ "$(uname -m)" == "aarch64" ]]; then
-  DOCKER_MD5=b2f85fc7ac751b3e87f87b9f473b2beb
+  DOCKER_MD5=f9b6570a174df41aec6b822fba7a17aa
 fi
 if [[ "$(uname -m)" == "x86_64" ]]; then
-  DOCKER_MD5=f2f2fd5c5ad899af923d2f2138b1c7eb
+  DOCKER_MD5=f8c950e9d4edb901c0a8124706f60919
+fi
+if [[ "$(uname -m)" == "loongarch64" ]]; then
+  DOCKER_MD5=6c6fc22839c1bbe3ce578c470c2cd719
 fi
 export DOCKER_MD5
 
