@@ -316,7 +316,7 @@ function prepare_check_required_pkg() {
         flag=1
     }
   done
-  if [[ "$flag" ]]; then
+  if [[ -n "$flag" ]]; then
     unset flag
     echo
     exit 1
