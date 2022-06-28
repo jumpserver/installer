@@ -40,10 +40,13 @@ function has_config() {
 }
 
 function get_config() {
-  . "${CONFIG_FILE}"
   key=$1
   default=${2-''}
-  value="${!key}"
+  values=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }')
+  OLD_IFS="$IFS"
+  IFS=" "
+  value=($values)
+  IFS=$OLD_IFS
   if [[ -z "$value" ]];then
     value="$default"
   fi
