@@ -46,7 +46,7 @@ function get_config() {
   OLD_IFS="$IFS"
   IFS=" "
   value=($values)
-  IFS=$OLD_IFS
+  IFS="$OLD_IFS"
   if [[ -z "$value" ]];then
     value="$default"
   fi
