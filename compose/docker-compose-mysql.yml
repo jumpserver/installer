@@ -6,7 +6,7 @@ services:
       mysql:
         condition: service_healthy
   mysql:
-    image: jumpserver/mysql:5
+    image: jumpserver/mysql:5.7
     container_name: jms_mysql
     restart: always
     command: --character-set-server=utf8
