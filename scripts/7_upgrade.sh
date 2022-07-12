@@ -88,6 +88,16 @@ function upgrade_config() {
       MAGNUS_POSTGRE_PORT=54320
       set_config MAGNUS_POSTGRE_PORT "${MAGNUS_POSTGRE_PORT}"
     fi
+    magnus_oracle_11g_port=$(get_config MAGNUS_ORACLE_11G_PORT)
+    if [ -z "${magnus_oracle_11g_port}" ]; then
+      MAGNUS_ORACLE_11G_PORT=15211
+      set_config MAGNUS_ORACLE_11G_PORT "${MAGNUS_ORACLE_11G_PORT}"
+    fi
+    magnus_oracle_12c_port=$(get_config MAGNUS_ORACLE_12C_PORT)
+    if [ -z "${magnus_oracle_12c_port}" ]; then
+      MAGNUS_ORACLE_12C_PORT=15212
+      set_config MAGNUS_ORACLE_12C_PORT "${MAGNUS_ORACLE_12C_PORT}"
+    fi
   fi
 }
 
