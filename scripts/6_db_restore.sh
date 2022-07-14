@@ -35,7 +35,7 @@ function main() {
     log_success "$(gettext 'Database recovered successfully')!"
   fi
 
-  if [[ "$flag" ]]; then
+  if [[ -n "$flag" ]]; then
     down_db_ops_env
     unset flag
   fi
