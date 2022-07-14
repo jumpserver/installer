@@ -65,6 +65,7 @@ function prepare_image_files() {
   fi
 
   images=$(get_images)
+  images+=' jumpserver/mysql:5.7'
 
   for image in ${images}; do
     echo "[${image}]"
