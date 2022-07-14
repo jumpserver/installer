@@ -34,12 +34,6 @@ function upgrade_config() {
     docker stop jms_xrdp &>/dev/null
     docker rm jms_xrdp &>/dev/null
   fi
-  if ! docker images | grep jumpserver/mysql | grep 5.7 &>/dev/null; then
-    if docker images | grep jumpserver/mysql | grep 5 &>/dev/null; then
-      docker tag jumpserver/mysql:5 jumpserver/mysql:5.7 &>/dev/null
-      docker rmi jumpserver/mysql:5 &>/dev/null
-    fi
-  fi
   current_version=$(get_config CURRENT_VERSION)
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"
