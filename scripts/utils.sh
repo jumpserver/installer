@@ -347,10 +347,18 @@ function prepare_config() {
   echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"
   if [[ ! -d ${CONFIG_DIR} ]]; then
     mkdir -p "${CONFIG_DIR}"
-    cp config-example.txt "${CONFIG_FILE}"
+    if [[ ! -f config.txt ]];then
+      cp config-example.txt "${CONFIG_FILE}"
+    else
+      cp config.txt "${CONFIG_FILE}"
+    fi
   fi
   if [[ ! -f ${CONFIG_FILE} ]]; then
-    cp config-example.txt "${CONFIG_FILE}"
+    if [[ ! -f config.txt ]];then
+      cp config-example.txt "${CONFIG_FILE}"
+    else
+      cp config.txt "${CONFIG_FILE}"
+    fi
   else
     echo_check "${CONFIG_FILE}"
   fi
