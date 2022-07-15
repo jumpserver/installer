@@ -65,6 +65,9 @@ function prepare_image_files() {
   fi
 
   images=$(get_images)
+  if ! echo ${images} | grep -q 'jumpserver/mysql:5.7'; then
+    images+=' jumpserver/mysql:5.7'
+  fi
 
   for image in ${images}; do
     echo "[${image}]"
