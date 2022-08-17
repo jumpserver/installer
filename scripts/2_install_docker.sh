@@ -121,7 +121,6 @@ function config_docker() {
     mkdir -p "${docker_storage_path}"
   fi
 
-  set_docker_config registry-mirrors '["https://hub-mirror.c.163.com", "http://f1361db2.m.daocloud.io"]'
   set_docker_config live-restore "true"
   set_docker_config data-root "${docker_storage_path}"
   set_docker_config log-driver "json-file"

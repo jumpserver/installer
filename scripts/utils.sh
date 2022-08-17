@@ -220,6 +220,10 @@ function echo_check() {
   echo -e "$1 \t [\033[32m √ \033[0m]"
 }
 
+function echo_warn() {
+  echo -e "[\033[33m WARNING \033[0m] $1"
+}
+
 function echo_failed() {
   echo_red "$(gettext 'fail')"
 }
