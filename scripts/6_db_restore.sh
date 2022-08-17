@@ -13,7 +13,7 @@ DATABASE=$(get_config DB_NAME)
 DB_FILE="$1"
 
 function main() {
-  echo "$(gettext 'Start restoring database'): $DB_FILE"
+  echo_warn "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
   restore_cmd="mysql --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
 
   if [[ ! -f "${DB_FILE}" ]]; then
@@ -22,6 +22,8 @@ function main() {
   fi
 
   mysql_images=$(get_mysql_images)
+
+  echo "$(gettext 'Start restoring database'): $DB_FILE"
 
   if ! docker ps | grep jms_ >/dev/null; then
     create_db_ops_env

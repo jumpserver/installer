@@ -5,7 +5,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 . "${BASE_DIR}/utils.sh"
 
 function remove_jumpserver() {
-  echo -e "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
+  echo_warn "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
   images=$(get_images)
   VOLUME_DIR=$(get_config VOLUME_DIR)
   confirm="n"
