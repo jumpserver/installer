@@ -76,7 +76,7 @@ function upgrade_config() {
     set_config MAGNUS_REDIS_PORT "${MAGNUS_REDIS_PORT}"
   fi
   # XPACK
-  use_xpack=$(get_config USE_XPACK)
+  use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
     rdp_port=$(get_config RDP_PORT)
     if [[ -z "${rdp_port}" ]]; then
@@ -130,15 +130,6 @@ function migrate_config_v1_5_to_v2_0() {
 
 function migrate_config_v2_5_v2_6() {
   prepare_config
-
-  # 处理之前版本没有 USE_XPACK 的问题
-  image_files=""
-  if [[ -d "$BASE_DIR/images" ]]; then
-    image_files=$(ls "$BASE_DIR"/images)
-  fi
-  if [[ "${image_files}" =~ omnidb ]]; then
-    set_config "USE_XPACK" 1
-  fi
 }
 
 function update_config_if_need() {

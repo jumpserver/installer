@@ -54,8 +54,7 @@ CLIENT_MAX_BODY_SIZE=4096m
 ## Task 配置, 是否启动 jms_celery 容器, 单节点必须开启
 USE_TASK=1
 
-## XPack, USE_XPACK=1 表示开启, 开源版本设置无效
-USE_XPACK=0
+## XPack 包, 企业版本自动开启, 开源版本设置无效
 RDP_PORT=3389
 MAGNUS_POSTGRE_PORT=54320
 MAGNUS_ORACLE_11G_PORT=15211

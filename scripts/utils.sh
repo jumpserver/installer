@@ -267,7 +267,7 @@ function get_docker_compose_services() {
   if [[ "${use_lb}" == "1" ]]; then
     services+=" lb"
   fi
-  use_xpack=$(get_config USE_XPACK)
+  use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
     services+=" omnidb razor"
   fi
@@ -305,7 +305,7 @@ function get_docker_compose_cmd_line() {
   else
     cmd="${cmd} -f compose/docker-compose-web-external.yml"
   fi
-  use_xpack=$(get_config USE_XPACK)
+  use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == '1' ]]; then
       cmd="${cmd} -f compose/docker-compose-xpack.yml"
   fi
