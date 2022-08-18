@@ -505,7 +505,21 @@ function get_current_version() {
 
 function pull_image() {
   image=$1
-  DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
+  DOCKER_IMAGE_MIRROR=$(get_config_or_env 'DOCKER_IMAGE_MIRROR')
+  if [[ "${DOCKER_IMAGE_MIRROR}" == "1" ]]; then
+    if [[ "$(uname -m)" == "x86_64" ]]; then
+      DOCKER_IMAGE_PREFIX="swr.cn-north-1.myhuaweicloud.com"
+    fi
+    if [[ "$(uname -m)" == "aarch64" ]]; then
+      DOCKER_IMAGE_PREFIX="swr.cn-north-4.myhuaweicloud.com"
+    fi
+    if [[ "$(uname -m)" == "loongarch64" ]]; then
+      DOCKER_IMAGE_PREFIX="swr.cn-southwest-2.myhuaweicloud.com"
+    fi
+  else
+    DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
+  fi
+
   IMAGE_PULL_POLICY=${IMAGE_PULL_POLICY-"Always"}
 
   if docker image inspect -f '{{ .Id }}' "$image" &> /dev/null; then
