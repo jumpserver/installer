@@ -5,13 +5,6 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 . "${BASE_DIR}/utils.sh"
 
 IMAGE_DIR="images"
-USE_XPACK="${USE_XPACK-0}"
-
-function prepare_config_xpack() {
-  if [[ "${USE_XPACK}" == "1" ]]; then
-    sed -i 's@^USE_XPACK=.*@USE_XPACK=1@g' "${PROJECT_DIR}"/config-example.txt
-  fi
-}
 
 function prepare_docker_bin() {
   md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
