@@ -267,7 +267,7 @@ function get_docker_compose_services() {
   if [[ "${use_lb}" == "1" ]]; then
     services+=" lb"
   fi
-  use_xpack=$(get_config_or_env USE_XPACK)
+  use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
     services+=" omnidb razor"
   fi
@@ -305,7 +305,7 @@ function get_docker_compose_cmd_line() {
   else
     cmd="${cmd} -f compose/docker-compose-web-external.yml"
   fi
-  use_xpack=$(get_config_or_env USE_XPACK)
+  use_xpack=$(get_config USE_XPACK)
   if [[ "${use_xpack}" == '1' ]]; then
       cmd="${cmd} -f compose/docker-compose-xpack.yml"
   fi
@@ -505,21 +505,7 @@ function get_current_version() {
 
 function pull_image() {
   image=$1
-  DOCKER_IMAGE_MIRROR=$(get_config_or_env 'DOCKER_IMAGE_MIRROR')
-  if [[ "${DOCKER_IMAGE_MIRROR}" == "1" ]]; then
-    if [[ "$(uname -m)" == "x86_64" ]]; then
-      DOCKER_IMAGE_PREFIX="swr.cn-north-1.myhuaweicloud.com"
-    fi
-    if [[ "$(uname -m)" == "aarch64" ]]; then
-      DOCKER_IMAGE_PREFIX="swr.cn-north-4.myhuaweicloud.com"
-    fi
-    if [[ "$(uname -m)" == "loongarch64" ]]; then
-      DOCKER_IMAGE_PREFIX="swr.cn-southwest-2.myhuaweicloud.com"
-    fi
-  else
-    DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
-  fi
-
+  DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
   IMAGE_PULL_POLICY=${IMAGE_PULL_POLICY-"Always"}
 
   if docker image inspect -f '{{ .Id }}' "$image" &> /dev/null; then
