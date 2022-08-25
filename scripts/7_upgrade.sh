@@ -222,9 +222,9 @@ function upgrade_docker() {
     fi
   fi
   if [[ -f "/usr/local/bin/docker-compose" ]]; then
-    if [[ ! "$(/usr/local/bin/docker-compose -v | grep ${DOCKER_COMPOSE_VERSION})" ]]; then
+    if [[ ! "$(/usr/local/bin/docker-compose version | grep ${DOCKER_COMPOSE_VERSION})" ]]; then
       echo
-      echo -e "$(docker-compose -v) \033[33m-->\033[0m docker-compose version \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
+      echo -e "$(docker-compose version) \033[33m-->\033[0m Docker Compose version \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
       confirm="n"
       read_from_input confirm "$(gettext 'Do you need upgrade Docker Compose')?" "y/n" "${confirm}"
       if [[ "${confirm}" == "y" ]]; then
