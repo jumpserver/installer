@@ -148,7 +148,7 @@ function set_service_port() {
   http_port=$(get_config HTTP_PORT)
   ssh_port=$(get_config SSH_PORT)
   rdp_port=$(get_config RDP_PORT)
-  use_xpack=$(get_config USE_XPACK)
+  use_xpack=$(get_config_or_env USE_XPACK)
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need to customize the JumpServer external port')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
