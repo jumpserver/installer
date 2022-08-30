@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 
-Version=dev
+Version=v2.25.3
 
 function install_soft() {
     if command -v dnf > /dev/null; then
