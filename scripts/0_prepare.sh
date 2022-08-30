@@ -95,7 +95,6 @@ function prepare_image_files() {
 
 function main() {
   prepare_check_required_pkg
-  prepare_config_xpack
 
   echo " $(gettext 'Preparing Docker offline package')"
   prepare_docker_bin
