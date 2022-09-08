@@ -76,7 +76,7 @@ function upgrade_config() {
     set_config MAGNUS_REDIS_PORT "${MAGNUS_REDIS_PORT}"
   fi
   # XPACK
-  use_xpack=$(get_config USE_XPACK)
+  use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
     rdp_port=$(get_config RDP_PORT)
     if [[ -z "${rdp_port}" ]]; then
@@ -101,7 +101,7 @@ function upgrade_config() {
   fi
 }
 
-function migrate_coco_to_koko_v1_54_to_v1_55() {
+function migrate_coco_to_koko() {
   volume_dir=$(get_config VOLUME_DIR)
   coco_dir="${volume_dir}/coco"
   koko_dir="${volume_dir}/koko"
@@ -112,39 +112,26 @@ function migrate_coco_to_koko_v1_54_to_v1_55() {
 }
 
 function migrate_config_v1_5_to_v2_0() {
-  mkdir -p "${CONFIG_DIR}"
+  if [[ ! -f ${CONFIG_FILE} ]]; then
+    mkdir -p "${CONFIG_DIR}"
 
-  # v1.5 => v2.0
-  # 原先配置文件都在自己的目录，以后配置文件统一放在 /opt/jumpserver/config 中
-  if [[ -f config.txt && ! -f ${CONFIG_FILE} ]]; then
-    mv config.txt "${CONFIG_FILE}"
-    rm -f .env
-    ln -s "${CONFIG_FILE}" .env
-    ln -s "${CONFIG_FILE}" config.link
-  fi
-
-  if [[ -f config.txt ]]; then
-    mv config.txt config.txt."$(date '+%s')"
+    # v1.5 => v2.0
+    # 原先配置文件都在自己的目录，以后配置文件统一放在 /opt/jumpserver/config 中
+    if [[ -f config.txt ]]; then
+      mv config.txt "${CONFIG_FILE}"
+      rm -f .env
+    fi
   fi
 }
 
-function migrate_config_v2_5_v2_6() {
+function migrate_config() {
   prepare_config
-
-  # 处理之前版本没有 USE_XPACK 的问题
-  image_files=""
-  if [[ -d "$BASE_DIR/images" ]]; then
-    image_files=$(ls "$BASE_DIR"/images)
-  fi
-  if [[ "${image_files}" =~ omnidb ]]; then
-    set_config "USE_XPACK" 1
-  fi
 }
 
 function update_config_if_need() {
-  migrate_coco_to_koko_v1_54_to_v1_55
   migrate_config_v1_5_to_v2_0
-  migrate_config_v2_5_v2_6
+  migrate_coco_to_koko
+  migrate_config
   upgrade_config
 }
 

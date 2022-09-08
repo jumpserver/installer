@@ -5,13 +5,6 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 . "${BASE_DIR}/utils.sh"
 
 IMAGE_DIR="images"
-USE_XPACK="${USE_XPACK-0}"
-
-function prepare_config_xpack() {
-  if [[ "${USE_XPACK}" == "1" ]]; then
-    sed -i 's@^USE_XPACK=.*@USE_XPACK=1@g' "${PROJECT_DIR}"/config-example.txt
-  fi
-}
 
 function prepare_docker_bin() {
   md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
@@ -65,8 +58,10 @@ function prepare_image_files() {
   fi
 
   images=$(get_images)
-  if ! echo ${images} | grep -q 'jumpserver/mysql:5.7'; then
-    images+=' jumpserver/mysql:5.7'
+  if [[ "$(uname -m)" == "x86_64" ]]; then
+    if ! echo ${images} | grep -q 'jumpserver/mysql:5.7'; then
+      images+=' jumpserver/mysql:5.7'
+    fi
   fi
 
   for image in ${images}; do
@@ -100,7 +95,6 @@ function prepare_image_files() {
 
 function main() {
   prepare_check_required_pkg
-  prepare_config_xpack
 
   echo " $(gettext 'Preparing Docker offline package')"
   prepare_docker_bin
