@@ -128,19 +128,12 @@ function get_mysql_images_file() {
 }
 
 function get_images() {
-  USE_XPACK=$(get_config_or_env USE_XPACK)
-  scope="public"
-  if [[ "$USE_XPACK" == "1" ]];then
-    scope="all"
-  fi
-
+  use_xpack=$(get_config_or_env USE_XPACK)
   mysql_images=$(get_mysql_images)
-
   images=(
     "jumpserver/redis:6.2"
     "${mysql_images}"
     "jumpserver/web:${VERSION}"
-    "jumpserver/core:${VERSION}"
     "jumpserver/koko:${VERSION}"
     "jumpserver/lion:${VERSION}"
     "jumpserver/magnus:${VERSION}"
@@ -148,9 +141,12 @@ function get_images() {
   for image in "${images[@]}"; do
     echo "${image}"
   done
-  if [[ "${scope}" == "all" ]]; then
+  if [[ "$use_xpack" == "1" ]];then
+    echo "registry.fit2cloud.com/jumpserver/core:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
+  else
+    echo "jumpserver/core:${VERSION}"
   fi
 }
 
@@ -358,9 +354,6 @@ function prepare_config() {
   else
     echo_check "${CONFIG_FILE}"
   fi
-  if [[ ! -f .env ]]; then
-    ln -s "${CONFIG_FILE}" .env
-  fi
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
@@ -429,7 +422,7 @@ function get_latest_version() {
 }
 
 function image_has_prefix() {
-  if [[ $1 =~ registry.* ]]; then
+  if [[ $1 =~ registry.fit2cloud.com.* ]]; then
     echo "1"
   else
     echo "0"
@@ -440,21 +433,23 @@ function get_db_migrate_compose_cmd() {
   use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
   use_external_redis=$(get_config USE_EXTERNAL_REDIS)
   use_ipv6=$(get_config USE_IPV6)
+  use_xpack=$(get_config_or_env USE_XPACK)
 
   cmd="docker-compose -f compose/docker-compose-init-db.yml"
   if [[ "${use_external_mysql}" == "0" ]]; then
     mysql_images_file=$(get_mysql_images_file)
     cmd="${cmd} -f ${mysql_images_file}"
   fi
-
   if [[ "${use_external_redis}" == "0" ]]; then
     cmd="${cmd} -f compose/docker-compose-redis.yml"
   fi
-
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
   else
     cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
+  fi
+  if [[ "${use_xpack}" == '1' ]]; then
+      cmd="${cmd} -f compose/docker-compose-init-xpack.yml"
   fi
   echo "$cmd"
 }
