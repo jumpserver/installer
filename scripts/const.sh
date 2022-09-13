@@ -16,6 +16,11 @@ export TEXTDOMAIN=jumpserver-installer
 export CONFIG_DIR='/opt/jumpserver/config'
 export CONFIG_FILE=$CONFIG_DIR/config.txt
 
+# Compose 项目设置
+export COMPOSE_PROJECT_NAME=jms
+# export COMPOSE_HTTP_TIMEOUT=3600
+# export DOCKER_CLIENT_TIMEOUT=3600
+
 STATIC_ENV=${PROJECT_DIR}/static.env
 # shellcheck source=../static.env
 . "${STATIC_ENV}"
