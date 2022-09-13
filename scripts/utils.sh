@@ -243,12 +243,12 @@ function get_docker_compose_services() {
   if [[ "${use_task}" != "0" ]]; then
     services+=" celery"
   fi
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  if [[ "${use_external_mysql}" != "1" && "${ignore_db}" != "ignore_db" ]]; then
+  mysql_host=$(get_config DB_HOST)
+  if [[ "${mysql_host}" == "mysql" && "${ignore_db}" != "ignore_db" ]]; then
     services+=" mysql"
   fi
-  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
-  if [[ "${use_external_redis}" != "1" && "${ignore_db}" != "ignore_db" ]]; then
+  redis_host=$(get_config REDIS_HOST)
+  if [[ "${redis_host}" == "redis" && "${ignore_db}" != "ignore_db" ]]; then
     services+=" redis"
   fi
   use_es=$(get_config USE_ES)
@@ -430,17 +430,17 @@ function image_has_prefix() {
 }
 
 function get_db_migrate_compose_cmd() {
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
+  mysql_host=$(get_config DB_HOST)
+  redis_host=$(get_config REDIS_HOST)
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
 
   cmd="docker-compose -f compose/docker-compose-init-db.yml"
-  if [[ "${use_external_mysql}" == "0" ]]; then
+  if [[ "${mysql_host}" == "mysql" ]]; then
     mysql_images_file=$(get_mysql_images_file)
     cmd="${cmd} -f ${mysql_images_file}"
   fi
-  if [[ "${use_external_redis}" == "0" ]]; then
+  if [[ "${redis_host}" == "redis" ]]; then
     cmd="${cmd} -f compose/docker-compose-redis.yml"
   fi
   if [[ "${use_ipv6}" != "1" ]]; then
@@ -466,8 +466,8 @@ function down_db_ops_env() {
 
 function perform_db_migrations() {
   if ! create_db_ops_env; then
-    use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
-    if [[ "${use_external_mysql}" == "0" ]]; then
+    mysql_host=$(get_config DB_HOST)
+    if [[ "${mysql_host}" == "mysql" ]]; then
       while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
         sleep 5s
       done
