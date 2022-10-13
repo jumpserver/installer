@@ -84,9 +84,7 @@ services:
     env_file:
       - ${CONFIG_FILE}
     ports:
-      - ${MAGNUS_MYSQL_PORT:-3306}:33060
-      - ${MAGNUS_MARIADB_PORT:-3307}:33061
-      - ${MAGNUS_REDIS_PORT:-6379}:63790
+      - ${MAGNUS_PORT:-30000-32767}:30000-32767
     volumes:
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
     depends_on:
