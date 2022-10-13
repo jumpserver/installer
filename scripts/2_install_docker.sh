@@ -52,14 +52,6 @@ function install_compose() {
     \cp -f ./docker/docker-compose /usr/local/bin/
     chmod +x /usr/local/bin/docker-compose
   fi
-
-  if [[ "$(uname -m)" == "loongarch64" ]]; then
-    if ! docker-compose -v >/dev/null 2>&1; then
-      if [ ! -f "/lib64/libcrypt.so.1" ]; then
-        ln -sf /lib64/libcrypto.so.1.1 /lib64/libcrypt.so.1;
-      fi
-    fi
-  fi
 }
 
 function check_docker_install() {
@@ -172,7 +164,7 @@ function check_docker_start() {
 }
 
 function check_docker_compose() {
-  if ! docker-compose -v >/dev/null 2>&1; then
+  if ! docker-compose version >/dev/null 2>&1; then
     echo_failed
     exit 1
   fi

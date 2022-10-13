@@ -19,13 +19,13 @@ function pre_install() {
 
 function post_install() {
   echo_green "\n>>> $(gettext 'The Installation is Complete')"
-  HOST=$(command -v ip &> /dev/null && ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
-  if [ ! "$HOST" ]; then
-      HOST=$(hostname -I | cut -d ' ' -f1)
+  host=$(command -v ip &> /dev/null && ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
+  if [ ! "$host" ]; then
+      host=$(hostname -I | cut -d ' ' -f1)
   fi
-  HTTP_PORT=$(get_config HTTP_PORT)
-  HTTPS_PORT=$(get_config HTTPS_PORT)
-  SSH_PORT=$(get_config SSH_PORT)
+  http_port=$(get_config HTTP_PORT)
+  https_port=$(get_config HTTPS_PORT)
+  ssh_port=$(get_config SSH_PORT)
 
   echo_yellow "1. $(gettext 'You can use the following command to start, and then visit')"
   echo "cd ${PROJECT_DIR}"
@@ -39,17 +39,12 @@ function post_install() {
   echo "$(gettext 'For more commands, you can enter ./jmsctl.sh --help to understand')"
 
   echo_yellow "\n3. $(gettext 'Web access')"
-  echo "http://${HOST}:${HTTP_PORT}"
-
-  use_lb=$(get_config USE_LB)
-  if [[ "${use_lb}" == "1" ]]; then
-    echo "https://${HOST}:${HTTPS_PORT}"
-  fi
+  echo "http://${host}:${http_port}"
   echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): admin"
 
   echo_yellow "\n4. SSH/SFTP $(gettext 'access')"
-  echo "ssh -p${SSH_PORT} admin@${HOST}"
-  echo "sftp -P${SSH_PORT} admin@${HOST}"
+  echo "ssh -p${ssh_port} admin@${host}"
+  echo "sftp -P${ssh_port} admin@${host}"
 
   echo_yellow "\n5. $(gettext 'More information')"
   echo "$(gettext 'Official Website'): https://www.jumpserver.org/"

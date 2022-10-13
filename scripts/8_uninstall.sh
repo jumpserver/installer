@@ -7,7 +7,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 function remove_jumpserver() {
   echo_warn "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
   images=$(get_images)
-  VOLUME_DIR=$(get_config VOLUME_DIR)
+  volume_dir=$(get_config VOLUME_DIR)
   confirm="n"
   read_from_input confirm "$(gettext 'Are you clean up JumpServer files')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
@@ -16,8 +16,8 @@ function remove_jumpserver() {
       bash ./jmsctl.sh down
       sleep 2s
       echo
-      echo -e "$(gettext 'Cleaning up') ${VOLUME_DIR}"
-      rm -rf "${VOLUME_DIR}"
+      echo -e "$(gettext 'Cleaning up') ${volume_dir}"
+      rm -rf "${volume_dir}"
       echo -e "$(gettext 'Cleaning up') ${CONFIG_DIR}"
       rm -rf "${CONFIG_DIR}"
       echo -e "$(gettext 'Cleaning up') /usr/bin/jmsctl"

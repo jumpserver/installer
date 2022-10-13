@@ -1,6 +1,12 @@
 version: '2.4'
 
 services:
+  core:
+    image: registry.fit2cloud.com/jumpserver/core:${VERSION}
+
+  celery:
+    image: registry.fit2cloud.com/jumpserver/core:${VERSION}
+
   omnidb:
     image: registry.fit2cloud.com/jumpserver/omnidb:${VERSION}
     container_name: jms_omnidb
@@ -49,9 +55,3 @@ services:
       start_period: 10s
     networks:
       - net
-
-  magnus:
-    ports:
-      - ${MAGNUS_POSTGRE_PORT:-5432}:54320
-      - ${MAGNUS_ORACLE_11G_PORT:-1521}:15211
-      - ${MAGNUS_ORACLE_12C_PORT:-1522}:15212
