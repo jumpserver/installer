@@ -60,20 +60,10 @@ function upgrade_config() {
     sed -i "s/sticky name=jms_route;/ip_hash;/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
   fi
   # MAGNUS 数据库
-  magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
-  if [ -z "${magnus_mysql_port}" ]; then
-    MAGNUS_MYSQL_PORT=33060
-    set_config MAGNUS_MYSQL_PORT "${MAGNUS_MYSQL_PORT}"
-  fi
-  magnus_mariadb_port=$(get_config MAGNUS_MARIADB_PORT)
-  if [ -z "${magnus_mariadb_port}" ]; then
-    MAGNUS_MARIADB_PORT=33061
-    set_config MAGNUS_MARIADB_PORT "${MAGNUS_MARIADB_PORT}"
-  fi
-  magnus_redis_port=$(get_config MAGNUS_REDIS_PORT)
-  if [ -z "${magnus_redis_port}" ]; then
-    MAGNUS_REDIS_PORT=63790
-    set_config MAGNUS_REDIS_PORT "${MAGNUS_REDIS_PORT}"
+  magnus_port=$(get_config MAGNUS_PORT)
+  if [ -z "${magnus_port}" ]; then
+    MAGNUS_PORT=30000-32767
+    set_config MAGNUS_PORT "${MAGNUS_PORT}"
   fi
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
@@ -82,21 +72,6 @@ function upgrade_config() {
     if [[ -z "${rdp_port}" ]]; then
       RDP_PORT=3389
       set_config RDP_PORT "${RDP_PORT}"
-    fi
-    magnus_postgre_port=$(get_config MAGNUS_POSTGRE_PORT)
-    if [ -z "${magnus_postgre_port}" ]; then
-      MAGNUS_POSTGRE_PORT=54320
-      set_config MAGNUS_POSTGRE_PORT "${MAGNUS_POSTGRE_PORT}"
-    fi
-    magnus_oracle_11g_port=$(get_config MAGNUS_ORACLE_11G_PORT)
-    if [ -z "${magnus_oracle_11g_port}" ]; then
-      MAGNUS_ORACLE_11G_PORT=15211
-      set_config MAGNUS_ORACLE_11G_PORT "${MAGNUS_ORACLE_11G_PORT}"
-    fi
-    magnus_oracle_12c_port=$(get_config MAGNUS_ORACLE_12C_PORT)
-    if [ -z "${magnus_oracle_12c_port}" ]; then
-      MAGNUS_ORACLE_12C_PORT=15212
-      set_config MAGNUS_ORACLE_12C_PORT "${MAGNUS_ORACLE_12C_PORT}"
     fi
   fi
 }
