@@ -84,7 +84,7 @@ services:
     env_file:
       - ${CONFIG_FILE}
     ports:
-      - ${MAGNUS_PORT:-30000-30100}:30000-30100
+      - ${MAGNUS_PORT:-30000-30100}:${MAGNUS_PORT:-30000-30100}
     volumes:
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
     depends_on:
