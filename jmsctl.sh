@@ -23,8 +23,8 @@ function check_config_file() {
     fi
   fi
 
-  if [[ ! -f .env ]]; then
-    ln -s "${CONFIG_FILE}" .env
+  if [[ ! -f "./compose/.env" ]]; then
+    ln -s "${CONFIG_FILE}" ./compose/.env
   fi
 }
 

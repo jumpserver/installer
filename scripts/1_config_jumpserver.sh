@@ -18,6 +18,10 @@ function set_secret_key() {
     set_config BOOTSTRAP_TOKEN "${bootstrap_key}"
     echo "BOOTSTRAP_TOKEN: ${bootstrap_key}"
   fi
+  if command -v hostname >/dev/null; then
+    SERVER_HOSTNAME=$(hostname)
+    set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
+  fi
 }
 
 function set_volume_dir() {
@@ -66,7 +70,6 @@ function set_external_mysql() {
   set_config DB_USER "${mysql_user}"
   set_config DB_PASSWORD "${mysql_password}"
   set_config DB_NAME "${mysql_db}"
-  set_config USE_EXTERNAL_MYSQL 1
 }
 
 function set_internal_mysql() {
@@ -82,14 +85,13 @@ function set_internal_mysql() {
   set_config DB_HOST mysql
   set_config DB_PORT 3306
   set_config DB_USER root
-  set_config USE_EXTERNAL_MYSQL 0
 }
 
 function set_mysql() {
   echo_yellow "\n3. $(gettext 'Configure MySQL')"
-  use_external_mysql=$(get_config USE_EXTERNAL_MYSQL)
+  mysql_host=$(get_config DB_HOST)
   confirm="n"
-  if [[ "${use_external_mysql}" == "1" ]]; then
+  if [[ "${mysql_host}" != "mysql" ]]; then
     confirm="y"
   fi
   read_from_input confirm "$(gettext 'Do you want to use external MySQL')?" "y/n" "${confirm}"
@@ -114,7 +116,6 @@ function set_external_redis() {
   set_config REDIS_HOST "${redis_host}"
   set_config REDIS_PORT "${redis_port}"
   set_config REDIS_PASSWORD "${redis_password}"
-  set_config USE_EXTERNAL_REDIS 1
 }
 
 function set_internal_redis() {
@@ -125,14 +126,13 @@ function set_internal_redis() {
   fi
   set_config REDIS_HOST redis
   set_config REDIS_PORT 6379
-  set_config USE_EXTERNAL_REDIS 0
 }
 
 function set_redis() {
   echo_yellow "\n4. $(gettext 'Configure Redis')"
-  use_external_redis=$(get_config USE_EXTERNAL_REDIS)
+  redis_host=$(get_config REDIS_HOST)
   confirm="n"
-  if [[ "${use_external_redis}" == "1" ]]; then
+  if [[ "${redis_host}" != "redis" ]]; then
     confirm="y"
   fi
   read_from_input confirm "$(gettext 'Do you want to use external Redis')?" "y/n" "${confirm}"
