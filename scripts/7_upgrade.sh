@@ -60,10 +60,10 @@ function upgrade_config() {
     sed -i "s/sticky name=jms_route;/ip_hash;/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
   fi
   # MAGNUS 数据库
-  magnus_port=$(get_config MAGNUS_PORT)
-  if [ -z "${magnus_port}" ]; then
-    MAGNUS_PORT=30000-32767
-    set_config MAGNUS_PORT "${MAGNUS_PORT}"
+  magnus_ports=$(get_config MAGNUS_PORTS)
+  if [ -z "${magnus_ports}" ]; then
+    MAGNUS_PORTS=30000-30100
+    set_config MAGNUS_PORTS "${MAGNUS_PORTS}"
   fi
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
