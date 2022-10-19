@@ -62,7 +62,7 @@ function upgrade_config() {
   # MAGNUS 数据库
   magnus_port=$(get_config MAGNUS_PORT)
   if [ -z "${magnus_port}" ]; then
-    MAGNUS_PORT=30000-32767
+    MAGNUS_PORT=30000-30100
     set_config MAGNUS_PORT "${MAGNUS_PORT}"
   fi
   # XPACK
