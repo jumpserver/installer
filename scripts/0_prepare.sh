@@ -58,12 +58,7 @@ function prepare_image_files() {
   fi
 
   images=$(get_images)
-  if [[ "$(uname -m)" == "x86_64" ]]; then
-    if ! echo ${images} | grep -q 'jumpserver/mysql:5.7'; then
-      images+=' jumpserver/mysql:5.7'
-    fi
-  fi
-
+  
   for image in ${images}; do
     echo "[${image}]"
     pull_image "$image"
