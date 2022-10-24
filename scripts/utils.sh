@@ -93,10 +93,6 @@ function set_config() {
 }
 
 function check_mysql_data() {
-   if [[ "$(uname -m)" == "loongarch64" ]]; then
-     echo "1"
-     return
-   fi
    if [[ ! -f "${CONFIG_FILE}" ]]; then
      return
    fi
