@@ -350,6 +350,9 @@ function prepare_config() {
   else
     echo_check "${CONFIG_FILE}"
   fi
+  if [[ ! -f ".env" ]]; then
+    ln -s "${CONFIG_FILE}" .env
+  fi
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
