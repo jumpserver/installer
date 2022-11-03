@@ -26,17 +26,17 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=20.10.20
+export DOCKER_VERSION=20.10.21
 export DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
 export DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
 if [[ "$(uname -m)" == "x86_64" ]]; then
-  DOCKER_MD5=50975316e7bc5c8149738109e0e71f64
+  DOCKER_MD5=88f2c418a8a82a3f445ea0e820c65a1d
 fi
 if [[ "$(uname -m)" == "aarch64" ]]; then
-  DOCKER_MD5=4fe34299d96d501510f5a58fb84b2e33
+  DOCKER_MD5=c83db4a402d53c317421e186e026c534
 fi
 if [[ "$(uname -m)" == "loongarch64" ]]; then
-  DOCKER_MD5=9e4ed4ba9e295ba78727eb291c9f1d99
+  DOCKER_MD5=22ee8dc9582fcbb9262ddf84b8e08c35
 fi
 export DOCKER_MD5
 
