@@ -93,10 +93,6 @@ function set_config() {
 }
 
 function check_mysql_data() {
-   if [[ "$(uname -m)" == "loongarch64" ]]; then
-     echo "1"
-     return
-   fi
    if [[ ! -f "${CONFIG_FILE}" ]]; then
      return
    fi
@@ -260,7 +256,8 @@ function get_docker_compose_services() {
     services+=" minio"
   fi
   use_lb=$(get_config USE_LB)
-  if [[ "${use_lb}" == "1" ]]; then
+  https_port=$(get_config HTTPS_PORT)
+  if [[ -n "${https_port}" && "${use_lb}" != "0" ]]; then
     services+=" lb"
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
@@ -298,8 +295,6 @@ function get_docker_compose_cmd_line() {
   fi
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f compose/docker-compose-lb.yml"
-  else
-    cmd="${cmd} -f compose/docker-compose-web-external.yml"
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == '1' ]]; then
@@ -353,6 +348,9 @@ function prepare_config() {
     cp config-example.txt "${CONFIG_FILE}"
   else
     echo_check "${CONFIG_FILE}"
+  fi
+  if [[ ! -f ".env" ]]; then
+    ln -s "${CONFIG_FILE}" .env
   fi
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
