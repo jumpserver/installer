@@ -256,7 +256,8 @@ function get_docker_compose_services() {
     services+=" minio"
   fi
   use_lb=$(get_config USE_LB)
-  if [[ "${use_lb}" == "1" ]]; then
+  https_port=$(get_config HTTPS_PORT)
+  if [[ -n "${https_port}" && "${use_lb}" != "0" ]]; then
     services+=" lb"
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
@@ -294,8 +295,6 @@ function get_docker_compose_cmd_line() {
   fi
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f compose/docker-compose-lb.yml"
-  else
-    cmd="${cmd} -f compose/docker-compose-web-external.yml"
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == '1' ]]; then
