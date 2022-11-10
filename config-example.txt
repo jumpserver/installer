@@ -71,7 +71,6 @@ MAGNUS_PORTS=30000-30100
 ################################# HTTPS 配置 #################################
 # 参考 https://docs.jumpserver.org/zh/master/admin-guide/proxy/ 配置
 #
-# USE_LB=1
 # HTTPS_PORT=443
 # SERVER_NAME=your_domain_name
 # SSL_CERTIFICATE=your_cert
@@ -83,14 +82,7 @@ CLIENT_MAX_BODY_SIZE=4096m
 # 组件注册使用, 默认情况下向 core 容器注册, 集群环境需要修改为集群 vip 地址
 #
 CORE_HOST=http://core:8080
-
-# Task 配置, 是否启动 jms_celery 容器, 单节点必须开启
-#
-USE_TASK=1
-
-# XPack 包, 企业版本自动开启, 开源版本设置无效
-#
-RDP_PORT=3389
+PERIOD_TASK_ENABLED=True
 
 # Core Session 定义,
 # SESSION_COOKIE_AGE 表示闲置多少秒后 session 过期,
@@ -102,6 +94,11 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE=True
 # Lion 开启字体平滑, 优化体验
 #
 JUMPSERVER_ENABLE_FONT_SMOOTHING=True
+
+################################# XPack 配置 #################################
+# XPack 包, 开源版本设置无效
+#
+RDP_PORT=3389
 
 ################################## 其他配置 ##################################
 # 终端使用宿主 HOSTNAME 标识, 首次安装自动生成
