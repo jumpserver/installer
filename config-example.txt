@@ -60,6 +60,12 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_PASSWORD=
 
+# 如果使用外置 Redis Sentinel, 请手动填写下面内容
+#
+# REDIS_SENTINEL_HOSTS=mymaster/192.168.100.1:26379,192.168.100.1:26380,192.168.100.1:26381
+# REDIS_SENTINEL_PASSWORD=your_sentinel_password
+# REDIS_PASSWORD=your_redis_password
+
 ################################## 访问配置 ###################################
 # 对外提供服务端口, 如果与现有服务冲突请自行修改
 # 如果不想对外提供访问可以使用 127.0.0.1:<port>, eg: 127.0.0.1:33060
