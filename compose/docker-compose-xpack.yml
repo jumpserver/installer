@@ -7,6 +7,18 @@ services:
   celery:
     image: registry.fit2cloud.com/jumpserver/core:${VERSION}
 
+  koko:
+    image: registry.fit2cloud.com/jumpserver/koko:${VERSION}
+
+  lion:
+    image: registry.fit2cloud.com/jumpserver/lion:${VERSION}
+
+  magnus:
+    image: registry.fit2cloud.com/jumpserver/magnus:${VERSION}
+
+  web:
+    image: registry.fit2cloud.com/jumpserver/web:${VERSION}
+
   omnidb:
     image: registry.fit2cloud.com/jumpserver/omnidb:${VERSION}
     container_name: jms_omnidb

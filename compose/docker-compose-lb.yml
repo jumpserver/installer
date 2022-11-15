@@ -1,34 +1,14 @@
 version: '2.4'
 
 services:
-  lb:
-    image: jumpserver/web:${VERSION}
-    container_name: jms_lb
-    ulimits:
-      core: 0
-    restart: always
-    tty: true
+  web:
     ports:
-      - ${HTTP_PORT}:80
-      - ${HTTPS_PORT:-443}:443
+      - ${HTTPS_PORT:-443}:${HTTPS_PORT:-443}
     environment:
-      USE_IPV6: ${USE_IPV6}
+      HTTPS_PORT: ${HTTPS_PORT:-443}
       SERVER_NAME: ${SERVER_NAME:-}
       SSL_CERTIFICATE: ${SSL_CERTIFICATE:-}
       SSL_CERTIFICATE_KEY: ${SSL_CERTIFICATE_KEY:-}
-      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-4096m}
     volumes:
-      - ${VOLUME_DIR}/lb/log:/var/log/nginx
       - ${CONFIG_DIR}/nginx/cert:/etc/nginx/cert
       - ${CONFIG_DIR}/nginx/lb_http_server.conf:/etc/nginx/sites-enabled/jumpserver.conf
-    depends_on:
-      web:
-        condition: service_healthy
-    healthcheck:
-      test: "curl -fs http://localhost/ > /dev/null"
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - net
