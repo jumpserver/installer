@@ -129,20 +129,24 @@ function get_images() {
   images=(
     "jumpserver/redis:6.2"
     "${mysql_images}"
-    "jumpserver/web:${VERSION}"
-    "jumpserver/koko:${VERSION}"
-    "jumpserver/lion:${VERSION}"
-    "jumpserver/magnus:${VERSION}"
   )
   for image in "${images[@]}"; do
     echo "${image}"
   done
   if [[ "$use_xpack" == "1" ]];then
     echo "registry.fit2cloud.com/jumpserver/core:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/lion:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
   else
     echo "jumpserver/core:${VERSION}"
+    echo "jumpserver/koko:${VERSION}"
+    echo "jumpserver/lion:${VERSION}"
+    echo "jumpserver/magnus:${VERSION}"
+    echo "jumpserver/web:${VERSION}"
   fi
 }
 
