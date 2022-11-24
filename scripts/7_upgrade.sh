@@ -34,6 +34,10 @@ function upgrade_config() {
     docker stop jms_xrdp &>/dev/null
     docker rm jms_xrdp &>/dev/null
   fi
+  if docker ps -a | grep jms_lb &>/dev/null; then
+    docker stop jms_lb &>/dev/null
+    docker rm jms_lb &>/dev/null
+  fi
   current_version=$(get_config CURRENT_VERSION)
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"
@@ -45,7 +49,7 @@ function upgrade_config() {
   fi
   server_hostname=$(get_config SERVER_HOSTNAME)
   if [ -z "${server_hostname}" ]; then
-    SERVER_HOSTNAME='${HOSTNAME}'
+    SERVER_HOSTNAME="${HOSTNAME}"
     set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
   fi
   # 字体平滑
