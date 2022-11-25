@@ -10,17 +10,9 @@ services:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
 
   koko:
-    environment:
-      REDIS_SSL_CA: redis_ca.crt
-      REDIS_SSL_CERT: redis_client.crt
-      REDIS_SSL_KEY: redis_client.key
     volumes:
       - ${CONFIG_DIR}/certs:/opt/koko/data/certs
 
   lion:
-    environment:
-      REDIS_SSL_CA: redis_ca.crt
-      REDIS_SSL_CERT: redis_client.crt
-      REDIS_SSL_KEY: redis_client.key
     volumes:
       - ${CONFIG_DIR}/certs:/opt/lion/data/certs
