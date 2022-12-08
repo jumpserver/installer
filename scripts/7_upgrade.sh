@@ -34,6 +34,10 @@ function upgrade_config() {
     docker stop jms_xrdp &>/dev/null
     docker rm jms_xrdp &>/dev/null
   fi
+  if docker ps -a | grep jms_lb &>/dev/null; then
+    docker stop jms_lb &>/dev/null
+    docker rm jms_lb &>/dev/null
+  fi
   current_version=$(get_config CURRENT_VERSION)
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"
