@@ -49,7 +49,7 @@ function upgrade_config() {
   fi
   server_hostname=$(get_config SERVER_HOSTNAME)
   if [ -z "${server_hostname}" ]; then
-    SERVER_HOSTNAME='${HOSTNAME}'
+    SERVER_HOSTNAME="${HOSTNAME}"
     set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
   fi
   # 字体平滑
