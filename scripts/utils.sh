@@ -300,9 +300,14 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f compose/docker-compose-lb.yml"
   fi
+  mysql_use_ssl=$(get_config_or_env DB_USE_SSL)
+  redis_use_ssl=$(get_config_or_env REDIS_USE_SSL)
+  if [[ "${mysql_use_ssl}" == "True" ]] || [[ "${redis_use_ssl}" == "True" ]]; then
+    cmd="${cmd} -f compose/docker-compose-db-tls.yml"
+  fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == '1' ]]; then
-      cmd="${cmd} -f compose/docker-compose-xpack.yml"
+    cmd="${cmd} -f compose/docker-compose-xpack.yml"
   fi
   echo "${cmd}"
 }
@@ -436,11 +441,16 @@ function get_db_migrate_compose_cmd() {
   redis_host=$(get_config REDIS_HOST)
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
+  mysql_use_ssl=$(get_config_or_env DB_USE_SSL)
+  redis_use_ssl=$(get_config_or_env REDIS_USE_SSL)
 
   cmd="docker-compose -f compose/docker-compose-init-db.yml"
   if [[ "${mysql_host}" == "mysql" ]]; then
     mysql_images_file=$(get_mysql_images_file)
     cmd="${cmd} -f ${mysql_images_file}"
+  fi
+  if [[ "${mysql_use_ssl}" == "True" ]] || [[ "${redis_use_ssl}" == "True" ]]; then
+    cmd="${cmd} -f compose/docker-compose-init-tls.yml"
   fi
   if [[ "${redis_host}" == "redis" ]]; then
     cmd="${cmd} -f compose/docker-compose-redis.yml"
