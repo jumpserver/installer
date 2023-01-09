@@ -65,9 +65,23 @@ function upgrade_config() {
   fi
   # MAGNUS 数据库
   magnus_ports=$(get_config MAGNUS_PORTS)
-  if [ -z "${magnus_ports}" ]; then
-    MAGNUS_PORTS=30000-30100
-    set_config MAGNUS_PORTS "${MAGNUS_PORTS}"
+  if [ -n "${magnus_ports}" ]; then
+    sed -i "s/MAGNUS_PORTS/MAGNUS_ORACLE_PORTS/g" ${CONFIG_FILE}
+  fi
+  magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
+  if [ -z "${magnus_mysql_port}" ]; then
+    MAGNUS_MYSQL_PORT=33061
+    set_config MAGNUS_MYSQL_PORT "${MAGNUS_MYSQL_PORT}"
+  fi
+  magnus_mariadb_port=$(get_config MAGNUS_MARIADB_PORT)
+  if [ -z "${magnus_mariadb_port}" ]; then
+    MAGNUS_MARIADB_PORT=33062
+    set_config MAGNUS_MARIADB_PORT "${MAGNUS_MARIADB_PORT}"
+  fi
+  magnus_redis_port=$(get_config MAGNUS_REDIS_PORT)
+  if [ -z "${magnus_redis_port}" ]; then
+    MAGNUS_REDIS_PORT=63790
+    set_config MAGNUS_REDIS_PORT "${MAGNUS_REDIS_PORT}"
   fi
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
@@ -77,7 +91,18 @@ function upgrade_config() {
       RDP_PORT=3389
       set_config RDP_PORT "${RDP_PORT}"
     fi
+    magnus_postgresql_port=$(get_config MAGNUS_POSTGRESQL_PORT)
+    if [ -z "${magnus_postgresql_port}" ]; then
+      MAGNUS_POSTGRESQL_PORT=54320
+      set_config MAGNUS_POSTGRESQL_PORT "${MAGNUS_POSTGRESQL_PORT}"
+    fi
+    magnus_oracle_ports=$(get_config MAGNUS_ORACLE_PORTS)
+    if [ -z "${magnus_oracle_ports}" ]; then
+      MAGNUS_ORACLE_PORTS=30000-30100
+      set_config MAGNUS_ORACLE_PORTS "${MAGNUS_ORACLE_PORTS}"
+    fi
   fi
+
 }
 
 function migrate_coco_to_koko() {
