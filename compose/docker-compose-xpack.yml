@@ -42,6 +42,11 @@ services:
     networks:
       - net
 
+  magnus:
+    ports:
+      - ${MAGNUS_POSTGRESQL_PORT:-54320}:54320
+      - ${MAGNUS_ORACLE_PORTS:-30000-30100}:-30000-30100
+
   razor:
     image: registry.fit2cloud.com/jumpserver/razor:${VERSION}
     container_name: jms_razor
