@@ -84,7 +84,7 @@ MAGNUS_MYSQL_PORT=33061
 MAGNUS_MARIADB_PORT=33062
 MAGNUS_REDIS_PORT=63790
 MAGNUS_POSTGRESQL_PORT=54320
-MAGNUS_ORACLE_PORTS=30000-30100
+MAGNUS_ORACLE_PORTS=30000-30030
 
 ################################# HTTPS 配置 #################################
 # 参考 https://docs.jumpserver.org/zh/master/admin-guide/proxy/ 配置

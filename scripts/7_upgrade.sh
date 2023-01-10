@@ -98,7 +98,7 @@ function upgrade_config() {
     fi
     magnus_oracle_ports=$(get_config MAGNUS_ORACLE_PORTS)
     if [ -z "${magnus_oracle_ports}" ]; then
-      MAGNUS_ORACLE_PORTS=30000-30100
+      MAGNUS_ORACLE_PORTS=30000-30030
       set_config MAGNUS_ORACLE_PORTS "${MAGNUS_ORACLE_PORTS}"
     fi
   fi
