@@ -15,6 +15,9 @@ services:
 
   magnus:
     image: registry.fit2cloud.com/jumpserver/magnus:${VERSION}
+    ports:
+      - ${MAGNUS_POSTGRESQL_PORT:-54320}:54320
+      - ${MAGNUS_ORACLE_PORTS:-30000-30030}:${MAGNUS_ORACLE_PORTS:-30000-30030}
 
   web:
     image: registry.fit2cloud.com/jumpserver/web:${VERSION}
@@ -41,11 +44,6 @@ services:
       start_period: 10s
     networks:
       - net
-
-  magnus:
-    ports:
-      - ${MAGNUS_POSTGRESQL_PORT:-54320}:54320
-      - ${MAGNUS_ORACLE_PORTS:-30000-30030}:${MAGNUS_ORACLE_PORTS:-30000-30030}
 
   razor:
     image: registry.fit2cloud.com/jumpserver/razor:${VERSION}
