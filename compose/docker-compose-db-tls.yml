@@ -1,0 +1,18 @@
+version: '2.4'
+
+services:
+  core:
+    volumes:
+      - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
+
+  celery:
+    volumes:
+      - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
+
+  koko:
+    volumes:
+      - ${CONFIG_DIR}/certs:/opt/koko/data/certs
+
+  lion:
+    volumes:
+      - ${CONFIG_DIR}/certs:/opt/lion/data/certs

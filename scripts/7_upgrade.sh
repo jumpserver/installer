@@ -34,6 +34,10 @@ function upgrade_config() {
     docker stop jms_xrdp &>/dev/null
     docker rm jms_xrdp &>/dev/null
   fi
+  if docker ps -a | grep jms_lb &>/dev/null; then
+    docker stop jms_lb &>/dev/null
+    docker rm jms_lb &>/dev/null
+  fi
   current_version=$(get_config CURRENT_VERSION)
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"
@@ -45,7 +49,7 @@ function upgrade_config() {
   fi
   server_hostname=$(get_config SERVER_HOSTNAME)
   if [ -z "${server_hostname}" ]; then
-    SERVER_HOSTNAME='${HOSTNAME}'
+    SERVER_HOSTNAME="${HOSTNAME}"
     set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
   fi
   # 字体平滑
@@ -61,9 +65,23 @@ function upgrade_config() {
   fi
   # MAGNUS 数据库
   magnus_ports=$(get_config MAGNUS_PORTS)
-  if [ -z "${magnus_ports}" ]; then
-    MAGNUS_PORTS=30000-30100
-    set_config MAGNUS_PORTS "${MAGNUS_PORTS}"
+  if [ -n "${magnus_ports}" ]; then
+    sed -i "s/MAGNUS_PORTS/MAGNUS_ORACLE_PORTS/g" ${CONFIG_FILE}
+  fi
+  magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
+  if [ -z "${magnus_mysql_port}" ]; then
+    MAGNUS_MYSQL_PORT=33061
+    set_config MAGNUS_MYSQL_PORT "${MAGNUS_MYSQL_PORT}"
+  fi
+  magnus_mariadb_port=$(get_config MAGNUS_MARIADB_PORT)
+  if [ -z "${magnus_mariadb_port}" ]; then
+    MAGNUS_MARIADB_PORT=33062
+    set_config MAGNUS_MARIADB_PORT "${MAGNUS_MARIADB_PORT}"
+  fi
+  magnus_redis_port=$(get_config MAGNUS_REDIS_PORT)
+  if [ -z "${magnus_redis_port}" ]; then
+    MAGNUS_REDIS_PORT=63790
+    set_config MAGNUS_REDIS_PORT "${MAGNUS_REDIS_PORT}"
   fi
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
@@ -73,7 +91,18 @@ function upgrade_config() {
       RDP_PORT=3389
       set_config RDP_PORT "${RDP_PORT}"
     fi
+    magnus_postgresql_port=$(get_config MAGNUS_POSTGRESQL_PORT)
+    if [ -z "${magnus_postgresql_port}" ]; then
+      MAGNUS_POSTGRESQL_PORT=54320
+      set_config MAGNUS_POSTGRESQL_PORT "${MAGNUS_POSTGRESQL_PORT}"
+    fi
+    magnus_oracle_ports=$(get_config MAGNUS_ORACLE_PORTS)
+    if [ -z "${magnus_oracle_ports}" ]; then
+      MAGNUS_ORACLE_PORTS=30000-30030
+      set_config MAGNUS_ORACLE_PORTS "${MAGNUS_ORACLE_PORTS}"
+    fi
   fi
+
 }
 
 function migrate_coco_to_koko() {
