@@ -64,6 +64,7 @@ function main(){
   prepare_install
   get_installer
   config_installer
+  curl -sfL https://resource.fit2cloud.com/installation-log.sh | sh -s js install ${Version}
 }
 
 main
