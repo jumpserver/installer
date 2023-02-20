@@ -558,3 +558,13 @@ function pull_images() {
     pull_image "$image"
   done
 }
+
+function installation_log() {
+  if [ -d "${BASE_DIR}/images" ]; then
+    return
+  fi
+  product=js
+  install_type=$1
+  version=$(get_current_version)
+  curl -sfL https://resource.fit2cloud.com/installation-log.sh | sh -s ${product} ${install_type} ${version} || True
+}
