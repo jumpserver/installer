@@ -566,5 +566,6 @@ function installation_log() {
   product=js
   install_type=$1
   version=$(get_current_version)
-  curl -sfL https://resource.fit2cloud.com/installation-log.sh | sh -s ${product} ${install_type} ${version} || True
+  url="https://community.fit2cloud.com/installation-analytics?product=${product}&type=${install_type}&version=${version}"
+  curl --connect-timeout 5 -m 10 -k $url > /dev/null 2>&1
 }
