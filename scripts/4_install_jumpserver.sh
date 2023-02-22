@@ -70,6 +70,7 @@ function main() {
     exit 1
   fi
   post_install
+  installation_log "install"
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then

@@ -130,6 +130,10 @@ function set_internal_redis() {
 
 function set_redis() {
   echo_yellow "\n4. $(gettext 'Configure Redis')"
+  redis_sentinel_hosts=$(get_config REDIS_SENTINEL_HOSTS)
+  if [ -n "${redis_sentinel_hosts}" ]; then
+    return
+  fi
   redis_host=$(get_config REDIS_HOST)
   confirm="n"
   if [[ "${redis_host}" != "redis" ]]; then

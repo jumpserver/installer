@@ -280,6 +280,7 @@ function main() {
   echo "./jmsctl.sh start"
   echo -e "\n"
   set_current_version
+  installation_log "upgrade"
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
