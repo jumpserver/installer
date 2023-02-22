@@ -58,6 +58,7 @@ function remove_jumpserver() {
 function main() {
   echo_yellow "\n>>> $(gettext 'Uninstall JumpServer')"
   remove_jumpserver
+  installation_log "uninstall"
 }
 
 main

@@ -558,3 +558,14 @@ function pull_images() {
     pull_image "$image"
   done
 }
+
+function installation_log() {
+  if [ -d "${BASE_DIR}/images" ]; then
+    return
+  fi
+  product=js
+  install_type=$1
+  version=$(get_current_version)
+  url="https://community.fit2cloud.com/installation-analytics?product=${product}&type=${install_type}&version=${version}"
+  curl --connect-timeout 5 -m 10 -k $url > /dev/null 2>&1
+}
