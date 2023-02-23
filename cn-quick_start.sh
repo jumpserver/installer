@@ -2,7 +2,7 @@
 #
 
 VERSION=dev
-DOWNLOAD_URL=https://github.com
+DOWNLOAD_URL=https://resource.fit2cloud.com
 
 function install_soft() {
     if command -v dnf > /dev/null; then
@@ -51,6 +51,7 @@ function get_installer() {
 function config_installer() {
   cd /opt/jumpserver-installer-${VERSION} || exit 1
   sed -i "s/VERSION=.*/VERSION=${VERSION}/g" /opt/jumpserver-installer-${VERSION}/static.env
+  sed -i "s/# DOCKER_IMAGE_MIRROR=1/DOCKER_IMAGE_MIRROR=1/g" /opt/jumpserver-installer-${VERSION}/config-example.txt
   ./jmsctl.sh install
   ./jmsctl.sh start
 }
