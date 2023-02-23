@@ -2,7 +2,7 @@
 #
 
 VERSION=dev
-DOWNLOAD_URL=https://jumpserver-resource.oss-cn-hangzhou.aliyuncs.com
+DOWNLOAD_URL=https://jumpserver-resource.fit2cloud.com
 
 function install_soft() {
     if command -v dnf > /dev/null; then
