@@ -255,6 +255,7 @@ function main() {
   fi
   echo
   update_config_if_need
+  installation_log "upgrade"
 
   echo_yellow "\n2. $(gettext 'Loading Docker Image')"
   bash "${BASE_DIR}/3_load_images.sh"
@@ -280,7 +281,6 @@ function main() {
   echo "./jmsctl.sh start"
   echo -e "\n"
   set_current_version
-  installation_log "upgrade"
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
