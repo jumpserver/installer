@@ -1,7 +1,7 @@
 # JumpServer configuration file example.
 #
 # 如果不了解用途可以跳过修改此配置文件, 系统会自动填入
-# 完整参数文档 https://docs.jumpserver.org/zh/master/admin-guide/env/
+# 完整参数文档 https://docs.jumpserver.org/zh/v3/guide/env/
 
 ################################## 镜像配置 ###################################
 #
@@ -53,7 +53,7 @@ DB_USER=root
 DB_PASSWORD=
 DB_NAME=jumpserver
 
-# 如果外置 MySQL 需要开启 TLS/SSL 连接, 参考 https://docs.jumpserver.org/zh/master/install/install_security/#ssl
+# 如果外置 MySQL 需要开启 TLS/SSL 连接, 参考 https://docs.jumpserver.org/zh/v3/installation/security_setup/mysql_ssl/
 #
 # DB_USE_SSL=True
 
@@ -71,7 +71,7 @@ REDIS_PASSWORD=
 # REDIS_PASSWORD=your_redis_password
 # REDIS_SENTINEL_SOCKET_TIMEOUT=5
 
-# 如果外置 Redis 需要开启 TLS/SSL 连接, 参考 https://docs.jumpserver.org/zh/master/install/install_security/#redis-ssl
+# 如果外置 Redis 需要开启 TLS/SSL 连接, 参考 https://docs.jumpserver.org/zh/v3/installation/security_setup/redis_ssl/
 #
 # REDIS_USE_SSL=True
 
@@ -87,7 +87,7 @@ MAGNUS_POSTGRESQL_PORT=54320
 MAGNUS_ORACLE_PORTS=30000-30030
 
 ################################# HTTPS 配置 #################################
-# 参考 https://docs.jumpserver.org/zh/master/admin-guide/proxy/ 配置
+# 参考 https://docs.jumpserver.org/zh/v3/installation/proxy/ 配置
 #
 # HTTPS_PORT=443
 # SERVER_NAME=your_domain_name
