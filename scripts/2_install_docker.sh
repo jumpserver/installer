@@ -61,7 +61,7 @@ function check_docker_install() {
 }
 
 function check_compose_install() {
-  command -v docker-compose >/dev/null || {
+  docker compose >/dev/null 2>&1 || command -v docker-compose >/dev/null || {
     install_compose
   }
   echo_done
@@ -164,7 +164,7 @@ function check_docker_start() {
 }
 
 function check_docker_compose() {
-  if ! docker-compose version >/dev/null 2>&1; then
+  if ! docker-compose version >/dev/null 2>&1 && ! docker compose version >/dev/null 2>&1; then
     echo_failed
     exit 1
   fi

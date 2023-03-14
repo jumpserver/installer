@@ -10,7 +10,7 @@ function pre_install() {
       log_error "$(gettext 'The current Linux system does not support systemd management. Please deploy docker by yourself before running this script again')"
       exit 1
     }
-    command -v docker-compose >/dev/null || {
+    command -v docker-compose >/dev/null || docker compose >/dev/null || {
       log_error "$(gettext 'The current Linux system does not support systemd management. Please deploy docker-compose by yourself before running this script again')"
       exit 1
     }

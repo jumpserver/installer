@@ -273,7 +273,11 @@ function get_docker_compose_services() {
 
 function get_docker_compose_cmd_line() {
   ignore_db="$1"
-  cmd="docker-compose -f compose/docker-compose-app.yml"
+  cmd="docker compose -f compose/docker-compose-app.yml"
+  if ! docker compose >/dev/null 2>&1; then
+    cmd="docker-compose -f compose/docker-compose-app.yml"
+  fi
+  
   use_ipv6=$(get_config USE_IPV6)
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
@@ -444,7 +448,10 @@ function get_db_migrate_compose_cmd() {
   mysql_use_ssl=$(get_config_or_env DB_USE_SSL)
   redis_use_ssl=$(get_config_or_env REDIS_USE_SSL)
 
-  cmd="docker-compose -f compose/docker-compose-init-db.yml"
+  cmd="docker compose -f compose/docker-compose-init-db.yml"
+  if ! docker compose >/dev/null 2>&1; then
+    cmd="docker-compose -f compose/docker-compose-init-db.yml"
+  fi
   if [[ "${mysql_host}" == "mysql" ]]; then
     mysql_images_file=$(get_mysql_images_file)
     cmd="${cmd} -f ${mysql_images_file}"
