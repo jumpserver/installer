@@ -26,30 +26,30 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=20.10.22
+export DOCKER_VERSION=20.10.23
 export DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
 export DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
 if [[ "$(uname -m)" == "x86_64" ]]; then
-  DOCKER_MD5=d2ee36bf614d2104e72d612e5df39983
+  DOCKER_MD5=08cc202a513ce35abde57173b9f9fdf6
 fi
 if [[ "$(uname -m)" == "aarch64" ]]; then
-  DOCKER_MD5=1e947e00fa8f79aa66e2f7119c6a9ebc
+  DOCKER_MD5=ab9b648fde590e389290e15e9ff26631
 fi
 if [[ "$(uname -m)" == "loongarch64" ]]; then
-  DOCKER_MD5=f359635edd85ee445b037300a4ef8308
+  DOCKER_MD5=0b18e4ee836ad81f51e28d043faf6601
 fi
 export DOCKER_MD5
 
-export DOCKER_COMPOSE_VERSION=v2.14.2
+export DOCKER_COMPOSE_VERSION=v2.15.1
 export DOCKER_COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
 export DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-$(uname -m)"
 if [[ "$(uname -m)" == "x86_64" ]]; then
-  DOCKER_COMPOSE_MD5=e6739efadaf75e91b59f0888859697e9
+  DOCKER_COMPOSE_MD5=a032e3515dd60105877b60a4e7d644c1
 fi
 if [[ "$(uname -m)" == "aarch64" ]]; then
-  DOCKER_COMPOSE_MD5=7b8729f8e4c51dc0ab005c5c8d705f9b
+  DOCKER_COMPOSE_MD5=10cbc45268907770e7e861ac133a5002
 fi
 if [[ "$(uname -m)" == "loongarch64" ]]; then
-  DOCKER_COMPOSE_MD5=bda782c158110027121f357e14917eb1
+  DOCKER_COMPOSE_MD5=0fac831844f4b1238eaddc0d8538e7b3
 fi
 export DOCKER_COMPOSE_MD5
