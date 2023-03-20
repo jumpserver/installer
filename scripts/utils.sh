@@ -535,17 +535,20 @@ function pull_image() {
     exits=1
   fi
 
-  if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]];then
+  if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]]; then
     echo "Image exist, pass"
     return
   fi
 
+  use_xpack=$(get_config_or_env USE_XPACK)
   if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
     docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
-    docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
-    docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
+    if [[ "${use_xpack}" != '1' ]]; then
+      docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "ghcr.io/${image}"
+      docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
+    fi
   else
-    docker pull "${image}"
+    docker pull "ghcr.io/${image}"
   fi
   echo ""
 }

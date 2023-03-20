@@ -2,7 +2,7 @@ version: '2.4'
 
 services:
   core:
-    image: jumpserver/core:${VERSION}
+    image: ghcr.io/jumpserver/core:${VERSION}
     container_name: jms_core
     ulimits:
       core: 0
@@ -25,7 +25,7 @@ services:
       - net
 
   koko:
-    image: jumpserver/koko:${VERSION}
+    image: ghcr.io/jumpserver/koko:${VERSION}
     container_name: jms_koko
     ulimits:
       core: 0
@@ -52,7 +52,7 @@ services:
       - net
 
   lion:
-    image: jumpserver/lion:${VERSION}
+    image: ghcr.io/jumpserver/lion:${VERSION}
     container_name: jms_lion
     ulimits:
       core: 0
@@ -75,7 +75,7 @@ services:
       - net
 
   magnus:
-    image: jumpserver/magnus:${VERSION}
+    image: ghcr.io/jumpserver/magnus:${VERSION}
     container_name: jms_magnus
     ulimits:
       core: 0
@@ -102,7 +102,7 @@ services:
       - net
 
   web:
-    image: jumpserver/web:${VERSION}
+    image: ghcr.io/jumpserver/web:${VERSION}
     container_name: jms_web
     ulimits:
       core: 0
