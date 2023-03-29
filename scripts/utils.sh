@@ -535,7 +535,7 @@ function pull_image() {
     exits=1
   fi
 
-  if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]];then
+  if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]]; then
     echo "Image exist, pass"
     return
   fi
