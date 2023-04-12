@@ -52,6 +52,10 @@ function remove_jumpserver() {
     fi
     echo
   fi
+  if [ -f "/usr/local/bin/docker-compose"]; then
+    echo -e "$(gettext 'Cleaning up') /usr/local/bin/docker-compose"
+    rm -f /usr/local/bin/docker-compose
+  fi
   echo_green "$(gettext 'Cleanup complete')!"
 }
 
