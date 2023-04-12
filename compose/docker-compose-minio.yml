@@ -2,7 +2,7 @@ version: '2.4'
 
 services:
   minio:
-    image: quay.io/minio/minio:latest
+    image: jumpserver/minio:latest
     container_name: jms_minio
     restart: always
     command: "server /data --console-address :9001"
