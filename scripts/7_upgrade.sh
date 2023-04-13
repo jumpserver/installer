@@ -102,7 +102,16 @@ function upgrade_config() {
       set_config MAGNUS_ORACLE_PORTS "${MAGNUS_ORACLE_PORTS}"
     fi
   fi
+}
 
+function clean_file() {
+  volume_dir=$(get_config VOLUME_DIR)
+  if [[ -f "${volume_dir}/core/data/flower" ]]; then
+    rm -f "${volume_dir}/core/data/flower"
+  fi
+  if [[ -f "${volume_dir}/core/data/flower.db" ]]; then
+    rm -f "${volume_dir}/core/data/flower.db"
+  fi
 }
 
 function migrate_coco_to_koko() {
@@ -137,6 +146,7 @@ function update_config_if_need() {
   migrate_coco_to_koko
   migrate_config
   upgrade_config
+  clean_file
 }
 
 function backup_config() {
