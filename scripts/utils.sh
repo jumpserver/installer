@@ -141,6 +141,7 @@ function get_images() {
     echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
   else
     echo "jumpserver/core:${VERSION}"
     echo "jumpserver/koko:${VERSION}"
@@ -268,6 +269,10 @@ function get_docker_compose_services() {
   if [[ "${use_xpack}" == "1" ]]; then
     services+=" omnidb razor"
   fi
+  use_video=$(get_config USE_VIDEO)
+  if [[ "${use_xpack}" == "1" && "${use_video}" == "1" ]]; then
+    services+=" video"
+  fi
   echo "${services}"
 }
 
@@ -308,6 +313,9 @@ function get_docker_compose_cmd_line() {
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == '1' ]]; then
     cmd="${cmd} -f compose/docker-compose-xpack.yml"
+  fi
+  if [[ "${services}" =~ video ]]; then
+    cmd="${cmd} -f compose/docker-compose-video.yml"
   fi
   echo "${cmd}"
 }
