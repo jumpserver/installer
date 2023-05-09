@@ -57,7 +57,6 @@ function main() {
   pre_install
   prepare_config
   set_current_version
-  installation_log "install"
   
   echo_green "\n>>> $(gettext 'Install and Configure Docker')"
   if ! bash "${BASE_DIR}/2_install_docker.sh"; then
@@ -71,6 +70,7 @@ function main() {
   if ! bash "${BASE_DIR}/1_config_jumpserver.sh"; then
     exit 1
   fi
+  installation_log "install"
   post_install
 }
 
