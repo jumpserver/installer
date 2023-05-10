@@ -307,7 +307,7 @@ function get_docker_compose_cmd_line() {
   fi
   mysql_use_ssl=$(get_config_or_env DB_USE_SSL)
   redis_use_ssl=$(get_config_or_env REDIS_USE_SSL)
-  if [[ "${mysql_use_ssl}" == "True" ]] || [[ "${redis_use_ssl}" == "True" ]]; then
+  if [[ "${mysql_use_ssl,,}" == "true" ]] || [[ "${redis_use_ssl,,}" == "true" ]]; then
     cmd="${cmd} -f compose/docker-compose-db-tls.yml"
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
@@ -457,7 +457,7 @@ function get_db_migrate_compose_cmd() {
     mysql_images_file=$(get_mysql_images_file)
     cmd="${cmd} -f ${mysql_images_file}"
   fi
-  if [[ "${mysql_use_ssl}" == "True" ]] || [[ "${redis_use_ssl}" == "True" ]]; then
+  if [[ "${mysql_use_ssl,,}" == "true" ]] || [[ "${redis_use_ssl,,}" == "true" ]]; then
     cmd="${cmd} -f compose/docker-compose-init-tls.yml"
   fi
   if [[ "${redis_host}" == "redis" ]]; then
