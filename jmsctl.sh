@@ -155,6 +155,26 @@ function check_update() {
   ./jmsctl.sh upgrade "${latest_version}"
 }
 
+function video-worker() {
+  EXE=$(get_video_worker_cmd_line)
+  if [[ ! "${EXE}" ]]; then
+    return
+  fi
+  if [[ "${target}" == "start" ]]; then
+    ${EXE} up -d
+  fi
+  if [[ "${target}" == "stop" ]]; then
+    ${EXE} down -v
+  fi
+  if [[ "${target}" == "restart" ]]; then
+    ${EXE} down -v
+    ${EXE} up -d
+  fi
+  if [[ "${target}" == "status" ]]; then
+    ${EXE} ps
+  fi
+}
+
 function main() {
   if [[ "${OS}" == 'Darwin' ]]; then
     echo
@@ -247,6 +267,9 @@ function main() {
     ;;
   init_db)
     perform_db_migrations
+    ;;
+  video-worker)
+    video-worker
     ;;
   raw)
     ${EXE} "${args[@]:1}"

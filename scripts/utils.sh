@@ -320,6 +320,20 @@ function get_docker_compose_cmd_line() {
   echo "${cmd}"
 }
 
+function get_video_worker_cmd_line() {
+  use_xpack=$(get_config_or_env USE_XPACK)
+  if [[ "${use_xpack}" != "1" ]]; then
+    return
+  fi
+  use_ipv6=$(get_config USE_IPV6)
+  cmd="docker-compose -f compose/docker-compose-network.yml"
+  if [[ "${use_ipv6}" == "1" ]]; then
+    cmd="docker-compose -f compose/docker-compose-network_ipv6.yml"
+  fi
+  cmd="${cmd} -f compose/docker-compose-video-worker.yml"
+  echo "${cmd}"
+}
+
 function prepare_check_required_pkg() {
   for i in curl wget tar iptables gettext; do
     command -v $i >/dev/null || {
