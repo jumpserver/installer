@@ -265,7 +265,6 @@ function main() {
   fi
   echo
   update_config_if_need
-  installation_log "upgrade"
 
   echo_yellow "\n2. $(gettext 'Loading Docker Image')"
   bash "${BASE_DIR}/3_load_images.sh"
@@ -285,6 +284,8 @@ function main() {
 
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
   upgrade_docker
+
+  installation_log "upgrade"
 
   echo_yellow "\n8. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "cd ${PROJECT_DIR}"

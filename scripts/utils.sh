@@ -141,6 +141,7 @@ function get_images() {
     echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
   else
     echo "jumpserver/core:${VERSION}"
     echo "jumpserver/koko:${VERSION}"
@@ -268,6 +269,10 @@ function get_docker_compose_services() {
   if [[ "${use_xpack}" == "1" ]]; then
     services+=" omnidb razor"
   fi
+  use_video=$(get_config USE_VIDEO)
+  if [[ "${use_xpack}" == "1" && "${use_video}" == "1" ]]; then
+    services+=" video"
+  fi
   echo "${services}"
 }
 
@@ -302,13 +307,30 @@ function get_docker_compose_cmd_line() {
   fi
   mysql_use_ssl=$(get_config_or_env DB_USE_SSL)
   redis_use_ssl=$(get_config_or_env REDIS_USE_SSL)
-  if [[ "${mysql_use_ssl}" == "True" ]] || [[ "${redis_use_ssl}" == "True" ]]; then
+  if [[ "${mysql_use_ssl,,}" == "true" ]] || [[ "${redis_use_ssl,,}" == "true" ]]; then
     cmd="${cmd} -f compose/docker-compose-db-tls.yml"
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == '1' ]]; then
     cmd="${cmd} -f compose/docker-compose-xpack.yml"
   fi
+  if [[ "${services}" =~ video ]]; then
+    cmd="${cmd} -f compose/docker-compose-video.yml"
+  fi
+  echo "${cmd}"
+}
+
+function get_video_worker_cmd_line() {
+  use_xpack=$(get_config_or_env USE_XPACK)
+  if [[ "${use_xpack}" != "1" ]]; then
+    return
+  fi
+  use_ipv6=$(get_config USE_IPV6)
+  cmd="docker-compose -f compose/docker-compose-network.yml"
+  if [[ "${use_ipv6}" == "1" ]]; then
+    cmd="docker-compose -f compose/docker-compose-network_ipv6.yml"
+  fi
+  cmd="${cmd} -f compose/docker-compose-video-worker.yml"
   echo "${cmd}"
 }
 
@@ -449,7 +471,7 @@ function get_db_migrate_compose_cmd() {
     mysql_images_file=$(get_mysql_images_file)
     cmd="${cmd} -f ${mysql_images_file}"
   fi
-  if [[ "${mysql_use_ssl}" == "True" ]] || [[ "${redis_use_ssl}" == "True" ]]; then
+  if [[ "${mysql_use_ssl,,}" == "true" ]] || [[ "${redis_use_ssl,,}" == "true" ]]; then
     cmd="${cmd} -f compose/docker-compose-init-tls.yml"
   fi
   if [[ "${redis_host}" == "redis" ]]; then

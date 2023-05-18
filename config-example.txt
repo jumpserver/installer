@@ -55,7 +55,7 @@ DB_NAME=jumpserver
 
 # 如果外置 MySQL 需要开启 TLS/SSL 连接, 参考 https://docs.jumpserver.org/zh/v3/installation/security_setup/mysql_ssl/
 #
-# DB_USE_SSL=True
+# DB_USE_SSL=true
 
 ################################# Redis 配置 ##################################
 # 外置 Redis 需要请输入正确的 Redis 信息, 内置 Redis 系统会自动处理
@@ -73,7 +73,7 @@ REDIS_PASSWORD=
 
 # 如果外置 Redis 需要开启 TLS/SSL 连接, 参考 https://docs.jumpserver.org/zh/v3/installation/security_setup/redis_ssl/
 #
-# REDIS_USE_SSL=True
+# REDIS_USE_SSL=true
 
 ################################## 访问配置 ###################################
 # 对外提供服务端口, 如果与现有服务冲突请自行修改
@@ -103,18 +103,18 @@ CLIENT_MAX_BODY_SIZE=4096m
 # 组件注册使用, 默认情况下向 core 容器注册, 集群环境需要修改为集群 vip 地址
 #
 CORE_HOST=http://core:8080
-PERIOD_TASK_ENABLED=True
+PERIOD_TASK_ENABLED=true
 
 # Core Session 定义,
 # SESSION_COOKIE_AGE 表示闲置多少秒后 session 过期,
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=true 表示关闭浏览器即 session 过期
 #
 # SESSION_COOKIE_AGE=86400
-SESSION_EXPIRE_AT_BROWSER_CLOSE=True
+SESSION_EXPIRE_AT_BROWSER_CLOSE=true
 
 # Lion 开启字体平滑, 优化体验
 #
-JUMPSERVER_ENABLE_FONT_SMOOTHING=True
+JUMPSERVER_ENABLE_FONT_SMOOTHING=true
 
 ################################# XPack 配置 #################################
 # XPack 包, 开源版本设置无效

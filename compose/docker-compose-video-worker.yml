@@ -1,0 +1,22 @@
+version: '2.4'
+
+services:
+  video:
+    image: registry.fit2cloud.com/jumpserver/video-worker:${VERSION}
+    container_name: jms_video_worker
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
+    env_file:
+      - ${CONFIG_FILE}
+    volumes:
+      - ${VOLUME_DIR}/video/data:/opt/video-worker/data
+    healthcheck:
+      test: "curl -fsL http://localhost:9000/video-worker/health/ > /dev/null"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
