@@ -10,6 +10,8 @@ services:
     tty: true
     env_file:
       - ${CONFIG_FILE}
+    ports:
+      - 9000:9000
     volumes:
       - ${VOLUME_DIR}/video/data:/opt/video-worker/data
     healthcheck:
