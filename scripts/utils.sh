@@ -138,7 +138,7 @@ function get_images() {
     echo "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/lion:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/omnidb:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/chen:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
@@ -267,7 +267,7 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" omnidb razor"
+    services+=" chen razor"
   fi
   use_video=$(get_config USE_VIDEO)
   if [[ "${use_xpack}" == "1" && "${use_video}" == "1" ]]; then

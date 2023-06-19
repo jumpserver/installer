@@ -18,32 +18,11 @@ services:
     ports:
       - ${MAGNUS_POSTGRESQL_PORT:-54320}:54320
       - ${MAGNUS_ORACLE_PORTS:-30000-30030}:${MAGNUS_ORACLE_PORTS:-30000-30030}
+  chen:
+    image: registry.fit2cloud.com/jumpserver/chen:${VERSION}
 
   web:
     image: registry.fit2cloud.com/jumpserver/web:${VERSION}
-
-  omnidb:
-    image: registry.fit2cloud.com/jumpserver/omnidb:${VERSION}
-    container_name: jms_omnidb
-    ulimits:
-      core: 0
-    restart: always
-    tty: true
-    env_file:
-      - ${CONFIG_FILE}
-    volumes:
-      - ${VOLUME_DIR}/omnidb/data:/opt/omnidb/data
-    depends_on:
-      core:
-        condition: service_healthy
-    healthcheck:
-      test: "ps axu | grep -v 'grep' | grep 'omnidb'"
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - net
 
   razor:
     image: registry.fit2cloud.com/jumpserver/razor:${VERSION}
