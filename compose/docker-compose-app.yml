@@ -101,6 +101,29 @@ services:
     networks:
       - net
 
+  chen:
+    image: jumpserver/chen:${VERSION}
+    container_name: jms_chen
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
+    env_file:
+      - ${CONFIG_FILE}
+    volumes:
+      - ${VOLUME_DIR}/chen/data:/opt/chen/data
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: "curl -f 127.0.0.1:8082/chen"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
+
   web:
     image: jumpserver/web:${VERSION}
     container_name: jms_web
