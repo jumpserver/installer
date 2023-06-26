@@ -38,6 +38,10 @@ function upgrade_config() {
     docker stop jms_lb &>/dev/null
     docker rm jms_lb &>/dev/null
   fi
+  if docker ps -a | grep jms_omnidb &>/dev/null; then
+    docker stop jms_omnidb &>/dev/null
+    docker rm jms_omnidb &>/dev/null
+  fi
   current_version=$(get_config CURRENT_VERSION)
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"

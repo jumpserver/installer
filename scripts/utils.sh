@@ -147,6 +147,7 @@ function get_images() {
     echo "jumpserver/koko:${VERSION}"
     echo "jumpserver/lion:${VERSION}"
     echo "jumpserver/magnus:${VERSION}"
+    echo "jumpserver/chen:${VERSION}"
     echo "jumpserver/web:${VERSION}"
   fi
 }
