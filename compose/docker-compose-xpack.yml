@@ -60,7 +60,7 @@ services:
     env_file:
       - ${CONFIG_FILE}
     ports:
-      - ${XRDP_PORT}:3390
+      - ${XRDP_PORT:-3390}:3390
     volumes:
       - ${VOLUME_DIR}/xrdp/data:/opt/xrdp/data
       - ${CONFIG_DIR}/nginx/cert:/opt/xrdp/cert
