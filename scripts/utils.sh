@@ -142,6 +142,7 @@ function get_images() {
     echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
   else
     echo "jumpserver/core:${VERSION}"
     echo "jumpserver/koko:${VERSION}"
@@ -268,7 +269,7 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" chen razor"
+    services+=" chen razor xrdp"
   fi
   use_video=$(get_config USE_VIDEO)
   if [[ "${use_xpack}" == "1" && "${use_video}" == "1" ]]; then
