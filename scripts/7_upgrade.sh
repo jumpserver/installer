@@ -105,6 +105,11 @@ function upgrade_config() {
       MAGNUS_ORACLE_PORTS=30000-30030
       set_config MAGNUS_ORACLE_PORTS "${MAGNUS_ORACLE_PORTS}"
     fi
+    xrdp_port=$(get_config XRDP_PORT)
+    if [ -z "${xrdp_port}" ]; then
+      XRDP_PORT=3390
+      set_config XRDP_PORT "${XRDP_PORT}"
+    fi
   fi
 }
 
