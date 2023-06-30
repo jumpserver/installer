@@ -40,16 +40,16 @@ if [[ "$(uname -m)" == "loongarch64" ]]; then
 fi
 export DOCKER_MD5
 
-export DOCKER_COMPOSE_VERSION=v2.17.3
+export DOCKER_COMPOSE_VERSION=v2.18.1
 export DOCKER_COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
 export DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-$(uname -m)"
 if [[ "$(uname -m)" == "x86_64" ]]; then
-  DOCKER_COMPOSE_MD5=18de31bb2d442cc76a0baa8e5eb4a34f
+  DOCKER_COMPOSE_MD5=a9c8563a7098bb0e990a87c508d24904
 fi
 if [[ "$(uname -m)" == "aarch64" ]]; then
-  DOCKER_COMPOSE_MD5=21e8dd3557573d8367357ba3238ca506
+  DOCKER_COMPOSE_MD5=fa6347d502f052152db5342425b17b1b
 fi
 if [[ "$(uname -m)" == "loongarch64" ]]; then
-  DOCKER_COMPOSE_MD5=45c275eb50bf7eb022b28a5cce86eb19
+  DOCKER_COMPOSE_MD5=eead09acde58a9b2cfb59dbd871dcde9
 fi
 export DOCKER_COMPOSE_MD5
