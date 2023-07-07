@@ -124,6 +124,29 @@ services:
     networks:
       - net
 
+  kael:
+    image: jumpserver/kael:${VERSION}
+    container_name: jms_kael
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
+    env_file:
+      - ${CONFIG_FILE}
+    volumes:
+      - ${VOLUME_DIR}/kael/data:/opt/kael/data
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: "curl -fsL http://localhost:8083/kael/health/ > /dev/null"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    networks:
+      - net
+
   web:
     image: jumpserver/web:${VERSION}
     container_name: jms_web
