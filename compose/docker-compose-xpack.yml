@@ -21,6 +21,9 @@ services:
   chen:
     image: registry.fit2cloud.com/jumpserver/chen:${VERSION}
 
+  kael:
+    image: registry.fit2cloud.com/jumpserver/kael:${VERSION}
+
   web:
     image: registry.fit2cloud.com/jumpserver/web:${VERSION}
 
