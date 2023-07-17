@@ -14,7 +14,6 @@ services:
     volumes:
       - ${CONFIG_DIR}/core/config.yml:/opt/jumpserver/config.yml
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
-      - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
     healthcheck:
       test: "curl -fsL http://localhost:8080/api/health/ > /dev/null"
       interval: 10s
