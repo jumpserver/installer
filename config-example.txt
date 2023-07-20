@@ -120,6 +120,7 @@ JUMPSERVER_ENABLE_FONT_SMOOTHING=true
 # XPack 包, 开源版本设置无效
 #
 RDP_PORT=3389
+XRDP_PORT=3390
 
 ################################## 其他配置 ##################################
 # 终端使用宿主 HOSTNAME 标识, 首次安装自动生成

@@ -14,7 +14,6 @@ services:
     volumes:
       - ${CONFIG_DIR}/core/config.yml:/opt/jumpserver/config.yml
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
-      - ${VOLUME_DIR}/core/logs:/opt/jumpserver/logs
     healthcheck:
       test: "curl -fsL http://localhost:8080/api/health/ > /dev/null"
       interval: 10s
@@ -36,7 +35,6 @@ services:
     ports:
       - ${SSH_PORT}:2222
     volumes:
-      - ${CONFIG_DIR}/koko/config.yml:/opt/koko/config.yml
       - ${VOLUME_DIR}/koko/data:/opt/koko/data
     depends_on:
       core:
@@ -98,6 +96,52 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    networks:
+      - net
+
+  chen:
+    image: jumpserver/chen:${VERSION}
+    container_name: jms_chen
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
+    env_file:
+      - ${CONFIG_FILE}
+    volumes:
+      - ${VOLUME_DIR}/chen/data:/opt/chen/data
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: "curl -f 127.0.0.1:8082/chen"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
+
+  kael:
+    image: jumpserver/kael:${VERSION}
+    container_name: jms_kael
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
+    env_file:
+      - ${CONFIG_FILE}
+    volumes:
+      - ${VOLUME_DIR}/kael/data:/opt/kael/data
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: "curl -fsL http://localhost:8083/kael/health/ > /dev/null"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
     networks:
       - net
 

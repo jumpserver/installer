@@ -38,6 +38,10 @@ function upgrade_config() {
     docker stop jms_lb &>/dev/null
     docker rm jms_lb &>/dev/null
   fi
+  if docker ps -a | grep jms_omnidb &>/dev/null; then
+    docker stop jms_omnidb &>/dev/null
+    docker rm jms_omnidb &>/dev/null
+  fi
   current_version=$(get_config CURRENT_VERSION)
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"
@@ -101,6 +105,11 @@ function upgrade_config() {
       MAGNUS_ORACLE_PORTS=30000-30030
       set_config MAGNUS_ORACLE_PORTS "${MAGNUS_ORACLE_PORTS}"
     fi
+    xrdp_port=$(get_config XRDP_PORT)
+    if [ -z "${xrdp_port}" ]; then
+      XRDP_PORT=3390
+      set_config XRDP_PORT "${XRDP_PORT}"
+    fi
   fi
 }
 
@@ -134,6 +143,13 @@ function migrate_config_v1_5_to_v2_0() {
       mv config.txt "${CONFIG_FILE}"
       rm -f .env
     fi
+  fi
+}
+
+function migrate_data_folder() {
+  volume_dir=$(get_config VOLUME_DIR)
+  if [[ -d "${volume_dir}/core/logs" ]] && [[ ! -d "${volume_dir}/core/data/logs" ]]; then
+    mv "${volume_dir}/core/logs" "${volume_dir}/core/data/logs"
   fi
 }
 
@@ -189,6 +205,7 @@ function db_migrations() {
       exit 1
     fi
   fi
+  migrate_data_folder
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     confirm="n"
