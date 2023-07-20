@@ -146,6 +146,13 @@ function migrate_config_v1_5_to_v2_0() {
   fi
 }
 
+function migrate_data_folder() {
+  volume_dir=$(get_config VOLUME_DIR)
+  if [[ -d "${volume_dir}/core/logs" ]] && [[ ! -d "${volume_dir}/core/data/logs" ]]; then
+    mv "${volume_dir}/core/logs" "${volume_dir}/core/data/logs"
+  fi
+}
+
 function migrate_config() {
   prepare_config
 }
@@ -198,6 +205,7 @@ function db_migrations() {
       exit 1
     fi
   fi
+  migrate_data_folder
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
     confirm="n"
