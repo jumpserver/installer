@@ -30,6 +30,7 @@ services:
   razor:
     image: registry.fit2cloud.com/jumpserver/razor:${VERSION}
     container_name: jms_razor
+    hostname: jms_razor
     ulimits:
       core: 0
     restart: always
@@ -56,6 +57,7 @@ services:
   xrdp:
     image: registry.fit2cloud.com/jumpserver/xrdp:${VERSION}
     container_name: jms_xrdp
+    hostname: jms_xrdp
     ulimits:
       core: 0
     restart: always
