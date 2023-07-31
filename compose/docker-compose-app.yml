@@ -4,6 +4,7 @@ services:
   core:
     image: jumpserver/core:${VERSION}
     container_name: jms_core
+    hostname: jms_core
     ulimits:
       core: 0
     restart: always
@@ -26,6 +27,7 @@ services:
   koko:
     image: jumpserver/koko:${VERSION}
     container_name: jms_koko
+    hostname: jms_koko
     ulimits:
       core: 0
     restart: always
@@ -52,6 +54,7 @@ services:
   lion:
     image: jumpserver/lion:${VERSION}
     container_name: jms_lion
+    hostname: jms_lion
     ulimits:
       core: 0
     restart: always
@@ -75,6 +78,7 @@ services:
   magnus:
     image: jumpserver/magnus:${VERSION}
     container_name: jms_magnus
+    hostname: jms_magnus
     ulimits:
       core: 0
     restart: always
@@ -102,6 +106,7 @@ services:
   chen:
     image: jumpserver/chen:${VERSION}
     container_name: jms_chen
+    hostname: jms_chen
     ulimits:
       core: 0
     restart: always
@@ -125,6 +130,7 @@ services:
   kael:
     image: jumpserver/kael:${VERSION}
     container_name: jms_kael
+    hostname: jms_kael
     ulimits:
       core: 0
     restart: always
@@ -148,6 +154,7 @@ services:
   web:
     image: jumpserver/web:${VERSION}
     container_name: jms_web
+    hostname: jms_web
     ulimits:
       core: 0
     restart: always

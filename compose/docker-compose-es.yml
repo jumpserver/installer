@@ -4,6 +4,7 @@ services:
   es:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
     container_name: jms_es
+    hostname: jms_es
     restart: always
     ports:
       - 9200:9200

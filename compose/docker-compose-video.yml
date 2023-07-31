@@ -4,6 +4,7 @@ services:
   video:
     image: registry.fit2cloud.com/jumpserver/video-worker:${VERSION}
     container_name: jms_video
+    hostname: jms_video
     ulimits:
       core: 0
     restart: always
