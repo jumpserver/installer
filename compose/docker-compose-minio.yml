@@ -4,6 +4,7 @@ services:
   minio:
     image: jumpserver/minio:latest
     container_name: jms_minio
+    hostname: jms_minio
     restart: always
     command: "server /data --console-address :9001"
     ports:
