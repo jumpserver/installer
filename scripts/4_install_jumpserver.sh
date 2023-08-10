@@ -19,12 +19,19 @@ function pre_install() {
 
 function post_install() {
   echo_green "\n>>> $(gettext 'The Installation is Complete')"
+  domains=$(get_config DOMAINS)
   host=$(command -v ip &> /dev/null && ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
-  if [ ! "$host" ]; then
+  if [ ! "${host}" ]; then
       host=$(hostname -I | cut -d ' ' -f1)
+  fi
+  if [[ ${host} =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      if [ ! "${domains}" ]; then
+          set_config DOMAINS "${host}"
+      fi
   fi
   http_port=$(get_config HTTP_PORT)
   https_port=$(get_config HTTPS_PORT)
+  server_name=$(get_config SERVER_NAME)
   ssh_port=$(get_config SSH_PORT)
 
   echo_yellow "1. $(gettext 'You can use the following command to start, and then visit')"
@@ -39,7 +46,12 @@ function post_install() {
   echo "$(gettext 'For more commands, you can enter ./jmsctl.sh --help to understand')"
 
   echo_yellow "\n3. $(gettext 'Web access')"
-  echo "http://${host}:${http_port}"
+  if [ -n "${server_name}" ] && [ -n "${https_port}" ]; then
+    echo "https://${server_name}:${https_port}"
+  else
+    echo "http://${host}:${http_port}"
+  fi
+
   echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): admin"
 
   echo_yellow "\n4. SSH/SFTP $(gettext 'access')"
@@ -57,7 +69,7 @@ function main() {
   pre_install
   prepare_config
   set_current_version
-  
+
   echo_green "\n>>> $(gettext 'Install and Configure Docker')"
   if ! bash "${BASE_DIR}/2_install_docker.sh"; then
     exit 1
