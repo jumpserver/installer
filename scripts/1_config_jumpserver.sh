@@ -153,18 +153,6 @@ function set_service() {
   ssh_port=$(get_config SSH_PORT)
   rdp_port=$(get_config RDP_PORT)
   use_xpack=$(get_config_or_env USE_XPACK)
-  domains=$(get_config DOMAINS)
-  if [[ -z "${domains}" ]]; then
-    read_from_input domains "$(gettext 'Please enter the access IP or domain name of JumpServer') (eg: demo.jumpserver.org:443, or eg: 172.17.200.191:80)" "" "${domains}"
-    if [[ -z "${domains}" ]] || [[ "${domains}" == "y" ]] || [[ "${domains}" == "n" ]]; then
-      host=$(get_host_ip)
-      if [[ -n "${host}" ]]; then
-          domains="${host}"
-      fi
-    fi
-    set_config DOMAINS "${domains}"
-  fi
-
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need to customize the JumpServer external port')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then

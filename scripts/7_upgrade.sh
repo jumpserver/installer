@@ -88,26 +88,6 @@ function upgrade_config() {
     MAGNUS_REDIS_PORT=63790
     set_config MAGNUS_REDIS_PORT "${MAGNUS_REDIS_PORT}"
   fi
-  domains=$(get_config DOMAINS)
-  if [[ -z "${domains}" ]]; then
-    echo
-    echo -e "\033[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo -e "\033[33m                                \033[33mWARNING\033[33m                 "
-    echo -e "\033[33m                                                                        "
-    echo -e "\033[33m  从 v3.6.0 开始，必须配置 DOMAINS 可信任 IP 或 域名 才能正常访问服务。    "
-    echo -e "\033[33m  详情: https://docs.jumpserver.org/zh/v3/installation/upgrade_notice/  "
-    echo -e "\033[33m                                                                        "
-    echo -e "\033[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo -e "\033[0m"
-    read_from_input domains "$(gettext 'Please enter the access IP or domain name of JumpServer') (eg: demo.jumpserver.org:443, or eg: 172.17.200.191:80)" "" "${domains}"
-    if [[ -z "${domains}" ]] || [[ "${domains}" == "y" ]] || [[ "${domains}" == "n" ]]; then
-      host=$(get_host_ip)
-      if [[ -n "${host}" ]]; then
-          domains="${host}"
-      fi
-    fi
-    set_config DOMAINS "${domains}"
-  fi
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
