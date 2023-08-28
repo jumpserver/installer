@@ -10,6 +10,11 @@
 #
 # DOCKER_IMAGE_MIRROR=1
 
+# 镜像拉取规则 Always, IfNotPresent
+# Always 表示每次都会拉取最新镜像, IfNotPresent 表示本地不存在镜像时才会拉取
+#
+# IMAGE_PULL_POLICY=Always
+
 ################################## 安装配置 ###################################
 #
 # JumpServer 数据库持久化目录, 默认情况下录像、任务日志都在此目录
@@ -118,6 +123,15 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE=true
 # DOMAINS="172.17.200.191:80"
 # DOMAINS="demo.jumpserver.org:443,172.17.200.191:80"
 DOMAINS=
+
+# 配置不需要启动的组件, 默认所有组件都会开启, 如果不需要某个组件可以通过设置 {组件名称}_ENABLED 为 0 关闭
+# CORE_ENABLED=0
+# CELERY_ENABLED=0
+# KOKO_ENABLED=0
+# LION_ENABLED=0
+# MAGNUS_ENABLED=0
+# CHEN_ENABLED=0
+# KAEL_ENABLED=0
 
 # Lion 开启字体平滑, 优化体验
 #

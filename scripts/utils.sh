@@ -243,10 +243,38 @@ function log_error() {
 
 function get_docker_compose_services() {
   ignore_db="$1"
-  services="core koko lion magnus chen kael web"
-  use_task=$(get_config USE_TASK)
-  if [[ "${use_task}" != "0" ]]; then
-    services+=" celery"
+  core_enabled=$(get_config CORE_ENABLED)
+  celery_enabled=$(get_config CELERY_ENABLED)
+  koko_enabled=$(get_config KOKO_ENABLED)
+  lion_enabled=$(get_config LION_ENABLED)
+  magnus_enabled=$(get_config MAGNUS_ENABLED)
+  chen_enabled=$(get_config CHEN_ENABLED)
+  kael_enabled=$(get_config KAEL_ENABLED)
+  web_enabled=$(get_config WEB_ENABLED)
+  services="core celery koko lion magnus chen kael web"
+  if [[ "${core_enabled}" == "0" ]]; then
+    services="${services//core/}"
+  fi
+  if [[ "${celery_enabled}" == "0" ]]; then
+    services="${services//celery/}"
+  fi
+  if [[ "${koko_enabled}" == "0" ]]; then
+    services="${services//koko/}"
+  fi
+  if [[ "${lion_enabled}" == "0" ]]; then
+    services="${services//lion/}"
+  fi
+  if [[ "${magnus_enabled}" == "0" ]]; then
+    services="${services//magnus/}"
+  fi
+  if [[ "${chen_enabled}" == "0" ]]; then
+    services="${services//chen/}"
+  fi
+  if [[ "${kael_enabled}" == "0" ]]; then
+    services="${services//kael/}"
+  fi
+  if [[ "${web_enabled}" == "0" ]]; then
+    services="${services//web/}"
   fi
   mysql_host=$(get_config DB_HOST)
   if [[ "${mysql_host}" == "mysql" && "${ignore_db}" != "ignore_db" ]]; then
@@ -271,27 +299,56 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" razor xrdp"
-  fi
-  use_video=$(get_config USE_VIDEO)
-  if [[ "${use_xpack}" == "1" && "${use_video}" == "1" ]]; then
-    services+=" video"
+    services+=" razor xrdp video"
+    razor_enabled=$(get_config RAZOR_ENABLED)
+    xrdp_enabled=$(get_config XRDP_ENABLED)
+    video_enabled=$(get_config VIDEO_ENABLED)
+    if [[ "${razor_enabled}" == "0" ]]; then
+      services="${services//razor/}"
+    fi
+    if [[ "${xrdp_enabled}" == "0" ]]; then
+      services="${services//xrdp/}"
+    fi
+    if [[ "${video_enabled}" == "0" ]]; then
+      services="${services//video/}"
+    fi
   fi
   echo "${services}"
 }
 
 function get_docker_compose_cmd_line() {
   ignore_db="$1"
-  cmd="docker-compose -f compose/docker-compose-app.yml"
+  cmd="docker-compose"
   use_ipv6=$(get_config USE_IPV6)
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
   else
-    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
+    cmd="${cmd} -f compose/docker-compose-network_v6.yml"
   fi
   services=$(get_docker_compose_services "$ignore_db")
+  if [[ "${services}" =~ core ]]; then
+    cmd="${cmd} -f compose/docker-compose-core.yml"
+  fi
   if [[ "${services}" =~ celery ]]; then
-    cmd="${cmd} -f compose/docker-compose-task.yml"
+    cmd="${cmd} -f compose/docker-compose-celery.yml"
+  fi
+  if [[ "${services}" =~ koko ]]; then
+    cmd="${cmd} -f compose/docker-compose-koko.yml"
+  fi
+  if [[ "${services}" =~ lion ]]; then
+    cmd="${cmd} -f compose/docker-compose-lion.yml"
+  fi
+  if [[ "${services}" =~ magnus ]]; then
+    cmd="${cmd} -f compose/docker-compose-magnus.yml"
+  fi
+  if [[ "${services}" =~ chen ]]; then
+    cmd="${cmd} -f compose/docker-compose-chen.yml"
+  fi
+  if [[ "${services}" =~ kael ]]; then
+    cmd="${cmd} -f compose/docker-compose-kael.yml"
+  fi
+  if [[ "${services}" =~ web ]]; then
+    cmd="${cmd} -f compose/docker-compose-web.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
     mysql_images_file=$(get_mysql_images_file)
@@ -309,17 +366,18 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ lb ]]; then
     cmd="${cmd} -f compose/docker-compose-lb.yml"
   fi
-  mysql_use_ssl=$(get_config_or_env DB_USE_SSL)
-  redis_use_ssl=$(get_config_or_env REDIS_USE_SSL)
-  if [[ "${mysql_use_ssl,,}" == "true" ]] || [[ "${redis_use_ssl,,}" == "true" ]]; then
-    cmd="${cmd} -f compose/docker-compose-db-tls.yml"
-  fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == '1' ]]; then
-    cmd="${cmd} -f compose/docker-compose-xpack.yml"
-  fi
-  if [[ "${services}" =~ video ]]; then
-    cmd="${cmd} -f compose/docker-compose-video.yml"
+    cmd="${cmd} -f compose/docker-compose-magnus-xpack.yml"
+    if [[ "${services}" =~ razor ]]; then
+      cmd="${cmd} -f compose/docker-compose-razor.yml"
+    fi
+    if [[ "${services}" =~ xrdp ]]; then
+      cmd="${cmd} -f compose/docker-compose-xrdp.yml"
+    fi
+    if [[ "${services}" =~ video ]]; then
+      cmd="${cmd} -f compose/docker-compose-video.yml"
+    fi
   fi
   echo "${cmd}"
 }
@@ -332,7 +390,7 @@ function get_video_worker_cmd_line() {
   use_ipv6=$(get_config USE_IPV6)
   cmd="docker-compose -f compose/docker-compose-network.yml"
   if [[ "${use_ipv6}" == "1" ]]; then
-    cmd="docker-compose -f compose/docker-compose-network_ipv6.yml"
+    cmd="docker-compose -f compose/docker-compose-network_v6.yml"
   fi
   cmd="${cmd} -f compose/docker-compose-video-worker.yml"
   echo "${cmd}"
@@ -466,17 +524,11 @@ function get_db_migrate_compose_cmd() {
   mysql_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
   use_ipv6=$(get_config USE_IPV6)
-  use_xpack=$(get_config_or_env USE_XPACK)
-  mysql_use_ssl=$(get_config_or_env DB_USE_SSL)
-  redis_use_ssl=$(get_config_or_env REDIS_USE_SSL)
 
   cmd="docker-compose -f compose/docker-compose-init-db.yml"
   if [[ "${mysql_host}" == "mysql" ]]; then
     mysql_images_file=$(get_mysql_images_file)
     cmd="${cmd} -f ${mysql_images_file}"
-  fi
-  if [[ "${mysql_use_ssl,,}" == "true" ]] || [[ "${redis_use_ssl,,}" == "true" ]]; then
-    cmd="${cmd} -f compose/docker-compose-init-tls.yml"
   fi
   if [[ "${redis_host}" == "redis" ]]; then
     cmd="${cmd} -f compose/docker-compose-redis.yml"
@@ -484,10 +536,7 @@ function get_db_migrate_compose_cmd() {
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd="${cmd} -f compose/docker-compose-network.yml"
   else
-    cmd="${cmd} -f compose/docker-compose-network_ipv6.yml"
-  fi
-  if [[ "${use_xpack}" == '1' ]]; then
-      cmd="${cmd} -f compose/docker-compose-init-xpack.yml"
+    cmd="${cmd} -f compose/docker-compose-network_v6.yml"
   fi
   echo "$cmd"
 }
@@ -505,8 +554,14 @@ function down_db_ops_env() {
 function perform_db_migrations() {
   if ! create_db_ops_env; then
     mysql_host=$(get_config DB_HOST)
+    redis_host=$(get_config REDIS_HOST)
     if [[ "${mysql_host}" == "mysql" ]]; then
       while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+        sleep 5s
+      done
+    fi
+    if [[ "${redis_host}" == "redis" ]]; then
+      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
         sleep 5s
       done
     fi
@@ -553,7 +608,7 @@ function pull_image() {
     DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
   fi
 
-  IMAGE_PULL_POLICY=${IMAGE_PULL_POLICY-"Always"}
+  IMAGE_PULL_POLICY=$(get_config_or_env 'IMAGE_PULL_POLICY')
 
   if docker image inspect -f '{{ .Id }}' "$image" &> /dev/null; then
     exits=0
@@ -577,6 +632,11 @@ function pull_image() {
 }
 
 function pull_images() {
+  DOCKER_IMAGE_MIRROR=$(get_config_or_env 'DOCKER_IMAGE_MIRROR')
+  DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
+  if [[ -z "${DOCKER_IMAGE_PREFIX}" ]] && [[ -z "${DOCKER_IMAGE_MIRROR}" ]]; then
+    return
+  fi
   images_to=$(get_images)
 
   for image in ${images_to}; do

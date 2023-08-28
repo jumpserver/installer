@@ -1,0 +1,26 @@
+version: '2.4'
+
+services:
+  razor:
+    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/razor:${VERSION}
+    container_name: jms_razor
+    hostname: jms_razor
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
+    env_file:
+      - ${CONFIG_FILE}
+    ports:
+      - ${RDP_PORT}:3389
+    volumes:
+      - ${VOLUME_DIR}/razor/data:/opt/razor/data
+      - ${CONFIG_DIR}/nginx/cert:/opt/razor/cert
+    healthcheck:
+      test: "ps axu | grep -v 'grep' | grep 'razor'"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
