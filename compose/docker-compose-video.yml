@@ -2,7 +2,7 @@ version: '2.4'
 
 services:
   video:
-    image: registry.fit2cloud.com/jumpserver/video-worker:${VERSION}
+    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/video-worker:${VERSION}
     container_name: jms_video
     hostname: jms_video
     cpus: 2
@@ -14,9 +14,6 @@ services:
       - ${CONFIG_FILE}
     volumes:
       - ${VOLUME_DIR}/video/data:/opt/video-worker/data
-    depends_on:
-      core:
-        condition: service_healthy
     healthcheck:
       test: "curl -fsL http://localhost:9000/video-worker/health/ > /dev/null"
       interval: 10s

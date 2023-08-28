@@ -1,0 +1,26 @@
+version: '2.4'
+
+services:
+  xrdp:
+    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/xrdp:${VERSION}
+    container_name: jms_xrdp
+    hostname: jms_xrdp
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
+    env_file:
+      - ${CONFIG_FILE}
+    ports:
+      - ${XRDP_PORT:-3390}:3390
+    volumes:
+      - ${VOLUME_DIR}/xrdp/data:/opt/xrdp/data
+      - ${CONFIG_DIR}/nginx/cert:/opt/xrdp/cert
+    healthcheck:
+      test: "nc -z 127.0.0.1 3390 || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
