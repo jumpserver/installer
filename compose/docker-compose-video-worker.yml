@@ -2,7 +2,7 @@ version: '2.4'
 
 services:
   video:
-    image: registry.fit2cloud.com/jumpserver/video-worker:${VERSION}
+    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/video-worker:${VERSION}
     container_name: jms_video_worker
     hostname: jms_video_worker
     ulimits:

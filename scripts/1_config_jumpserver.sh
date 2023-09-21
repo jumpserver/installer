@@ -147,8 +147,8 @@ function set_redis() {
   fi
 }
 
-function set_service_port() {
-  echo_yellow "\n5. $(gettext 'Configure External Port')"
+function set_service() {
+  echo_yellow "\n5. $(gettext 'Configure External Access')"
   http_port=$(get_config HTTP_PORT)
   ssh_port=$(get_config SSH_PORT)
   rdp_port=$(get_config RDP_PORT)
@@ -188,7 +188,7 @@ function main() {
   if set_redis; then
     echo_done
   fi
-  if set_service_port; then
+  if set_service; then
     echo_done
   fi
   if init_db; then

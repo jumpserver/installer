@@ -19,15 +19,9 @@ function pre_install() {
 
 function post_install() {
   echo_green "\n>>> $(gettext 'The Installation is Complete')"
-  domains=$(get_config DOMAINS)
-  host=$(command -v ip &> /dev/null && ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
-  if [ ! "${host}" ]; then
-      host=$(hostname -I | cut -d ' ' -f1)
-  fi
-  if [[ ${host} =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-      if [ ! "${domains}" ]; then
-          set_config DOMAINS "${host}"
-      fi
+  host=$(get_host_ip)
+  if [[ -z "${host}" ]]; then
+    host="127.0.0.1"
   fi
   http_port=$(get_config HTTP_PORT)
   https_port=$(get_config HTTPS_PORT)

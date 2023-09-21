@@ -1,5 +1,0 @@
-version: '2.4'
-
-services:
-  core:
-    image: registry.fit2cloud.com/jumpserver/core:${VERSION}
