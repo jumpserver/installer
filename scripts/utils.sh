@@ -292,11 +292,6 @@ function get_docker_compose_services() {
   if [[ "${use_minio}" == "1" ]]; then
     services+=" minio"
   fi
-  use_lb=$(get_config USE_LB)
-  https_port=$(get_config HTTPS_PORT)
-  if [[ -n "${https_port}" && "${use_lb}" != "0" ]]; then
-    services+=" lb"
-  fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
     services+=" razor xrdp video"
@@ -363,7 +358,9 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ minio ]]; then
     cmd="${cmd} -f compose/docker-compose-minio.yml"
   fi
-  if [[ "${services}" =~ lb ]]; then
+  use_lb=$(get_config USE_LB)
+  https_port=$(get_config HTTPS_PORT)
+  if [[ -n "${https_port}" && "${use_lb}" != "0" ]]; then
     cmd="${cmd} -f compose/docker-compose-lb.yml"
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
