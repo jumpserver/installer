@@ -543,7 +543,9 @@ function get_db_migrate_compose_cmd() {
 
 function create_db_ops_env() {
   cmd=$(get_db_migrate_compose_cmd)
-  ${cmd} up -d
+  ${cmd} up -d || {
+    exit 1
+  }
 }
 
 function down_db_ops_env() {
@@ -552,31 +554,25 @@ function down_db_ops_env() {
 }
 
 function perform_db_migrations() {
-  if ! create_db_ops_env; then
-    mysql_host=$(get_config DB_HOST)
-    redis_host=$(get_config REDIS_HOST)
-    if [[ "${mysql_host}" == "mysql" ]]; then
-      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
-        sleep 5s
-      done
-    fi
-    if [[ "${redis_host}" == "redis" ]]; then
-      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
-        sleep 5s
-      done
-    fi
-    create_db_ops_env
-    sleep 5s
+  mysql_host=$(get_config DB_HOST)
+  redis_host=$(get_config REDIS_HOST)
+
+  create_db_ops_env
+  if [[ "${mysql_host}" == "mysql" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+      sleep 5s
+    done
+  fi
+  if [[ "${redis_host}" == "redis" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
+      sleep 5s
+    done
   fi
 
-  docker exec -i jms_core bash -c './jms upgrade_db'
-  ret=$?
-
-  down_db_ops_env
-  if [[ "$ret" != "0" ]]; then
+  docker exec -i jms_core bash -c './jms upgrade_db' || {
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
-  fi
+  }
 }
 
 function set_current_version() {
