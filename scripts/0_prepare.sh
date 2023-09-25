@@ -58,7 +58,7 @@ function prepare_image_files() {
   fi
 
   images=$(get_images)
-  
+
   for image in ${images}; do
     echo "[${image}]"
     pull_image "$image"
