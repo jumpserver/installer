@@ -52,7 +52,6 @@ function usage() {
   echo "Management Commands: "
   echo "  start             $(gettext 'Start   JumpServer')"
   echo "  stop              $(gettext 'Stop    JumpServer')"
-  echo "  close             $(gettext 'Close   JumpServer')"
   echo "  restart           $(gettext 'Restart JumpServer')"
   echo "  status            $(gettext 'Check   JumpServer')"
   echo "  down              $(gettext 'Offline JumpServer')"
@@ -86,13 +85,7 @@ function stop() {
     ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     return
   fi
-  services=$(get_docker_compose_services ignore_db)
-  for i in ${services}; do
-    ${EXE} stop "${i}"
-  done
-  for i in ${services}; do
-    ${EXE} rm -f "${i}" >/dev/null
-  done
+  ${EXE} down -v
 }
 
 function close() {
