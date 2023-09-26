@@ -445,6 +445,11 @@ function prepare_config() {
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
+  if [[ "$(uname -m)" == "loongarch64" ]]; then
+    if ! grep -q "^SECURITY_LOGIN_CAPTCHA_ENABLED" "${CONFIG_FILE}"; then
+      echo "SECURITY_LOGIN_CAPTCHA_ENABLED=False" >> "${CONFIG_FILE}"
+    fi
+  fi
 
   # shellcheck disable=SC2045
   for d in $(ls "${PROJECT_DIR}/config_init"); do
