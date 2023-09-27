@@ -48,7 +48,6 @@ function prepare_compose_bin() {
   \cp -rf /tmp/docker-compose docker/
   chown -R root:root docker
   chmod +x docker/*
-  export PATH=$PATH:$(pwd)/docker
 }
 
 function prepare_image_files() {
@@ -56,15 +55,12 @@ function prepare_image_files() {
     echo "$(gettext 'Docker is not running, please install and start') ..."
     exit 1
   fi
+  pull_images
 
   images=$(get_images)
-
   for image in ${images}; do
-    echo "[${image}]"
-    pull_image "$image"
-
     filename=$(basename "${image}").tar
-    component=$(echo "${filename}" | awk -F: '{ print $1 }')
+    image_path="${IMAGE_DIR}/${filename}"
     md5_filename=$(basename "${image}").md5
     md5_path=${IMAGE_DIR}/${md5_filename}
 
@@ -74,28 +70,33 @@ function prepare_image_files() {
       saved_id=$(cat "${md5_path}")
     fi
 
-    mkdir -p "${IMAGE_DIR}"
-    # 这里达不到想要的想过，因为在构建前会删掉目录下的所有文件，所以 save_id 不可能存在
-    if [[ ${image_id} != "${saved_id}" ]]; then
-      rm -f ${IMAGE_DIR}/${component}*
-      image_path="${IMAGE_DIR}/${filename}"
-      echo "$(gettext 'Save image') ${image} -> ${image_path}"
-      docker save -o "${image_path}" "${image}" && echo "${image_id}" >"${md5_path}"
-    else
-      echo "$(gettext 'The image has been saved, skipping'): ${image}"
+    if [[ ! -d "${IMAGE_DIR}" ]]; then
+      mkdir -p "${IMAGE_DIR}"
     fi
-    echo
+
+    if [[ -f "${image_path}" ]]; then
+      if [[ "${image_id}" != "${saved_id}" ]]; then
+        rm -f "${image_path}" "${md5_path}"
+      else
+        echo "$(gettext 'The image has been saved, skipping'): ${image}"
+        continue
+      fi
+    fi
+    echo "$(gettext 'Save image') ${image} -> ${image_path}"
+    docker save -o "${image_path}" "${image}" &
+    echo "${image_id}" >"${md5_path}" &
   done
+  wait
 }
 
 function main() {
   prepare_check_required_pkg
 
-  echo " $(gettext 'Preparing Docker offline package')"
+  echo "$(gettext 'Preparing Docker offline package')"
   prepare_docker_bin
   prepare_compose_bin
 
-  echo -e "\n $(gettext 'Preparing image offline package')"
+  echo -e "\n$(gettext 'Preparing image offline package')"
   prepare_image_files
 }
 
