@@ -615,10 +615,11 @@ function pull_image() {
   fi
 
   if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]]; then
-    echo "Image exist, pass"
+    echo "[${image}] exist, pass"
     return
   fi
 
+  echo "[${image}] pulling"
   if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
     docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
     docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
@@ -630,17 +631,12 @@ function pull_image() {
 }
 
 function pull_images() {
-  DOCKER_IMAGE_MIRROR=$(get_config_or_env 'DOCKER_IMAGE_MIRROR')
-  DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
-  if [[ -z "${DOCKER_IMAGE_PREFIX}" ]] && [[ -z "${DOCKER_IMAGE_MIRROR}" ]]; then
-    return
-  fi
   images_to=$(get_images)
 
   for image in ${images_to}; do
-    echo "[${image}]"
-    pull_image "$image"
+    pull_image "$image" &
   done
+  wait
 }
 
 function installation_log() {
