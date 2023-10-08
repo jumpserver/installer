@@ -148,6 +148,11 @@ XRDP_PORT=3390
 #
 SERVER_HOSTNAME=${HOSTNAME}
 
+# 使用内置 SLB, 如果 Web 页面获取到的客户端 IP 地址不正确, 请将 USE_LB 设置为 0
+# USE_LB 设置为 1 时, 使用配置 proxy_set_header X-Forwarded-For $remote_addr
+# USE_LB 设置为 0 时, 使用配置 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for
+USE_LB=1
+
 # 当前运行的 JumpServer 版本号, 安装和升级完成后自动生成
 #
 CURRENT_VERSION=

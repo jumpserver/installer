@@ -358,9 +358,8 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ minio ]]; then
     cmd="${cmd} -f compose/docker-compose-minio.yml"
   fi
-  use_lb=$(get_config USE_LB)
   https_port=$(get_config HTTPS_PORT)
-  if [[ -n "${https_port}" && "${use_lb}" != "0" ]]; then
+  if [[ -n "${https_port}" ]]; then
     cmd="${cmd} -f compose/docker-compose-lb.yml"
   fi
   use_xpack=$(get_config_or_env USE_XPACK)

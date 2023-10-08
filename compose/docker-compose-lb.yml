@@ -11,4 +11,4 @@ services:
       SSL_CERTIFICATE_KEY: ${SSL_CERTIFICATE_KEY:-}
     volumes:
       - ${CONFIG_DIR}/nginx/cert:/etc/nginx/cert
-      - ${CONFIG_DIR}/nginx/lb_http_server.conf:/etc/nginx/sites-enabled/jumpserver.conf
+      - ${CONFIG_DIR}/nginx/lb_http_server.conf:/etc/nginx/sites-enabled/https_server.conf
