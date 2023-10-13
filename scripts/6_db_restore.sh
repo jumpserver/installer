@@ -29,6 +29,11 @@ function main() {
     create_db_ops_env
     flag=1
   fi
+  if [[ "${HOST}" == "mysql" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+      sleep 5s
+    done
+  fi
 
   if ! docker run --rm -i --network=jms_net "${mysql_images}" $restore_cmd <"${DB_FILE}"; then
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
