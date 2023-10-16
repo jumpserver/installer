@@ -134,7 +134,7 @@ function get_images() {
     echo "${image}"
   done
   if [[ "$use_xpack" == "1" ]];then
-    echo "registry.fit2cloud.com/jumpserver/core:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/core-ee:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/lion:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
@@ -145,7 +145,7 @@ function get_images() {
     echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
   else
-    echo "jumpserver/core:${VERSION}"
+    echo "jumpserver/core-ce:${VERSION}"
     echo "jumpserver/koko:${VERSION}"
     echo "jumpserver/lion:${VERSION}"
     echo "jumpserver/magnus:${VERSION}"
@@ -313,66 +313,74 @@ function get_docker_compose_services() {
 
 function get_docker_compose_cmd_line() {
   ignore_db="$1"
-  cmd="docker-compose"
   use_ipv6=$(get_config USE_IPV6)
+  use_xpack=$(get_config_or_env USE_XPACK)
+  https_port=$(get_config HTTPS_PORT)
+  mysql_images_file=$(get_mysql_images_file)
+  cmd="docker-compose"
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-network.yml"
+    cmd+=" -f compose/docker-compose-network.yml"
   else
-    cmd="${cmd} -f compose/docker-compose-network_v6.yml"
+    cmd+=" -f compose/docker-compose-network_v6.yml"
   fi
   services=$(get_docker_compose_services "$ignore_db")
   if [[ "${services}" =~ core ]]; then
-    cmd="${cmd} -f compose/docker-compose-core.yml"
+    cmd+=" -f compose/docker-compose-core.yml"
+    if [[ "${use_xpack}" == '1' ]]; then
+      cmd+=" -f compose/docker-compose-core-xpack.yml"
+    fi
   fi
   if [[ "${services}" =~ celery ]]; then
-    cmd="${cmd} -f compose/docker-compose-celery.yml"
+    cmd+=" -f compose/docker-compose-celery.yml"
+    if [[ "${use_xpack}" == '1' ]]; then
+      cmd+=" -f compose/docker-compose-celery-xpack.yml"
+    fi
   fi
   if [[ "${services}" =~ koko ]]; then
-    cmd="${cmd} -f compose/docker-compose-koko.yml"
+    cmd+=" -f compose/docker-compose-koko.yml"
   fi
   if [[ "${services}" =~ lion ]]; then
-    cmd="${cmd} -f compose/docker-compose-lion.yml"
+    cmd+=" -f compose/docker-compose-lion.yml"
   fi
   if [[ "${services}" =~ magnus ]]; then
-    cmd="${cmd} -f compose/docker-compose-magnus.yml"
+    cmd+=" -f compose/docker-compose-magnus.yml"
+    if [[ "${use_xpack}" == '1' ]]; then
+      cmd+=" -f compose/docker-compose-magnus-xpack.yml"
+    fi
   fi
   if [[ "${services}" =~ chen ]]; then
-    cmd="${cmd} -f compose/docker-compose-chen.yml"
+    cmd+=" -f compose/docker-compose-chen.yml"
   fi
   if [[ "${services}" =~ kael ]]; then
-    cmd="${cmd} -f compose/docker-compose-kael.yml"
+    cmd+=" -f compose/docker-compose-kael.yml"
   fi
   if [[ "${services}" =~ web ]]; then
-    cmd="${cmd} -f compose/docker-compose-web.yml"
+    cmd+=" -f compose/docker-compose-web.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
-    mysql_images_file=$(get_mysql_images_file)
-    cmd="${cmd} -f ${mysql_images_file}"
+    cmd+=" -f ${mysql_images_file}"
   fi
   if [[ "${services}" =~ redis ]]; then
-    cmd="${cmd} -f compose/docker-compose-redis.yml"
+    cmd+=" -f compose/docker-compose-redis.yml"
   fi
   if [[ "${services}" =~ es ]]; then
-    cmd="${cmd} -f compose/docker-compose-es.yml"
+    cmd+=" -f compose/docker-compose-es.yml"
   fi
   if [[ "${services}" =~ minio ]]; then
-    cmd="${cmd} -f compose/docker-compose-minio.yml"
+    cmd+=" -f compose/docker-compose-minio.yml"
   fi
-  https_port=$(get_config HTTPS_PORT)
   if [[ -n "${https_port}" ]]; then
-    cmd="${cmd} -f compose/docker-compose-lb.yml"
+    cmd+=" -f compose/docker-compose-lb.yml"
   fi
-  use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == '1' ]]; then
-    cmd="${cmd} -f compose/docker-compose-magnus-xpack.yml"
     if [[ "${services}" =~ razor ]]; then
-      cmd="${cmd} -f compose/docker-compose-razor.yml"
+      cmd+=" -f compose/docker-compose-razor.yml"
     fi
     if [[ "${services}" =~ xrdp ]]; then
-      cmd="${cmd} -f compose/docker-compose-xrdp.yml"
+      cmd+=" -f compose/docker-compose-xrdp.yml"
     fi
     if [[ "${services}" =~ video ]]; then
-      cmd="${cmd} -f compose/docker-compose-video.yml"
+      cmd+=" -f compose/docker-compose-video.yml"
     fi
   fi
   echo "${cmd}"
@@ -384,11 +392,13 @@ function get_video_worker_cmd_line() {
     return
   fi
   use_ipv6=$(get_config USE_IPV6)
-  cmd="docker-compose -f compose/docker-compose-network.yml"
-  if [[ "${use_ipv6}" == "1" ]]; then
-    cmd="docker-compose -f compose/docker-compose-network_v6.yml"
+  cmd="docker-compose"
+  if [[ "${use_ipv6}" != "1" ]]; then
+    cmd+=" -f compose/docker-compose-network.yml"
+  else
+    cmd+=" -f compose/docker-compose-network_v6.yml"
   fi
-  cmd="${cmd} -f compose/docker-compose-video-worker.yml"
+  cmd+=" -f compose/docker-compose-video-worker.yml"
   echo "${cmd}"
 }
 
@@ -525,19 +535,23 @@ function get_db_migrate_compose_cmd() {
   mysql_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
   use_ipv6=$(get_config USE_IPV6)
+  use_xpack=$(get_config_or_env USE_XPACK)
 
   cmd="docker-compose -f compose/docker-compose-init-db.yml"
+  if [[ "${use_xpack}" == "1" ]]; then
+    cmd+=" -f compose/docker-compose-init-db-xpack.yml"
+  fi
   if [[ "${mysql_host}" == "mysql" ]]; then
     mysql_images_file=$(get_mysql_images_file)
-    cmd="${cmd} -f ${mysql_images_file}"
+    cmd+=" -f ${mysql_images_file}"
   fi
   if [[ "${redis_host}" == "redis" ]]; then
-    cmd="${cmd} -f compose/docker-compose-redis.yml"
+    cmd+=" -f compose/docker-compose-redis.yml"
   fi
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd="${cmd} -f compose/docker-compose-network.yml"
+    cmd+=" -f compose/docker-compose-network.yml"
   else
-    cmd="${cmd} -f compose/docker-compose-network_v6.yml"
+    cmd+=" -f compose/docker-compose-network_v6.yml"
   fi
   echo "$cmd"
 }
