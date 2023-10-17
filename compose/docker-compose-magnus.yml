@@ -19,7 +19,7 @@ services:
       - ${CONFIG_DIR}/certs:/opt/magnus/data/certs
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
     healthcheck:
-      test: "ps axu | grep -v 'grep' | grep magnus"
+      test: "nc -z 127.0.0.1 33061 || exit 1"
       interval: 10s
       timeout: 5s
       retries: 3
