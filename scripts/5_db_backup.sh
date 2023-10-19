@@ -27,6 +27,11 @@ function main() {
     create_db_ops_env
     flag=1
   fi
+  if [[ "${HOST}" == "mysql" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+      sleep 5s
+    done
+  fi
 
   backup_cmd="mysqldump --skip-add-locks --skip-lock-tables --single-transaction --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
   if ! docker run --rm -i --network=jms_net "${mysql_images}" ${backup_cmd} > "${DB_FILE}"; then

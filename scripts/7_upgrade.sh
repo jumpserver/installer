@@ -88,6 +88,11 @@ function upgrade_config() {
     MAGNUS_REDIS_PORT=63790
     set_config MAGNUS_REDIS_PORT "${MAGNUS_REDIS_PORT}"
   fi
+  use_lb=$(get_config USE_LB)
+  if [ -z "${use_lb}" ]; then
+    USE_LB=1
+    set_config USE_LB "${USE_LB}"
+  fi
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then

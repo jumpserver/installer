@@ -292,11 +292,6 @@ function get_docker_compose_services() {
   if [[ "${use_minio}" == "1" ]]; then
     services+=" minio"
   fi
-  use_lb=$(get_config USE_LB)
-  https_port=$(get_config HTTPS_PORT)
-  if [[ -n "${https_port}" && "${use_lb}" != "0" ]]; then
-    services+=" lb"
-  fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
     services+=" razor xrdp video"
@@ -363,7 +358,8 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ minio ]]; then
     cmd="${cmd} -f compose/docker-compose-minio.yml"
   fi
-  if [[ "${services}" =~ lb ]]; then
+  https_port=$(get_config HTTPS_PORT)
+  if [[ -n "${https_port}" ]]; then
     cmd="${cmd} -f compose/docker-compose-lb.yml"
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
@@ -447,6 +443,11 @@ function prepare_config() {
   fi
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
+  fi
+  if [[ "$(uname -m)" == "loongarch64" ]]; then
+    if ! grep -q "^SECURITY_LOGIN_CAPTCHA_ENABLED" "${CONFIG_FILE}"; then
+      echo "SECURITY_LOGIN_CAPTCHA_ENABLED=False" >> "${CONFIG_FILE}"
+    fi
   fi
 
   # shellcheck disable=SC2045
@@ -543,7 +544,9 @@ function get_db_migrate_compose_cmd() {
 
 function create_db_ops_env() {
   cmd=$(get_db_migrate_compose_cmd)
-  ${cmd} up -d
+  ${cmd} up -d || {
+    exit 1
+  }
 }
 
 function down_db_ops_env() {
@@ -552,31 +555,25 @@ function down_db_ops_env() {
 }
 
 function perform_db_migrations() {
-  if ! create_db_ops_env; then
-    mysql_host=$(get_config DB_HOST)
-    redis_host=$(get_config REDIS_HOST)
-    if [[ "${mysql_host}" == "mysql" ]]; then
-      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
-        sleep 5s
-      done
-    fi
-    if [[ "${redis_host}" == "redis" ]]; then
-      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
-        sleep 5s
-      done
-    fi
-    create_db_ops_env
-    sleep 5s
+  mysql_host=$(get_config DB_HOST)
+  redis_host=$(get_config REDIS_HOST)
+
+  create_db_ops_env
+  if [[ "${mysql_host}" == "mysql" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+      sleep 5s
+    done
+  fi
+  if [[ "${redis_host}" == "redis" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
+      sleep 5s
+    done
   fi
 
-  docker exec -i jms_core bash -c './jms upgrade_db'
-  ret=$?
-
-  down_db_ops_env
-  if [[ "$ret" != "0" ]]; then
+  docker exec -i jms_core bash -c './jms upgrade_db' || {
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
-  fi
+  }
 }
 
 function set_current_version() {
@@ -617,10 +614,11 @@ function pull_image() {
   fi
 
   if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]]; then
-    echo "Image exist, pass"
+    echo "[${image}] exist, pass"
     return
   fi
 
+  echo "[${image}] pulling"
   if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
     docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
     docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
@@ -632,17 +630,12 @@ function pull_image() {
 }
 
 function pull_images() {
-  DOCKER_IMAGE_MIRROR=$(get_config_or_env 'DOCKER_IMAGE_MIRROR')
-  DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
-  if [[ -z "${DOCKER_IMAGE_PREFIX}" ]] && [[ -z "${DOCKER_IMAGE_MIRROR}" ]]; then
-    return
-  fi
   images_to=$(get_images)
 
   for image in ${images_to}; do
-    echo "[${image}]"
-    pull_image "$image"
+    pull_image "$image" &
   done
+  wait
 }
 
 function installation_log() {
