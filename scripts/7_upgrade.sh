@@ -251,7 +251,7 @@ function clean_images() {
     read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       echo
-      docker images | grep "jumpserver/" | grep "${current_version}" | awk '{print $3}' | xargs docker rmi -f
+      docker images --format "{{.Repository}}:{{.Tag}}" | grep "jumpserver/" | grep "${current_version}" | xargs docker rmi -f
     fi
   fi
 }
