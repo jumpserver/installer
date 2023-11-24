@@ -152,6 +152,27 @@ function migrate_config_v1_5_to_v2_0() {
   fi
 }
 
+function migrate_config_v2_0_to_v3_0() {
+  https_port=$(get_config HTTPS_PORT)
+  use_https=0
+
+  for app in jms_lb jms_nginx jms_web; do
+    if docker ps -a | grep "${app}" &>/dev/null; then
+      if [[ -n "${https_port}" ]]; then
+        if docker inspect --format='{{.NetworkSettings.Ports}}' "${app}" | grep -w "${https_port}" &>/dev/null; then
+          use_https=1
+        fi
+      fi
+    fi
+  done
+
+  if [[ "${use_https}" == "0" ]]; then
+    if [[ -n "${https_port}" ]]; then
+      sed -i "s/^HTTPS_PORT=/# HTTPS_PORT=/g" "${CONFIG_FILE}"
+    fi
+  fi
+}
+
 function migrate_data_folder() {
   volume_dir=$(get_config VOLUME_DIR)
   if [[ -d "${volume_dir}/core/logs" ]] && [[ ! -d "${volume_dir}/core/data/logs" ]]; then
@@ -165,6 +186,7 @@ function migrate_config() {
 
 function update_config_if_need() {
   migrate_config_v1_5_to_v2_0
+  migrate_config_v2_0_to_v3_0
   migrate_coco_to_koko
   migrate_config
   upgrade_config
@@ -229,7 +251,7 @@ function clean_images() {
     read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       echo
-      docker images | grep "jumpserver/" | grep "${current_version}" | awk '{print $3}' | xargs docker rmi -f
+      docker images --format "{{.Repository}}:{{.Tag}}" | grep "jumpserver/" | grep "${current_version}" | xargs docker rmi -f
     fi
   fi
 }
