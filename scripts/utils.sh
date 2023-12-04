@@ -144,6 +144,7 @@ function get_images() {
     echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/panda:${VERSION}"
   else
     echo "jumpserver/core-ce:${VERSION}"
     echo "jumpserver/koko:${VERSION}"
@@ -294,10 +295,11 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" razor xrdp video"
+    services+=" razor xrdp video panda"
     razor_enabled=$(get_config RAZOR_ENABLED)
     xrdp_enabled=$(get_config XRDP_ENABLED)
     video_enabled=$(get_config VIDEO_ENABLED)
+    panda_enabled=$(get_config PANDA_ENABLED)
     if [[ "${razor_enabled}" == "0" ]]; then
       services="${services//razor/}"
     fi
@@ -306,6 +308,9 @@ function get_docker_compose_services() {
     fi
     if [[ "${video_enabled}" == "0" ]]; then
       services="${services//video/}"
+    fi
+    if [[ "${panda_enabled}" == "0" ]]; then
+      services="${services//panda/}"
     fi
   fi
   echo "${services}"
@@ -381,6 +386,9 @@ function get_docker_compose_cmd_line() {
     fi
     if [[ "${services}" =~ video ]]; then
       cmd+=" -f compose/docker-compose-video.yml"
+    fi
+    if [[ "${services}" =~ panda ]]; then
+      cmd+=" -f compose/docker-compose-panda.yml"
     fi
   fi
   echo "${cmd}"
