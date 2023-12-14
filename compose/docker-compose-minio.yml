@@ -17,7 +17,7 @@ services:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: $BOOTSTRAP_TOKEN
     healthcheck:
-      test: "curl -sL http://localhost:9000 > /dev/null"
+      test: "mc ready local"
       interval: 10s
       timeout: 5s
       retries: 3
