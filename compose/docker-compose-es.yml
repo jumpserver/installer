@@ -2,7 +2,7 @@ version: '2.4'
 
 services:
   es:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.16
     container_name: jms_es
     hostname: jms_es
     restart: always
