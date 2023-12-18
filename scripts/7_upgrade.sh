@@ -101,20 +101,25 @@ function upgrade_config() {
       RDP_PORT=3389
       set_config RDP_PORT "${RDP_PORT}"
     fi
+    xrdp_port=$(get_config XRDP_PORT)
+    if [ -z "${xrdp_port}" ]; then
+      XRDP_PORT=3390
+      set_config XRDP_PORT "${XRDP_PORT}"
+    fi
     magnus_postgresql_port=$(get_config MAGNUS_POSTGRESQL_PORT)
     if [ -z "${magnus_postgresql_port}" ]; then
       MAGNUS_POSTGRESQL_PORT=54320
       set_config MAGNUS_POSTGRESQL_PORT "${MAGNUS_POSTGRESQL_PORT}"
     fi
+    magnus_sqlserver_port=$(get_config MAGNUS_SQLSERVER_PORT)
+    if [ -z "${magnus_sqlserver_port}" ]; then
+      MAGNUS_SQLSERVER_PORT=14330
+      set_config MAGNUS_SQLSERVER_PORT "${MAGNUS_SQLSERVER_PORT}"
+    fi
     magnus_oracle_ports=$(get_config MAGNUS_ORACLE_PORTS)
     if [ -z "${magnus_oracle_ports}" ]; then
       MAGNUS_ORACLE_PORTS=30000-30030
       set_config MAGNUS_ORACLE_PORTS "${MAGNUS_ORACLE_PORTS}"
-    fi
-    xrdp_port=$(get_config XRDP_PORT)
-    if [ -z "${xrdp_port}" ]; then
-      XRDP_PORT=3390
-      set_config XRDP_PORT "${XRDP_PORT}"
     fi
   fi
 }
