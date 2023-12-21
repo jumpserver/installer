@@ -25,7 +25,7 @@ services:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/nginx/data/logs:/var/log/nginx
     healthcheck:
-      test: "curl -k -fsL http://localhost:$$HTTP_PORT/api/health/ > /dev/null"
+      test: "curl -k -fsL http://localhost:51980/api/health/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3

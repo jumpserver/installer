@@ -101,20 +101,25 @@ function upgrade_config() {
       RDP_PORT=3389
       set_config RDP_PORT "${RDP_PORT}"
     fi
+    xrdp_port=$(get_config XRDP_PORT)
+    if [ -z "${xrdp_port}" ]; then
+      XRDP_PORT=3390
+      set_config XRDP_PORT "${XRDP_PORT}"
+    fi
     magnus_postgresql_port=$(get_config MAGNUS_POSTGRESQL_PORT)
     if [ -z "${magnus_postgresql_port}" ]; then
       MAGNUS_POSTGRESQL_PORT=54320
       set_config MAGNUS_POSTGRESQL_PORT "${MAGNUS_POSTGRESQL_PORT}"
     fi
+    magnus_sqlserver_port=$(get_config MAGNUS_SQLSERVER_PORT)
+    if [ -z "${magnus_sqlserver_port}" ]; then
+      MAGNUS_SQLSERVER_PORT=14330
+      set_config MAGNUS_SQLSERVER_PORT "${MAGNUS_SQLSERVER_PORT}"
+    fi
     magnus_oracle_ports=$(get_config MAGNUS_ORACLE_PORTS)
     if [ -z "${magnus_oracle_ports}" ]; then
       MAGNUS_ORACLE_PORTS=30000-30030
       set_config MAGNUS_ORACLE_PORTS "${MAGNUS_ORACLE_PORTS}"
-    fi
-    xrdp_port=$(get_config XRDP_PORT)
-    if [ -z "${xrdp_port}" ]; then
-      XRDP_PORT=3390
-      set_config XRDP_PORT "${XRDP_PORT}"
     fi
   fi
 }
@@ -152,6 +157,27 @@ function migrate_config_v1_5_to_v2_0() {
   fi
 }
 
+function migrate_config_v2_0_to_v3_0() {
+  https_port=$(get_config HTTPS_PORT)
+  use_https=0
+
+  for app in jms_lb jms_nginx jms_web; do
+    if docker ps -a | grep "${app}" &>/dev/null; then
+      if [[ -n "${https_port}" ]]; then
+        if docker inspect --format='{{.NetworkSettings.Ports}}' "${app}" | grep -w "${https_port}" &>/dev/null; then
+          use_https=1
+        fi
+      fi
+    fi
+  done
+
+  if [[ "${use_https}" == "0" ]]; then
+    if [[ -n "${https_port}" ]]; then
+      sed -i "s/^HTTPS_PORT=/# HTTPS_PORT=/g" "${CONFIG_FILE}"
+    fi
+  fi
+}
+
 function migrate_data_folder() {
   volume_dir=$(get_config VOLUME_DIR)
   if [[ -d "${volume_dir}/core/logs" ]] && [[ ! -d "${volume_dir}/core/data/logs" ]]; then
@@ -165,6 +191,7 @@ function migrate_config() {
 
 function update_config_if_need() {
   migrate_config_v1_5_to_v2_0
+  migrate_config_v2_0_to_v3_0
   migrate_coco_to_koko
   migrate_config
   upgrade_config
@@ -229,7 +256,7 @@ function clean_images() {
     read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
       echo
-      docker images | grep "jumpserver/" | grep "${current_version}" | awk '{print $3}' | xargs docker rmi -f
+      docker images --format "{{.Repository}}:{{.Tag}}" | grep "jumpserver/" | grep "${current_version}" | xargs docker rmi -f
     fi
   fi
 }

@@ -1,0 +1,24 @@
+version: '2.4'
+
+services:
+  panda:
+    image: ${REGISTRY:-docker.io}/jumpserver/panda:${VERSION}
+    container_name: jms_panda
+    hostname: jms_panda
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
+    env_file:
+      - ${CONFIG_FILE}
+    volumes:
+      - ${VOLUME_DIR}/panda/data:/opt/panda/data
+      - /var/run/docker.sock:/var/run/docker.sock:z
+    healthcheck:
+      test: "curl -fsL http://localhost:9001/panda/health/ > /dev/null"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
