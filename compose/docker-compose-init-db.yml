@@ -10,7 +10,6 @@ services:
     env_file:
       - ${CONFIG_FILE}
     volumes:
-      - ${CONFIG_DIR}/core/config.yml:/opt/jumpserver/config.yml
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
     networks:
