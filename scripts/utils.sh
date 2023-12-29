@@ -651,13 +651,42 @@ function pull_image() {
   echo ""
 }
 
+function check_images() {
+  images_to=$(get_images)
+  failed=0
+
+  for image in ${images_to}; do
+    if ! docker image inspect -f '{{ .Id }}' "$image" &> /dev/null; then
+      pull_image "$image"
+    fi
+  done
+  for image in ${images_to}; do
+    if ! docker image inspect -f '{{ .Id }}' "$image" &> /dev/null; then
+      echo_red "$(gettext 'Failed to pull image') ${image}"
+      failed=1
+    fi
+  done
+
+  if [ $failed -eq 1 ]; then
+    exit 1
+  fi
+}
+
 function pull_images() {
   images_to=$(get_images)
+  pids=()
+
+  trap 'kill ${pids[*]}' SIGINT SIGTERM
 
   for image in ${images_to}; do
     pull_image "$image" &
+    pids+=($!)
   done
-  wait
+  wait ${pids[*]}
+
+  trap - SIGINT SIGTERM
+
+  check_images
 }
 
 function installation_log() {
