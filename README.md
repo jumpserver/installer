@@ -51,10 +51,6 @@ $ ./jmsctl.sh tail
 [root@localhost config]# tree .
 .
 ├── config.txt       # 主配置文件
-├── core
-│   └── config.yml   # core yml 格式配置文件，可以留空，使用 config.txt 设置
-├── koko
-│   └── config.yml   # koko yml 格式配置文件，可以留空，使用 config.txt 设置
 ├── mysql
 │   └── my.cnf       # mysql 配置文件
 |── mariadb
