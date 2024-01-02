@@ -158,6 +158,19 @@ function migrate_config_v1_5_to_v2_0() {
 }
 
 function migrate_config_v2_0_to_v3_0() {
+  is_running=0
+  for app in jms_lb jms_nginx jms_web; do
+    if docker ps | grep -q "${app}"; then
+      is_running=1
+      break
+    fi
+  done
+
+  if [ "$is_running" -eq 0 ]; then
+    # Nothing to do
+    return
+  fi
+
   https_port=$(get_config HTTPS_PORT)
   use_https=0
 
