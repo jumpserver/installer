@@ -2,7 +2,7 @@ version: '2.4'
 
 services:
   koko:
-    image: ${REGISTRY:-docker.io}/jumpserver/koko:${VERSION}
+    image: ${REGISTRY:-docker.io}/jumpserver/koko-ce:${VERSION}
     container_name: jms_koko
     hostname: jms_koko
     ulimits:
