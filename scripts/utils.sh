@@ -137,21 +137,13 @@ function get_images() {
     echo "registry.fit2cloud.com/jumpserver/core-ee:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/lion:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/chen:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/kael:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/panda:${VERSION}"
   else
     echo "jumpserver/core-ce:${VERSION}"
     echo "jumpserver/koko:${VERSION}"
     echo "jumpserver/lion:${VERSION}"
-    echo "jumpserver/magnus:${VERSION}"
     echo "jumpserver/chen:${VERSION}"
-    echo "jumpserver/kael:${VERSION}"
     echo "jumpserver/web:${VERSION}"
   fi
 }
@@ -248,11 +240,9 @@ function get_docker_compose_services() {
   celery_enabled=$(get_config CELERY_ENABLED)
   koko_enabled=$(get_config KOKO_ENABLED)
   lion_enabled=$(get_config LION_ENABLED)
-  magnus_enabled=$(get_config MAGNUS_ENABLED)
   chen_enabled=$(get_config CHEN_ENABLED)
-  kael_enabled=$(get_config KAEL_ENABLED)
   web_enabled=$(get_config WEB_ENABLED)
-  services="core celery koko lion magnus chen kael web"
+  services="core celery koko lion chen web"
   if [[ "${core_enabled}" == "0" ]]; then
     services="${services//core/}"
   fi
@@ -265,14 +255,8 @@ function get_docker_compose_services() {
   if [[ "${lion_enabled}" == "0" ]]; then
     services="${services//lion/}"
   fi
-  if [[ "${magnus_enabled}" == "0" ]]; then
-    services="${services//magnus/}"
-  fi
   if [[ "${chen_enabled}" == "0" ]]; then
     services="${services//chen/}"
-  fi
-  if [[ "${kael_enabled}" == "0" ]]; then
-    services="${services//kael/}"
   fi
   if [[ "${web_enabled}" == "0" ]]; then
     services="${services//web/}"
@@ -294,25 +278,6 @@ function get_docker_compose_services() {
     services+=" minio"
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
-  if [[ "${use_xpack}" == "1" ]]; then
-    services+=" razor xrdp video panda"
-    razor_enabled=$(get_config RAZOR_ENABLED)
-    xrdp_enabled=$(get_config XRDP_ENABLED)
-    video_enabled=$(get_config VIDEO_ENABLED)
-    panda_enabled=$(get_config PANDA_ENABLED)
-    if [[ "${razor_enabled}" == "0" ]]; then
-      services="${services//razor/}"
-    fi
-    if [[ "${xrdp_enabled}" == "0" ]]; then
-      services="${services//xrdp/}"
-    fi
-    if [[ "${video_enabled}" == "0" ]]; then
-      services="${services//video/}"
-    fi
-    if [[ "${panda_enabled}" == "0" ]]; then
-      services="${services//panda/}"
-    fi
-  fi
   echo "${services}"
 }
 
@@ -347,17 +312,8 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ lion ]]; then
     cmd+=" -f compose/docker-compose-lion.yml"
   fi
-  if [[ "${services}" =~ magnus ]]; then
-    cmd+=" -f compose/docker-compose-magnus.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-magnus-xpack.yml"
-    fi
-  fi
   if [[ "${services}" =~ chen ]]; then
     cmd+=" -f compose/docker-compose-chen.yml"
-  fi
-  if [[ "${services}" =~ kael ]]; then
-    cmd+=" -f compose/docker-compose-kael.yml"
   fi
   if [[ "${services}" =~ web ]]; then
     cmd+=" -f compose/docker-compose-web.yml"
@@ -377,36 +333,6 @@ function get_docker_compose_cmd_line() {
   if [[ -n "${https_port}" ]]; then
     cmd+=" -f compose/docker-compose-lb.yml"
   fi
-  if [[ "${use_xpack}" == '1' ]]; then
-    if [[ "${services}" =~ razor ]]; then
-      cmd+=" -f compose/docker-compose-razor.yml"
-    fi
-    if [[ "${services}" =~ xrdp ]]; then
-      cmd+=" -f compose/docker-compose-xrdp.yml"
-    fi
-    if [[ "${services}" =~ video ]]; then
-      cmd+=" -f compose/docker-compose-video.yml"
-    fi
-    if [[ "${services}" =~ panda ]]; then
-      cmd+=" -f compose/docker-compose-panda.yml"
-    fi
-  fi
-  echo "${cmd}"
-}
-
-function get_video_worker_cmd_line() {
-  use_xpack=$(get_config_or_env USE_XPACK)
-  if [[ "${use_xpack}" != "1" ]]; then
-    return
-  fi
-  use_ipv6=$(get_config USE_IPV6)
-  cmd="docker-compose"
-  if [[ "${use_ipv6}" != "1" ]]; then
-    cmd+=" -f compose/docker-compose-network.yml"
-  else
-    cmd+=" -f compose/docker-compose-network_v6.yml"
-  fi
-  cmd+=" -f compose/docker-compose-video-worker.yml"
   echo "${cmd}"
 }
 
@@ -622,6 +548,9 @@ function pull_image() {
     fi
     if [[ "$(uname -m)" == "loongarch64" ]]; then
       DOCKER_IMAGE_PREFIX="swr.cn-southwest-2.myhuaweicloud.com"
+    fi
+    if [[ "$(uname -m)" == "s390x" ]]; then
+      DOCKER_IMAGE_PREFIX="swr.sa-brazil-1.myhuaweicloud.com"
     fi
   else
     DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')

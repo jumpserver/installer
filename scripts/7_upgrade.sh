@@ -10,39 +10,6 @@ target=$1
 function upgrade_config() {
   # 如果配置文件有更新, 则添加到新的配置文件
   check_docker_start
-  if docker ps -a | grep jms_guacamole &>/dev/null; then
-    docker stop jms_guacamole &>/dev/null
-    docker rm jms_guacamole &>/dev/null
-  fi
-  if docker ps -a | grep jms_lina &>/dev/null; then
-    docker stop jms_lina &>/dev/null
-    docker rm jms_lina &>/dev/null
-  fi
-  if docker ps -a | grep jms_luna &>/dev/null; then
-    docker stop jms_luna &>/dev/null
-    docker rm jms_luna &>/dev/null
-  fi
-  if docker ps -a | grep jms_nginx &>/dev/null; then
-    docker stop jms_nginx &>/dev/null
-    docker rm jms_nginx &>/dev/null
-  fi
-  if docker ps -a | grep jms_xpack &>/dev/null; then
-    docker stop jms_xpack &>/dev/null
-    docker rm jms_xpack &>/dev/null
-    docker volume rm jms_share-volume &>/dev/null
-  fi
-  if docker ps -a | grep jms_xrdp &>/dev/null; then
-    docker stop jms_xrdp &>/dev/null
-    docker rm jms_xrdp &>/dev/null
-  fi
-  if docker ps -a | grep jms_lb &>/dev/null; then
-    docker stop jms_lb &>/dev/null
-    docker rm jms_lb &>/dev/null
-  fi
-  if docker ps -a | grep jms_omnidb &>/dev/null; then
-    docker stop jms_omnidb &>/dev/null
-    docker rm jms_omnidb &>/dev/null
-  fi
   current_version=$(get_config CURRENT_VERSION)
   if [ -z "${current_version}" ]; then
     set_config CURRENT_VERSION "${VERSION}"
@@ -68,59 +35,10 @@ function upgrade_config() {
   if grep -q "sticky name=jms_route;" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
     sed -i "s/sticky name=jms_route;/ip_hash;/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
   fi
-  # MAGNUS 数据库
-  magnus_ports=$(get_config MAGNUS_PORTS)
-  if [ -n "${magnus_ports}" ]; then
-    sed -i "s/MAGNUS_PORTS/MAGNUS_ORACLE_PORTS/g" ${CONFIG_FILE}
-  fi
-  magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
-  if [ -z "${magnus_mysql_port}" ]; then
-    MAGNUS_MYSQL_PORT=33061
-    set_config MAGNUS_MYSQL_PORT "${MAGNUS_MYSQL_PORT}"
-  fi
-  magnus_mariadb_port=$(get_config MAGNUS_MARIADB_PORT)
-  if [ -z "${magnus_mariadb_port}" ]; then
-    MAGNUS_MARIADB_PORT=33062
-    set_config MAGNUS_MARIADB_PORT "${MAGNUS_MARIADB_PORT}"
-  fi
-  magnus_redis_port=$(get_config MAGNUS_REDIS_PORT)
-  if [ -z "${magnus_redis_port}" ]; then
-    MAGNUS_REDIS_PORT=63790
-    set_config MAGNUS_REDIS_PORT "${MAGNUS_REDIS_PORT}"
-  fi
   use_lb=$(get_config USE_LB)
   if [ -z "${use_lb}" ]; then
     USE_LB=1
     set_config USE_LB "${USE_LB}"
-  fi
-  # XPACK
-  use_xpack=$(get_config_or_env USE_XPACK)
-  if [[ "${use_xpack}" == "1" ]]; then
-    rdp_port=$(get_config RDP_PORT)
-    if [[ -z "${rdp_port}" ]]; then
-      RDP_PORT=3389
-      set_config RDP_PORT "${RDP_PORT}"
-    fi
-    xrdp_port=$(get_config XRDP_PORT)
-    if [ -z "${xrdp_port}" ]; then
-      XRDP_PORT=3390
-      set_config XRDP_PORT "${XRDP_PORT}"
-    fi
-    magnus_postgresql_port=$(get_config MAGNUS_POSTGRESQL_PORT)
-    if [ -z "${magnus_postgresql_port}" ]; then
-      MAGNUS_POSTGRESQL_PORT=54320
-      set_config MAGNUS_POSTGRESQL_PORT "${MAGNUS_POSTGRESQL_PORT}"
-    fi
-    magnus_sqlserver_port=$(get_config MAGNUS_SQLSERVER_PORT)
-    if [ -z "${magnus_sqlserver_port}" ]; then
-      MAGNUS_SQLSERVER_PORT=14330
-      set_config MAGNUS_SQLSERVER_PORT "${MAGNUS_SQLSERVER_PORT}"
-    fi
-    magnus_oracle_ports=$(get_config MAGNUS_ORACLE_PORTS)
-    if [ -z "${magnus_oracle_ports}" ]; then
-      MAGNUS_ORACLE_PORTS=30000-30030
-      set_config MAGNUS_ORACLE_PORTS "${MAGNUS_ORACLE_PORTS}"
-    fi
   fi
 }
 
@@ -134,78 +52,11 @@ function clean_file() {
   fi
 }
 
-function migrate_coco_to_koko() {
-  volume_dir=$(get_config VOLUME_DIR)
-  coco_dir="${volume_dir}/coco"
-  koko_dir="${volume_dir}/koko"
-  if [[ ! -d "${koko_dir}" && -d "${coco_dir}" ]]; then
-    mv "${coco_dir}" "${koko_dir}"
-    ln -s "${koko_dir}" "${coco_dir}"
-  fi
-}
-
-function migrate_config_v1_5_to_v2_0() {
-  if [[ ! -f ${CONFIG_FILE} ]]; then
-    mkdir -p "${CONFIG_DIR}"
-
-    # v1.5 => v2.0
-    # 原先配置文件都在自己的目录，以后配置文件统一放在 /opt/jumpserver/config 中
-    if [[ -f config.txt ]]; then
-      mv config.txt "${CONFIG_FILE}"
-      rm -f .env
-    fi
-  fi
-}
-
-function migrate_config_v2_0_to_v3_0() {
-  is_running=0
-  for app in jms_lb jms_nginx jms_web; do
-    if docker ps | grep -q "${app}"; then
-      is_running=1
-      break
-    fi
-  done
-
-  if [ "$is_running" -eq 0 ]; then
-    # Nothing to do
-    return
-  fi
-
-  https_port=$(get_config HTTPS_PORT)
-  use_https=0
-
-  for app in jms_lb jms_nginx jms_web; do
-    if docker ps -a | grep "${app}" &>/dev/null; then
-      if [[ -n "${https_port}" ]]; then
-        if docker inspect --format='{{.NetworkSettings.Ports}}' "${app}" | grep -w "${https_port}" &>/dev/null; then
-          use_https=1
-        fi
-      fi
-    fi
-  done
-
-  if [[ "${use_https}" == "0" ]]; then
-    if [[ -n "${https_port}" ]]; then
-      sed -i "s/^HTTPS_PORT=/# HTTPS_PORT=/g" "${CONFIG_FILE}"
-    fi
-  fi
-}
-
-function migrate_data_folder() {
-  volume_dir=$(get_config VOLUME_DIR)
-  if [[ -d "${volume_dir}/core/logs" ]] && [[ ! -d "${volume_dir}/core/data/logs" ]]; then
-    mv "${volume_dir}/core/logs" "${volume_dir}/core/data/logs"
-  fi
-}
-
 function migrate_config() {
   prepare_config
 }
 
 function update_config_if_need() {
-  migrate_config_v1_5_to_v2_0
-  migrate_config_v2_0_to_v3_0
-  migrate_coco_to_koko
   migrate_config
   upgrade_config
   clean_file

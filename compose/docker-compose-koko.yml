@@ -11,8 +11,6 @@ services:
     tty: true
     env_file:
       - ${CONFIG_FILE}
-    ports:
-      - ${SSH_PORT}:2222
     volumes:
       - ${CONFIG_DIR}/certs:/opt/koko/data/certs
       - ${VOLUME_DIR}/koko/data:/opt/koko/data
