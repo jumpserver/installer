@@ -1,5 +1,0 @@
-version: '2.4'
-
-services:
-  koko:
-    image: ${REGISTRY:-docker.io}/jumpserver/koko-ee:${VERSION}

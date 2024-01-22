@@ -135,7 +135,7 @@ function get_images() {
   done
   if [[ "$use_xpack" == "1" ]];then
     echo "registry.fit2cloud.com/jumpserver/core-ee:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/koko-ee:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/lion:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/chen:${VERSION}"
@@ -147,7 +147,7 @@ function get_images() {
     echo "registry.fit2cloud.com/jumpserver/panda:${VERSION}"
   else
     echo "jumpserver/core-ce:${VERSION}"
-    echo "jumpserver/koko-ce:${VERSION}"
+    echo "jumpserver/koko:${VERSION}"
     echo "jumpserver/lion:${VERSION}"
     echo "jumpserver/magnus:${VERSION}"
     echo "jumpserver/chen:${VERSION}"
@@ -343,9 +343,6 @@ function get_docker_compose_cmd_line() {
   fi
   if [[ "${services}" =~ koko ]]; then
     cmd+=" -f compose/docker-compose-koko.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-koko-xpack.yml"
-    fi
   fi
   if [[ "${services}" =~ lion ]]; then
     cmd+=" -f compose/docker-compose-lion.yml"
