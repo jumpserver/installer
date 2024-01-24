@@ -8,10 +8,6 @@ VOLUME_DIR=$(get_config VOLUME_DIR)
 BACKUP_DIR="${VOLUME_DIR}/db_backup"
 CURRENT_VERSION=$(get_config CURRENT_VERSION)
 
-HOST=$(get_config DB_HOST)
-PORT=$(get_config DB_PORT)
-USER=$(get_config DB_USER)
-PASSWORD=$(get_config DB_PASSWORD)
 DATABASE=$(get_config DB_NAME)
 DB_FILE=${BACKUP_DIR}/${DATABASE}-${CURRENT_VERSION}-$(date +%F_%T).sql
 
@@ -33,8 +29,9 @@ function main() {
     done
   fi
 
-  backup_cmd="mysqldump --skip-add-locks --skip-lock-tables --single-transaction --host=${HOST} --port=${PORT} --user=${USER} --password=${PASSWORD} ${DATABASE}"
-  if ! docker run --rm -i --network=jms_net "${mysql_images}" ${backup_cmd} > "${DB_FILE}"; then
+  backup_cmd='mysqldump --skip-add-locks --skip-lock-tables --single-transaction -h$DB_HOST -P$DB_PORT -u$DB_USER -p"$DB_PASSWORD" $DB_NAME > '${DB_FILE}
+  if ! docker run --rm --env-file=${CONFIG_FILE} -i --network=jms_net -v "${BACKUP_DIR}:${BACKUP_DIR}" "${mysql_images}" bash -c "${backup_cmd}"; then
+    log_error "$(gettext 'Backup failed')!"
     log_error "$(gettext 'Backup failed')!"
     rm -f "${DB_FILE}"
     exit 1
