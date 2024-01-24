@@ -622,9 +622,6 @@ function pull_image() {
     if [[ "$(uname -m)" == "aarch64" ]]; then
       DOCKER_IMAGE_PREFIX="swr.cn-north-4.myhuaweicloud.com"
     fi
-    if [[ "$(uname -m)" == "loongarch64" ]]; then
-      DOCKER_IMAGE_PREFIX="swr.cn-southwest-2.myhuaweicloud.com"
-    fi
   else
     DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
   fi
