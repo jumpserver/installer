@@ -19,7 +19,7 @@ services:
       - ${CONFIG_DIR}/certs:/opt/magnus/data/certs
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
     healthcheck:
-      test: "nc -z 127.0.0.1 33061 || exit 1"
+      test: "curl localhost:8088/health || exit 1"
       interval: 10s
       timeout: 5s
       retries: 3
