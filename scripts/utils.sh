@@ -17,16 +17,18 @@ function is_confirm() {
 function random_str() {
   len=$1
   if [[ -z ${len} ]]; then
-    len=16
+    len=24
   fi
-  uuid=None
+  uuid=""
   if command -v dmidecode &>/dev/null; then
-    uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | base64 | head -c ${len})
+    if [[ ${len} -gt 24 ]]; then
+      uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | sha256sum | awk '{print $1}' | head -c ${len})
+    fi
   fi
   if [[ "${#uuid}" == "${len}" ]]; then
     echo "${uuid}"
   else
-    head -c100 < /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c ${len}; echo
+    head -c200 < /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c ${len}; echo
   fi
 }
 
