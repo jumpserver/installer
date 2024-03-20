@@ -45,16 +45,14 @@ function usage() {
   echo
   echo "Installation Commands: "
   echo "  install           $(gettext 'Install JumpServer')"
-  echo "  upgrade [version] $(gettext 'Upgrade JumpServer')"
-  echo "  check_update      $(gettext 'Check for updates JumpServer')"
-  echo "  reconfig          $(gettext 'Reconfiguration JumpServer')"
   echo
   echo "Management Commands: "
-  echo "  start             $(gettext 'Start   JumpServer')"
-  echo "  stop              $(gettext 'Stop    JumpServer')"
-  echo "  restart           $(gettext 'Restart JumpServer')"
-  echo "  status            $(gettext 'Check   JumpServer')"
-  echo "  down              $(gettext 'Offline JumpServer')"
+  echo "  config            $(gettext 'Configuration  Tools')"
+  echo "  start             $(gettext 'Start     JumpServer')"
+  echo "  stop              $(gettext 'Stop      JumpServer')"
+  echo "  restart           $(gettext 'Restart   JumpServer')"
+  echo "  status            $(gettext 'Check     JumpServer')"
+  echo "  down              $(gettext 'Offline   JumpServer')"
   echo "  uninstall         $(gettext 'Uninstall JumpServer')"
   echo
   echo "More Commands: "
@@ -184,7 +182,7 @@ function main() {
 
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""
-  elif [[ "${action}" == "install" || "${action}" == "reconfig" ]]; then
+  elif [[ "${action}" == "install" || "${action}" == "config" || "${action}" == "reconfig" ]]; then
     echo ""
   else
     pre_check || return 3
@@ -199,6 +197,9 @@ function main() {
     ;;
   check_update)
     check_update
+    ;;
+  config)
+    bash "${SCRIPT_DIR}/config.sh" "$target"
     ;;
   reconfig)
     ${EXE} down -v
