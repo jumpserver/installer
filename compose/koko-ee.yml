@@ -1,0 +1,5 @@
+services:
+  koko:
+    image: ${REGISTRY:-docker.io}/jumpserver/koko-ee:${VERSION}
+    ports:
+      - ${SSH_PORT}:2222

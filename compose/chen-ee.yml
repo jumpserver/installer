@@ -1,0 +1,3 @@
+services:
+  chen:
+    image: ${REGISTRY:-docker.io}/jumpserver/chen-ee:${VERSION}
