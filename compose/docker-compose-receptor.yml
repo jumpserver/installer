@@ -1,0 +1,20 @@
+services:
+  receptor:
+    image: ${REGISTRY:-docker.io}/jumpserver/core-ce:${VERSION}
+    container_name: jms_receptor
+    hostname: jms_receptor
+    ulimits:
+      core: 0
+    restart: always
+    tty: true
+    command: start receptor
+    volumes:
+      - ${VOLUME_DIR}/core/data/share:/opt/jumpserver/data/share
+    healthcheck:
+      test: "test -S /opt/jumpserver/data/share/control.sock || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - net

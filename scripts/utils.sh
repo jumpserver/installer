@@ -338,9 +338,9 @@ function get_docker_compose_cmd_line() {
     fi
   fi
   if [[ "${services}" =~ celery ]]; then
-    cmd+=" -f compose/docker-compose-celery.yml"
+    cmd+=" -f compose/docker-compose-celery.yml -f compose/docker-compose-receptor.yml"
     if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-celery-xpack.yml"
+      cmd+=" -f compose/docker-compose-celery-xpack.yml -f compose/docker-compose-receptor-xpack.yml"
     fi
   fi
   if [[ "${services}" =~ koko ]]; then
