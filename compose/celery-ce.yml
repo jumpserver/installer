@@ -6,7 +6,6 @@ services:
     ulimits:
       core: 0
     restart: always
-    tty: true
     command: start task
     env_file:
       - ${CONFIG_FILE}

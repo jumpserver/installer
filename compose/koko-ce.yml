@@ -1,22 +1,19 @@
 services:
   koko:
-    image: ${REGISTRY:-docker.io}/jumpserver/koko:${VERSION}
+    image: ${REGISTRY:-docker.io}/jumpserver/koko-ce:${VERSION}
     container_name: jms_koko
     hostname: jms_koko
     ulimits:
       core: 0
     restart: always
-    tty: true
     env_file:
       - ${CONFIG_FILE}
-    ports:
-      - ${SSH_PORT}:2222
     volumes:
       - ${CONFIG_DIR}/certs:/opt/koko/data/certs
       - ${VOLUME_DIR}/koko/data:/opt/koko/data
     privileged: true
     healthcheck:
-      test: "curl -fsL http://localhost:5000/koko/health/ > /dev/null"
+      test: "check http://localhost:5000/koko/health/"
       interval: 10s
       timeout: 5s
       retries: 3

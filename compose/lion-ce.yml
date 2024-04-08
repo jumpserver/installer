@@ -1,19 +1,18 @@
 services:
   lion:
-    image: ${REGISTRY:-docker.io}/jumpserver/lion:${VERSION}
+    image: ${REGISTRY:-docker.io}/jumpserver/lion-ce:${VERSION}
     container_name: jms_lion
     hostname: jms_lion
     ulimits:
       core: 0
     restart: always
-    tty: true
     env_file:
       - ${CONFIG_FILE}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/lion/data/certs
       - ${VOLUME_DIR}/lion/data:/opt/lion/data
     healthcheck:
-      test: "curl -fsL http://localhost:8081/lion/health/ > /dev/null"
+      test: "check http://localhost:8081/lion/health/"
       interval: 10s
       timeout: 5s
       retries: 3

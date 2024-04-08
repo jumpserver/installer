@@ -27,6 +27,7 @@ function post_install() {
   https_port=$(get_config HTTPS_PORT)
   server_name=$(get_config SERVER_NAME)
   ssh_port=$(get_config SSH_PORT)
+  use_xpack=$(get_config_or_env USE_XPACK)
 
   echo_yellow "1. $(gettext 'You can use the following command to start, and then visit')"
   echo "cd ${PROJECT_DIR}"
@@ -48,11 +49,13 @@ function post_install() {
 
   echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): admin"
 
-  echo_yellow "\n4. SSH/SFTP $(gettext 'access')"
-  echo "ssh -p${ssh_port} admin@${host}"
-  echo "sftp -P${ssh_port} admin@${host}"
+  if [[ "${use_xpack}" == "1" ]]; then
+    echo_yellow "\n4. SSH/SFTP $(gettext 'access')"
+    echo "ssh -p${ssh_port} admin@${host}"
+    echo "sftp -P${ssh_port} admin@${host}"
+  fi
 
-  echo_yellow "\n5. $(gettext 'More information')"
+  echo_yellow "\n $(gettext 'More information')"
   echo "$(gettext 'Official Website'): https://www.jumpserver.org/"
   echo "$(gettext 'Documentation'): https://docs.jumpserver.org/"
   echo -e "\n"

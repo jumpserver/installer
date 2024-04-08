@@ -118,9 +118,9 @@ function get_mysql_images() {
 function get_mysql_images_file() {
   mysql_data_exists=$(check_mysql_data)
   if [[ "${mysql_data_exists}" == "1" ]]; then
-    mysql_images_file=compose/docker-compose-mysql.yml
+    mysql_images_file=compose/mysql.yml
   else
-    mysql_images_file=compose/docker-compose-mariadb.yml
+    mysql_images_file=compose/mariadb.yml
   fi
   echo "${mysql_images_file}"
 }
@@ -137,24 +137,21 @@ function get_images() {
   done
   if [[ "$use_xpack" == "1" ]];then
     echo "registry.fit2cloud.com/jumpserver/core-ee:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/lion:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/koko-ee:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/lion-ee:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/chen-ee:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/web-ee:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/chen:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/kael:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/panda:${VERSION}"
   else
     echo "jumpserver/core-ce:${VERSION}"
-    echo "jumpserver/koko:${VERSION}"
-    echo "jumpserver/lion:${VERSION}"
-    echo "jumpserver/magnus:${VERSION}"
-    echo "jumpserver/chen:${VERSION}"
-    echo "jumpserver/kael:${VERSION}"
-    echo "jumpserver/web:${VERSION}"
+    echo "jumpserver/koko-ce:${VERSION}"
+    echo "jumpserver/lion-ce:${VERSION}"
+    echo "jumpserver/chen-ce:${VERSION}"
+    echo "jumpserver/web-ce:${VERSION}"
   fi
 }
 
@@ -250,11 +247,9 @@ function get_docker_compose_services() {
   celery_enabled=$(get_config CELERY_ENABLED)
   koko_enabled=$(get_config KOKO_ENABLED)
   lion_enabled=$(get_config LION_ENABLED)
-  magnus_enabled=$(get_config MAGNUS_ENABLED)
   chen_enabled=$(get_config CHEN_ENABLED)
-  kael_enabled=$(get_config KAEL_ENABLED)
   web_enabled=$(get_config WEB_ENABLED)
-  services="core celery koko lion magnus chen kael web"
+  services="core celery koko lion chen web"
   if [[ "${core_enabled}" == "0" ]]; then
     services="${services//core/}"
   fi
@@ -267,14 +262,8 @@ function get_docker_compose_services() {
   if [[ "${lion_enabled}" == "0" ]]; then
     services="${services//lion/}"
   fi
-  if [[ "${magnus_enabled}" == "0" ]]; then
-    services="${services//magnus/}"
-  fi
   if [[ "${chen_enabled}" == "0" ]]; then
     services="${services//chen/}"
-  fi
-  if [[ "${kael_enabled}" == "0" ]]; then
-    services="${services//kael/}"
   fi
   if [[ "${web_enabled}" == "0" ]]; then
     services="${services//web/}"
@@ -297,11 +286,15 @@ function get_docker_compose_services() {
   fi
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" razor xrdp video panda"
+    services+=" magnus razor xrdp video panda"
+    magnus_enabled=$(get_config MAGNUS_ENABLED)
     razor_enabled=$(get_config RAZOR_ENABLED)
     xrdp_enabled=$(get_config XRDP_ENABLED)
     video_enabled=$(get_config VIDEO_ENABLED)
     panda_enabled=$(get_config PANDA_ENABLED)
+    if [[ "${magnus_enabled}" == "0" ]]; then
+      services="${services//magnus/}"
+    fi
     if [[ "${razor_enabled}" == "0" ]]; then
       services="${services//razor/}"
     fi
@@ -326,71 +319,77 @@ function get_docker_compose_cmd_line() {
   mysql_images_file=$(get_mysql_images_file)
   cmd="docker-compose"
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd+=" -f compose/docker-compose-network.yml"
+    cmd+=" -f compose/network.yml"
   else
-    cmd+=" -f compose/docker-compose-network_v6.yml"
+    cmd+=" -f compose/network-v6.yml"
   fi
   services=$(get_docker_compose_services "$ignore_db")
   if [[ "${services}" =~ core ]]; then
-    cmd+=" -f compose/docker-compose-core.yml"
+    cmd+=" -f compose/core-ce.yml"
     if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-core-xpack.yml"
+      cmd+=" -f compose/core-ee.yml"
     fi
   fi
   if [[ "${services}" =~ celery ]]; then
-    cmd+=" -f compose/docker-compose-celery.yml"
+    cmd+=" -f compose/celery-ce.yml"
     if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-celery-xpack.yml"
+      cmd+=" -f compose/celery-ee.yml"
     fi
   fi
   if [[ "${services}" =~ koko ]]; then
-    cmd+=" -f compose/docker-compose-koko.yml"
+    cmd+=" -f compose/koko-ce.yml"
+    if [[ "${use_xpack}" == '1' ]]; then
+      cmd+=" -f compose/koko-ee.yml"
+    fi
   fi
   if [[ "${services}" =~ lion ]]; then
-    cmd+=" -f compose/docker-compose-lion.yml"
-  fi
-  if [[ "${services}" =~ magnus ]]; then
-    cmd+=" -f compose/docker-compose-magnus.yml"
+    cmd+=" -f compose/lion-ce.yml"
     if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-magnus-xpack.yml"
+      cmd+=" -f compose/lion-ee.yml"
     fi
   fi
   if [[ "${services}" =~ chen ]]; then
-    cmd+=" -f compose/docker-compose-chen.yml"
-  fi
-  if [[ "${services}" =~ kael ]]; then
-    cmd+=" -f compose/docker-compose-kael.yml"
+    cmd+=" -f compose/chen-ce.yml"
+    if [[ "${use_xpack}" == '1' ]]; then
+      cmd+=" -f compose/chen-ee.yml"
+    fi
   fi
   if [[ "${services}" =~ web ]]; then
-    cmd+=" -f compose/docker-compose-web.yml"
+    cmd+=" -f compose/web-ce.yml"
+    if [[ "${use_xpack}" == '1' ]]; then
+      cmd+=" -f compose/web-ee.yml"
+    fi
   fi
   if [[ "${services}" =~ mysql ]]; then
     cmd+=" -f ${mysql_images_file}"
   fi
   if [[ "${services}" =~ redis ]]; then
-    cmd+=" -f compose/docker-compose-redis.yml"
+    cmd+=" -f compose/redis.yml"
   fi
   if [[ "${services}" =~ es ]]; then
-    cmd+=" -f compose/docker-compose-es.yml"
+    cmd+=" -f compose/es.yml"
   fi
   if [[ "${services}" =~ minio ]]; then
-    cmd+=" -f compose/docker-compose-minio.yml"
+    cmd+=" -f compose/minio.yml"
   fi
   if [[ -n "${https_port}" ]]; then
-    cmd+=" -f compose/docker-compose-lb.yml"
+    cmd+=" -f compose/lb.yml"
   fi
   if [[ "${use_xpack}" == '1' ]]; then
+    if [[ "${services}" =~ magnus ]]; then
+      cmd+=" -f compose/magnus.yml"
+    fi
     if [[ "${services}" =~ razor ]]; then
-      cmd+=" -f compose/docker-compose-razor.yml"
+      cmd+=" -f compose/razor.yml"
     fi
     if [[ "${services}" =~ xrdp ]]; then
-      cmd+=" -f compose/docker-compose-xrdp.yml"
+      cmd+=" -f compose/xrdp.yml"
     fi
     if [[ "${services}" =~ video ]]; then
-      cmd+=" -f compose/docker-compose-video.yml"
+      cmd+=" -f compose/video.yml"
     fi
     if [[ "${services}" =~ panda ]]; then
-      cmd+=" -f compose/docker-compose-panda.yml"
+      cmd+=" -f compose/panda.yml"
     fi
   fi
   echo "${cmd}"
@@ -404,11 +403,11 @@ function get_video_worker_cmd_line() {
   use_ipv6=$(get_config USE_IPV6)
   cmd="docker-compose"
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd+=" -f compose/docker-compose-network.yml"
+    cmd+=" -f compose/network.yml"
   else
-    cmd+=" -f compose/docker-compose-network_v6.yml"
+    cmd+=" -f compose/network-v6.yml"
   fi
-  cmd+=" -f compose/docker-compose-video-worker.yml"
+  cmd+=" -f compose/video-worker.yml"
   echo "${cmd}"
 }
 
@@ -547,21 +546,21 @@ function get_db_migrate_compose_cmd() {
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
 
-  cmd="docker-compose -f compose/docker-compose-init-db.yml"
+  cmd="docker-compose -f compose/init-db.yml"
   if [[ "${use_xpack}" == "1" ]]; then
-    cmd+=" -f compose/docker-compose-init-db-xpack.yml"
+    cmd+=" -f compose/core-ee.yml"
   fi
   if [[ "${mysql_host}" == "mysql" ]]; then
     mysql_images_file=$(get_mysql_images_file)
     cmd+=" -f ${mysql_images_file}"
   fi
   if [[ "${redis_host}" == "redis" ]]; then
-    cmd+=" -f compose/docker-compose-redis.yml"
+    cmd+=" -f compose/redis.yml"
   fi
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd+=" -f compose/docker-compose-network.yml"
+    cmd+=" -f compose/network.yml"
   else
-    cmd+=" -f compose/docker-compose-network_v6.yml"
+    cmd+=" -f compose/network-v6.yml"
   fi
   echo "$cmd"
 }

@@ -158,9 +158,10 @@ function set_service() {
   if [[ "${confirm}" == "y" ]]; then
     read_from_input http_port "$(gettext 'JumpServer web port')" "" "${http_port}"
     set_config HTTP_PORT "${http_port}"
-    read_from_input ssh_port "$(gettext 'JumpServer ssh port')" "" "${ssh_port}"
-    set_config SSH_PORT "${ssh_port}"
+
     if [[ "${use_xpack}" == "1" ]]; then
+      read_from_input ssh_port "$(gettext 'JumpServer ssh port')" "" "${ssh_port}"
+      set_config SSH_PORT "${ssh_port}"
       read_from_input rdp_port "$(gettext 'JumpServer rdp port')" "" "${rdp_port}"
       set_config RDP_PORT "${rdp_port}"
     fi
