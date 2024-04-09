@@ -7,7 +7,7 @@ services:
       core: 0
     restart: always
     tty: true
-    command: start receptor
+    command: start all receptor
     volumes:
       - ${VOLUME_DIR}/core/data/share:/opt/jumpserver/data/share
     healthcheck:
