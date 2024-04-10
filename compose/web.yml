@@ -1,6 +1,6 @@
 services:
   web:
-    image: ${REGISTRY:-docker.io}/jumpserver/web-ce:${VERSION}
+    image: ${REGISTRY:-docker.io}/jumpserver/web:${VERSION}
     container_name: jms_web
     hostname: jms_web
     ulimits:

@@ -1,6 +1,6 @@
 services:
   lion:
-    image: ${REGISTRY:-docker.io}/jumpserver/lion-ce:${VERSION}
+    image: ${REGISTRY:-docker.io}/jumpserver/lion:${VERSION}
     container_name: jms_lion
     hostname: jms_lion
     ulimits:

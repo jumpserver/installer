@@ -1,6 +1,6 @@
 services:
   chen:
-    image: ${REGISTRY:-docker.io}/jumpserver/chen-ce:${VERSION}
+    image: ${REGISTRY:-docker.io}/jumpserver/chen:${VERSION}
     container_name: jms_chen
     hostname: jms_chen
     ulimits:

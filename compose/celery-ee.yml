@@ -1,3 +1,0 @@
-services:
-  celery:
-    image: ${REGISTRY:-docker.io}/jumpserver/core-ee:${VERSION}

@@ -1,3 +1,0 @@
-services:
-  web:
-    image: ${REGISTRY:-docker.io}/jumpserver/web-ee:${VERSION}
