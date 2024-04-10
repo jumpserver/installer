@@ -1,6 +1,6 @@
 services:
   magnus:
-    image: ${REGISTRY:-docker.io}/jumpserver/magnus:${VERSION}
+    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/magnus:${VERSION}
     container_name: jms_magnus
     hostname: jms_magnus
     ulimits:

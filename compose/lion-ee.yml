@@ -1,3 +1,0 @@
-services:
-  lion:
-    image: ${REGISTRY:-docker.io}/jumpserver/lion-ee:${VERSION}

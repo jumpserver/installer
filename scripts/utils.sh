@@ -136,22 +136,22 @@ function get_images() {
     echo "${image}"
   done
   if [[ "$use_xpack" == "1" ]];then
-    echo "registry.fit2cloud.com/jumpserver/core-ee:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/koko-ee:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/lion-ee:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/chen-ee:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/web-ee:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/core:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/lion:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/chen:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/panda:${VERSION}"
   else
-    echo "jumpserver/core-ce:${VERSION}"
-    echo "jumpserver/koko-ce:${VERSION}"
-    echo "jumpserver/lion-ce:${VERSION}"
-    echo "jumpserver/chen-ce:${VERSION}"
-    echo "jumpserver/web-ce:${VERSION}"
+    echo "jumpserver/core:${VERSION}"
+    echo "jumpserver/koko:${VERSION}"
+    echo "jumpserver/lion:${VERSION}"
+    echo "jumpserver/chen:${VERSION}"
+    echo "jumpserver/web:${VERSION}"
   fi
 }
 
@@ -325,40 +325,22 @@ function get_docker_compose_cmd_line() {
   fi
   services=$(get_docker_compose_services "$ignore_db")
   if [[ "${services}" =~ core ]]; then
-    cmd+=" -f compose/core-ce.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/core-ee.yml"
-    fi
+    cmd+=" -f compose/core.yml"
   fi
   if [[ "${services}" =~ celery ]]; then
-    cmd+=" -f compose/celery-ce.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/celery-ee.yml"
-    fi
+    cmd+=" -f compose/celery.yml"
   fi
   if [[ "${services}" =~ koko ]]; then
-    cmd+=" -f compose/koko-ce.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/koko-ee.yml"
-    fi
+    cmd+=" -f compose/koko.yml"
   fi
   if [[ "${services}" =~ lion ]]; then
-    cmd+=" -f compose/lion-ce.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/lion-ee.yml"
-    fi
+    cmd+=" -f compose/lion.yml"
   fi
   if [[ "${services}" =~ chen ]]; then
-    cmd+=" -f compose/chen-ce.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/chen-ee.yml"
-    fi
+    cmd+=" -f compose/chen.yml"
   fi
   if [[ "${services}" =~ web ]]; then
-    cmd+=" -f compose/web-ce.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/web-ee.yml"
-    fi
+    cmd+=" -f compose/web.yml"
   fi
   if [[ "${services}" =~ mysql ]]; then
     cmd+=" -f ${mysql_images_file}"
@@ -547,9 +529,6 @@ function get_db_migrate_compose_cmd() {
   use_xpack=$(get_config_or_env USE_XPACK)
 
   cmd="docker-compose -f compose/init-db.yml"
-  if [[ "${use_xpack}" == "1" ]]; then
-    cmd+=" -f compose/core-ee.yml"
-  fi
   if [[ "${mysql_host}" == "mysql" ]]; then
     mysql_images_file=$(get_mysql_images_file)
     cmd+=" -f ${mysql_images_file}"
