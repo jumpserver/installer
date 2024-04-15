@@ -363,6 +363,9 @@ function get_docker_compose_cmd_line() {
   fi
   if [[ "${services}" =~ web ]]; then
     cmd+=" -f compose/docker-compose-web.yml"
+    if [[ "${use_xpack}" == '1' ]]; then
+      cmd+=" -f compose/docker-compose-web-xpack.yml"
+    fi
   fi
   if [[ "${services}" =~ mysql ]]; then
     cmd+=" -f ${mysql_images_file}"
