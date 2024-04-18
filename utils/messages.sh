@@ -7,6 +7,8 @@ function init_message() {
     msginit --input=/tmp/jumpserver-installer.pot --locale=locale/zh_CN/LC_MESSAGES/jumpserver-installer.po
 
     msginit --input=/tmp/jumpserver-installer.pot --locale=locale/en/LC_MESSAGES/jumpserver-installer.po
+
+    msginit --input=/tmp/jumpserver-installer.pot --locale=locale/zh_Hant/LC_MESSAGES/jumpserver-installer.po
 }
 
 function make_message() {
@@ -19,14 +21,20 @@ function make_message() {
     msginit --input=/tmp/jumpserver-installer.pot --locale=locale/en/LC_MESSAGES/jumpserver-installer-tmp.po
     msgmerge -U locale/en/LC_MESSAGES/jumpserver-installer.po locale/en/LC_MESSAGES/jumpserver-installer-tmp.po
 
+    msginit --input=/tmp/jumpserver-installer.pot --locale=locale/zh_Hant/LC_MESSAGES/jumpserver-installer-tmp.po
+    msgmerge -U locale/zh_Hant/LC_MESSAGES/jumpserver-installer.po locale/zh_Hant/LC_MESSAGES/jumpserver-installer-tmp.po
+
     rm ./locale/zh_CN/LC_MESSAGES/jumpserver-installer-tmp.po
     rm ./locale/en/LC_MESSAGES/jumpserver-installer-tmp.po
+    rm ./locale/zh_Hant/LC_MESSAGES/jumpserver-installer-tmp.po
 }
 
 function compile_message() {
    msgfmt --output-file=locale/zh_CN/LC_MESSAGES/jumpserver-installer.mo locale/zh_CN/LC_MESSAGES/jumpserver-installer.po
 
    msgfmt --output-file=locale/en/LC_MESSAGES/jumpserver-installer.mo locale/en/LC_MESSAGES/jumpserver-installer.po
+
+   msgfmt --output-file=locale/zh_Hant/LC_MESSAGES/jumpserver-installer.mo locale/zh_Hant/LC_MESSAGES/jumpserver-installer.po
 }
 
 action=$1

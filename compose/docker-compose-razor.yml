@@ -1,5 +1,3 @@
-version: '2.4'
-
 services:
   razor:
     image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/razor:${VERSION}
@@ -17,7 +15,7 @@ services:
       - ${VOLUME_DIR}/razor/data:/opt/razor/data
       - ${CONFIG_DIR}/nginx/cert:/opt/razor/cert
     healthcheck:
-      test: "ps axu | grep -v 'grep' | grep 'razor'"
+      test: "curl -fsL http://localhost:8084/razor/health/ > /dev/null"
       interval: 10s
       timeout: 5s
       retries: 3

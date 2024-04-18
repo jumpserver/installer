@@ -118,7 +118,7 @@ PERIOD_TASK_ENABLED=true
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=true 表示关闭浏览器即 session 过期
 #
 # SESSION_COOKIE_AGE=86400
-SESSION_EXPIRE_AT_BROWSER_CLOSE=true
+SESSION_EXPIRE_AT_BROWSER_CLOSE=false
 
 # 可信任 DOMAINS 定义,
 # 定义可信任的访问 IP, 请根据实际情况修改, 如果是公网 IP 请改成对应的公网 IP,
@@ -136,6 +136,7 @@ DOMAINS=
 # CHEN_ENABLED=0
 # KAEL_ENABLED=0
 # PANDA_ENABLED=0
+# WEB_ENABLED=0
 
 # Lion 开启字体平滑, 优化体验
 #
