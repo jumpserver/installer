@@ -94,43 +94,17 @@ function set_config() {
   sed -i "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
-function check_mysql_data() {
-   if [[ ! -f "${CONFIG_FILE}" ]]; then
-     return
-   fi
-   volume_dir=$(get_config VOLUME_DIR)
-   db_name=$(get_config DB_NAME)
-   if [[ -d "${volume_dir}/mysql/data/${db_name}" ]]; then
-     echo "1"
-   fi
-}
-
-function get_mysql_images() {
-  mysql_data_exists=$(check_mysql_data)
-  if [[ "${mysql_data_exists}" == "1" ]]; then
-    mysql_images=jumpserver/mysql:5.7
-  else
-    mysql_images=jumpserver/mariadb:10.6
-  fi
-  echo "${mysql_images}"
-}
-
-function get_mysql_images_file() {
-  mysql_data_exists=$(check_mysql_data)
-  if [[ "${mysql_data_exists}" == "1" ]]; then
-    mysql_images_file=compose/mysql.yml
-  else
-    mysql_images_file=compose/mariadb.yml
-  fi
-  echo "${mysql_images_file}"
+function get_db_images() {
+  db_image="postgres:16.2-bullseye"
+  echo "${db_image}"
 }
 
 function get_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
-  mysql_images=$(get_mysql_images)
+  db_image=$(get_db_images)
   images=(
-    "jumpserver/redis:6.2"
-    "${mysql_images}"
+    "redis:7.0-bullseye"
+    "${db_image}"
   )
   for image in "${images[@]}"; do
     echo "${image}"
@@ -268,9 +242,9 @@ function get_docker_compose_services() {
   if [[ "${web_enabled}" == "0" ]]; then
     services="${services//web/}"
   fi
-  mysql_host=$(get_config DB_HOST)
-  if [[ "${mysql_host}" == "mysql" && "${ignore_db}" != "ignore_db" ]]; then
-    services+=" mysql"
+  db_host=$(get_config DB_HOST)
+  if [[ "${db_host}" == "postgresql" && "${ignore_db}" != "ignore_db" ]]; then
+    services+=" postgresql"
   fi
   redis_host=$(get_config REDIS_HOST)
   if [[ "${redis_host}" == "redis" && "${ignore_db}" != "ignore_db" ]]; then
@@ -316,7 +290,6 @@ function get_docker_compose_cmd_line() {
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
   https_port=$(get_config HTTPS_PORT)
-  mysql_images_file=$(get_mysql_images_file)
   cmd="docker-compose"
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
@@ -342,8 +315,8 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ web ]]; then
     cmd+=" -f compose/web.yml"
   fi
-  if [[ "${services}" =~ mysql ]]; then
-    cmd+=" -f ${mysql_images_file}"
+  if [[ "${services}" =~ postgresql ]]; then
+    cmd+=" -f compose/postgresql.yml"
   fi
   if [[ "${services}" =~ redis ]]; then
     cmd+=" -f compose/redis.yml"
@@ -523,15 +496,14 @@ function image_has_prefix() {
 }
 
 function get_db_migrate_compose_cmd() {
-  mysql_host=$(get_config DB_HOST)
+  db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
 
   cmd="docker-compose -f compose/init-db.yml"
-  if [[ "${mysql_host}" == "mysql" ]]; then
-    mysql_images_file=$(get_mysql_images_file)
-    cmd+=" -f ${mysql_images_file}"
+  if [[ "${db_host}" == "postgresql" ]]; then
+    cmd+=" -f compose/postgresql.yml"
   fi
   if [[ "${redis_host}" == "redis" ]]; then
     cmd+=" -f compose/redis.yml"
@@ -557,12 +529,12 @@ function down_db_ops_env() {
 }
 
 function perform_db_migrations() {
-  mysql_host=$(get_config DB_HOST)
+  db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
 
   create_db_ops_env
-  if [[ "${mysql_host}" == "mysql" ]]; then
-    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+  if [[ "${db_host}" == "postgresql" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_postgresql)" != "healthy" ]]; do
       sleep 5s
     done
   fi

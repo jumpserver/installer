@@ -51,10 +51,6 @@ $ ./jmsctl.sh tail
 [root@localhost config]# tree .
 .
 ├── config.txt       # 主配置文件
-├── mysql
-│   └── my.cnf       # mysql 配置文件
-|── mariadb
-|   └── mariadb.cnf  # mariadb 配置文件
 ├── nginx            # nginx 配置文件
 │   ├── cert
 │   │   ├── server.crt

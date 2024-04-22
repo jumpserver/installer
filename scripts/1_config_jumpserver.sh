@@ -50,55 +50,55 @@ function set_volume_dir() {
   set_config VOLUME_DIR ${volume_dir}
 }
 
-function set_external_mysql() {
-  mysql_host=$(get_config DB_HOST)
-  read_from_input mysql_host "$(gettext 'Please enter MySQL server IP')" "" "${mysql_host}"
-  if [[ "${mysql_host}" == "127.0.0.1" || "${mysql_host}" == "localhost" ]]; then
-    mysql_host=$(hostname -I | cut -d ' ' -f1)
+function set_external_db() {
+  db_host=$(get_config DB_HOST)
+  read_from_input db_host "$(gettext 'Please enter PostgreSQL server IP')" "" "${db_host}"
+  if [[ "${db_host}" == "127.0.0.1" || "${db_host}" == "localhost" ]]; then
+    db_host=$(hostname -I | cut -d ' ' -f1)
   fi
-  mysql_port=$(get_config DB_PORT)
-  read_from_input mysql_port "$(gettext 'Please enter MySQL server port')" "" "${mysql_port}"
-  mysql_db=$(get_config DB_NAME)
-  read_from_input mysql_db "$(gettext 'Please enter MySQL database name')" "" "${mysql_db}"
-  mysql_user=$(get_config DB_USER)
-  read_from_input mysql_user "$(gettext 'Please enter MySQL username')" "" "${mysql_user}"
-  mysql_password=$(get_config DB_PASSWORD)
-  read_from_input mysql_password "$(gettext 'Please enter MySQL password')" "" "${mysql_password}"
+  db_port=$(get_config DB_PORT)
+  read_from_input db_port "$(gettext 'Please enter PostgreSQL server port')" "" "${db_port}"
+  db_name=$(get_config DB_NAME)
+  read_from_input db_db "$(gettext 'Please enter PostgreSQL database name')" "" "${db_name}"
+  db_user=$(get_config DB_USER)
+  read_from_input db_user "$(gettext 'Please enter PostgreSQL username')" "" "${db_user}"
+  db_password=$(get_config DB_PASSWORD)
+  read_from_input db_password "$(gettext 'Please enter PostgreSQL password')" "" "${db_password}"
 
-  set_config DB_HOST "${mysql_host}"
-  set_config DB_PORT "${mysql_port}"
-  set_config DB_USER "${mysql_user}"
-  set_config DB_PASSWORD "${mysql_password}"
-  set_config DB_NAME "${mysql_db}"
+  set_config DB_HOST "${db_host}"
+  set_config DB_PORT "${db_port}"
+  set_config DB_USER "${db_user}"
+  set_config DB_PASSWORD "${db_password}"
+  set_config DB_NAME "${db_name}"
 }
 
-function set_internal_mysql() {
-  mysql_password=$(get_config DB_PASSWORD)
-  if [[ -z "${mysql_password}" ]]; then
+function set_internal_db() {
+  db_password=$(get_config DB_PASSWORD)
+  if [[ -z "${db_password}" ]]; then
     DB_PASSWORD=$(random_str 26)
     set_config DB_PASSWORD "${DB_PASSWORD}"
   fi
-  mysql_db=$(get_config DB_NAME)
-  if [[ -z "${mysql_db}" ]]; then
+  db_name=$(get_config DB_NAME)
+  if [[ -z "${db_name}" ]]; then
     set_config DB_NAME jumpserver
   fi
-  set_config DB_HOST mysql
-  set_config DB_PORT 3306
-  set_config DB_USER root
+  set_config DB_HOST postgresql
+  set_config DB_PORT 5432
+  set_config DB_USER postgres
 }
 
-function set_mysql() {
-  echo_yellow "\n3. $(gettext 'Configure MySQL')"
-  mysql_host=$(get_config DB_HOST)
+function set_db() {
+  echo_yellow "\n3. $(gettext 'Configure PostgreSQL')"
+  db_host=$(get_config DB_HOST)
   confirm="n"
-  if [[ "${mysql_host}" != "mysql" ]]; then
+  if [[ "${db_host}" != "postgresql" ]]; then
     confirm="y"
   fi
-  read_from_input confirm "$(gettext 'Do you want to use external MySQL')?" "y/n" "${confirm}"
+  read_from_input confirm "$(gettext 'Do you want to use external PostgreSQL')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
-    set_external_mysql
+    set_external_db
   else
-    set_internal_mysql
+    set_internal_db
   fi
 }
 
@@ -183,7 +183,7 @@ function main() {
   if set_volume_dir; then
     echo_done
   fi
-  if set_mysql; then
+  if set_db; then
     echo_done
   fi
   if set_redis; then

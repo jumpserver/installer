@@ -9,7 +9,7 @@ BACKUP_DIR="${VOLUME_DIR}/db_backup"
 CURRENT_VERSION=$(get_config CURRENT_VERSION)
 
 DATABASE=$(get_config DB_NAME)
-DB_FILE=${BACKUP_DIR}/${DATABASE}-${CURRENT_VERSION}-$(date +%F_%T).sql
+DB_FILE=${BACKUP_DIR}/${DATABASE}-${CURRENT_VERSION}-$(date +%F_%T).pgdump
 
 function main() {
   if [[ ! -d ${BACKUP_DIR} ]]; then
@@ -17,21 +17,20 @@ function main() {
   fi
   echo "$(gettext 'Backing up')..."
 
-  mysql_images=$(get_mysql_images)
+  db_image=$(get_db_images)
 
   if ! docker ps | grep jms_ >/dev/null; then
     create_db_ops_env
     flag=1
   fi
-  if [[ "${HOST}" == "mysql" ]]; then
-    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
+  if [[ "${HOST}" == "postgresql" ]]; then
+    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_postgresql)" != "healthy" ]]; do
       sleep 5s
     done
   fi
 
-  backup_cmd='mysqldump --skip-add-locks --skip-lock-tables --single-transaction -h$DB_HOST -P$DB_PORT -u$DB_USER -p"$DB_PASSWORD" $DB_NAME > '${DB_FILE}
-  if ! docker run --rm --env-file=${CONFIG_FILE} -i --network=jms_net -v "${BACKUP_DIR}:${BACKUP_DIR}" "${mysql_images}" bash -c "${backup_cmd}"; then
-    log_error "$(gettext 'Backup failed')!"
+  backup_cmd='PGPASSWORD=${DB_PASSWORD} pg_dump --format=custom --no-owner -U $DB_USER -h $DB_HOST -p $DB_PORT -d "$DB_NAME" -f '${DB_FILE}
+  if ! docker run --rm --env-file=${CONFIG_FILE} -i --network=jms_net -v "${BACKUP_DIR}:${BACKUP_DIR}" "${db_image}" bash -c "${backup_cmd}"; then
     log_error "$(gettext 'Backup failed')!"
     rm -f "${DB_FILE}"
     exit 1

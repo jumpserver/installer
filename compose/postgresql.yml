@@ -1,0 +1,19 @@
+services:
+  postgresql:
+    image: postgres:16.2-bullseye
+    container_name: jms_postgresql
+    hostname: jms_postgresql
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: $DB_PASSWORD
+      POSTGRES_DB: $DB_NAME
+    volumes:
+      - ${VOLUME_DIR}/postgresql/data:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - net
