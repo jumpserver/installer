@@ -8,6 +8,8 @@ services:
     restart: always
     tty: true
     command: start receptor
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL}
     volumes:
       - ${VOLUME_DIR}/core/data/share:/opt/jumpserver/data/share
     healthcheck:
