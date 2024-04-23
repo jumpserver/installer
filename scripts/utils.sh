@@ -248,6 +248,7 @@ function get_docker_compose_services() {
   ignore_db="$1"
   core_enabled=$(get_config CORE_ENABLED)
   celery_enabled=$(get_config CELERY_ENABLED)
+  receptor_enabled=$(get_config RECEPTOR_ENABLED)
   koko_enabled=$(get_config KOKO_ENABLED)
   lion_enabled=$(get_config LION_ENABLED)
   magnus_enabled=$(get_config MAGNUS_ENABLED)
@@ -260,6 +261,9 @@ function get_docker_compose_services() {
   fi
   if [[ "${celery_enabled}" == "0" ]]; then
     services="${services//celery/}"
+  fi
+  if [[ "${receptor_enabled}" == "0" ]]; then
+    services="${services//receptor/}"
   fi
   if [[ "${koko_enabled}" == "0" ]]; then
     services="${services//koko/}"
@@ -338,9 +342,15 @@ function get_docker_compose_cmd_line() {
     fi
   fi
   if [[ "${services}" =~ celery ]]; then
-    cmd+=" -f compose/docker-compose-celery.yml -f compose/docker-compose-receptor.yml"
+    cmd+=" -f compose/docker-compose-celery.yml"
     if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-celery-xpack.yml -f compose/docker-compose-receptor-xpack.yml"
+      cmd+=" -f compose/docker-compose-celery-xpack.yml"
+    fi
+  fi
+  if [[ "${services}" =~ receptor ]]; then
+    cmd+=" -f compose/docker-compose-receptor.yml"
+    if [[ "${use_xpack}" == '1' ]]; then
+      cmd+=" -f compose/docker-compose-receptor-xpack.yml"
     fi
   fi
   if [[ "${services}" =~ koko ]]; then
