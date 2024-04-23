@@ -256,6 +256,9 @@ function get_docker_compose_services() {
   kael_enabled=$(get_config KAEL_ENABLED)
   web_enabled=$(get_config WEB_ENABLED)
   services="core celery koko lion magnus chen kael web"
+  if [[ "${receptor_enabled}" == "1" ]]; then
+    services+=" receptor"
+  fi
   if [[ "${core_enabled}" == "0" ]]; then
     services="${services//core/}"
   fi

@@ -130,7 +130,6 @@ DOMAINS=
 # 配置不需要启动的组件, 默认所有组件都会开启, 如果不需要某个组件可以通过设置 {组件名称}_ENABLED 为 0 关闭
 # CORE_ENABLED=0
 # CELERY_ENABLED=0
-# RECEPTOR_ENABLED=0
 # KOKO_ENABLED=0
 # LION_ENABLED=0
 # MAGNUS_ENABLED=0
