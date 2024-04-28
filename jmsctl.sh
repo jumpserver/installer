@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 cd "${PROJECT_DIR}" || exit 1
 
@@ -61,7 +61,7 @@ function usage() {
   echo "  load_image        $(gettext 'Loading docker image')"
   echo "  backup_db         $(gettext 'Backup database')"
   echo "  restore_db [file] $(gettext 'Data recovery through database backup file')"
-  echo "  raw               $(gettext 'Execute the original docker-compose command')"
+  echo "  raw               $(gettext 'Execute the original docker compose command')"
   echo "  tail [service]    $(gettext 'View log')"
   echo
 }
@@ -127,7 +127,7 @@ function check_update() {
     exit 1
   fi
   echo -e "$(gettext 'The current version is'): ${current_version}"
-  Install_DIR="$(cd "$(dirname "${PROJECT_DIR}")" >/dev/null 2>&1 && pwd)"
+  Install_DIR="$(cd "$(dirname "${PROJECT_DIR}")" &>/dev/null && pwd)"
   if [[ ! -d "${Install_DIR}/jumpserver-installer-${latest_version}" ]]; then
     if [[ ! -f "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" ]]; then
       timeout 60s wget -qO "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" "https://github.com/jumpserver/installer/releases/download/${latest_version}/jumpserver-installer-${latest_version}.tar.gz" || {

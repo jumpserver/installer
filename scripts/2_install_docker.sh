@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/0_prepare.sh"
 
@@ -46,23 +46,49 @@ function install_compose() {
   if [[ ! -f ./docker/docker-compose ]]; then
     prepare_compose_bin
   fi
-  old_docker_compose_md5=$(get_file_md5 /usr/local/bin/docker-compose)
+  old_docker_compose_md5=$(get_file_md5 /usr/local/libexec/docker/cli-plugins/docker-compose)
   new_docker_compose_md5=$(get_file_md5 ./docker/docker-compose)
-  if [[ ! -f "/usr/local/bin/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
-    \cp -f ./docker/docker-compose /usr/local/bin/
-    chmod +x /usr/local/bin/docker-compose
+  if [[ ! -f "/usr/local/libexec/docker/cli-plugins/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
+    if [[ ! -d "/usr/local/libexec/docker/cli-plugins" ]]; then
+      mkdir -p /usr/local/libexec/docker/cli-plugins
+    fi
+    \cp -f ./docker/docker-compose /usr/local/libexec/docker/cli-plugins/
+    chmod +x /usr/local/libexec/docker/cli-plugins/docker-compose
+  fi
+}
+
+function install_compose_home() {
+  if [[ ! -f ./docker/docker-compose ]]; then
+    prepare_compose_bin
+  fi
+  old_docker_compose_md5=$(get_file_md5 $HOME/.docker/cli-plugins/docker-compose)
+  new_docker_compose_md5=$(get_file_md5 ./docker/docker-compose)
+  if [[ ! -f "$HOME/.docker/cli-plugins/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
+    if [[ ! -d "$HOME/.docker/cli-plugins" ]]; then
+      mkdir -p $HOME/.docker/cli-plugins
+    fi
+    \cp -f ./docker/docker-compose $HOME/.docker/cli-plugins/
+    chmod +x $HOME/.docker/cli-plugins/docker-compose
   fi
 }
 
 function check_docker_install() {
-  command -v docker >/dev/null || {
-    install_docker
+  docker version &>/dev/null || {
+    if check_root; then
+      install_docker
+    else
+      log_warn "$(gettext 'Permission denied. pass...')"
+    fi
   }
 }
 
 function check_compose_install() {
-  command -v docker-compose >/dev/null || {
-    install_compose
+  docker compose version &>/dev/null || {
+    if check_root; then
+      install_compose
+    else
+      install_compose_home
+    fi
   }
   echo_done
 }
@@ -71,11 +97,11 @@ function set_docker_config() {
   key=$1
   value=$2
 
-  if command -v python >/dev/null; then
+  if command -v python&>/dev/null; then
     docker_command=python
-  elif command -v python2 >/dev/null; then
+  elif command -v python2&>/dev/null; then
     docker_command=python2
-  elif command -v python3 >/dev/null; then
+  elif command -v python3&>/dev/null; then
     docker_command=python3
   else
     return
@@ -137,20 +163,24 @@ function set_network() {
 }
 
 function check_docker_config() {
-  if [[ ! -f "/etc/docker/daemon.json" ]]; then
-    config_docker
-    set_network
+  if check_root; then
+    if [[ ! -f "/etc/docker/daemon.json" ]]; then
+      config_docker
+      set_network
+    fi
+    echo_done
+  else
+    log_warn "$(gettext 'Permission denied. pass...')"
   fi
-  echo_done
 }
 
 function start_docker() {
-  if command -v systemctl >/dev/null; then
+  if command -v systemctl&>/dev/null; then
     systemctl daemon-reload
     systemctl enable docker
     systemctl start docker
   fi
-  if ! docker ps >/dev/null 2>&1; then
+  if ! docker ps &>/dev/null; then
     echo_failed
     exit 1
   fi
@@ -158,13 +188,13 @@ function start_docker() {
 
 function check_docker_start() {
   prepare_set_redhat_firewalld
-  if ! docker ps >/dev/null 2>&1; then
+  if ! docker ps &>/dev/null; then
     start_docker
   fi
 }
 
 function check_docker_compose() {
-  if ! docker-compose version >/dev/null 2>&1; then
+  if ! docker compose version &>/dev/null; then
     echo_failed
     exit 1
   fi
