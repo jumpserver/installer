@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/utils.sh"
 
@@ -51,7 +51,7 @@ function prepare_compose_bin() {
 }
 
 function prepare_image_files() {
-  if ! pgrep -f "docker" >/dev/null; then
+  if ! pgrep -f "docker"&>/dev/null; then
     echo "$(gettext 'Docker is not running, please install and start') ..."
     exit 1
   fi

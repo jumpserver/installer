@@ -49,13 +49,14 @@ DOCKER_SUBNET=192.168.250.0/24
 USE_IPV6=0
 DOCKER_SUBNET_IPV6=fc00:1010:1111:200::/64
 
-################################# MySQL 配置 ##################################
-# 外置 MySQL 需要输入正确的 MySQL 信息, 内置 MySQL 系统会自动处理
+################################# DB 配置 ##################################
+# 外置数据库需要输入正确的数据库信息, 内置数据库系统会自动处理
 # (*) 密码部分不得包含单引号和双引号
 #
-DB_HOST=mysql
-DB_PORT=3306
-DB_USER=root
+DB_ENGINE=postgresql
+DB_HOST=postgresql
+DB_PORT=5432
+DB_USER=postgres
 DB_PASSWORD=
 DB_NAME=jumpserver
 
@@ -157,4 +158,5 @@ USE_LB=1
 
 # 当前运行的 JumpServer 版本号, 安装和升级完成后自动生成
 #
+TZ=Asia/Shanghai
 CURRENT_VERSION=

@@ -12,6 +12,7 @@ services:
       - ${VOLUME_DIR}/minio/data:/data
       - ${CONFIG_DIR}/minio/config:/root/.minio
     environment:
+      TZ: ${TZ:-Asia/Shanghai}
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: $BOOTSTRAP_TOKEN
     healthcheck:

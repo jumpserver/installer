@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/utils.sh"
 
@@ -18,7 +18,7 @@ function set_secret_key() {
     set_config BOOTSTRAP_TOKEN "${bootstrap_key}"
     echo "BOOTSTRAP_TOKEN: ${bootstrap_key}"
   fi
-  if command -v hostname >/dev/null; then
+  if command -v hostname&>/dev/null; then
     SERVER_HOSTNAME=$(hostname)
     set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
   fi
@@ -50,63 +50,100 @@ function set_volume_dir() {
   set_config VOLUME_DIR ${volume_dir}
 }
 
-function set_external_mysql() {
-  mysql_host=$(get_config DB_HOST)
-  read_from_input mysql_host "$(gettext 'Please enter MySQL server IP')" "" "${mysql_host}"
-  if [[ "${mysql_host}" == "127.0.0.1" || "${mysql_host}" == "localhost" ]]; then
-    mysql_host=$(hostname -I | cut -d ' ' -f1)
-  fi
-  mysql_port=$(get_config DB_PORT)
-  read_from_input mysql_port "$(gettext 'Please enter MySQL server port')" "" "${mysql_port}"
-  mysql_db=$(get_config DB_NAME)
-  read_from_input mysql_db "$(gettext 'Please enter MySQL database name')" "" "${mysql_db}"
-  mysql_user=$(get_config DB_USER)
-  read_from_input mysql_user "$(gettext 'Please enter MySQL username')" "" "${mysql_user}"
-  mysql_password=$(get_config DB_PASSWORD)
-  read_from_input mysql_password "$(gettext 'Please enter MySQL password')" "" "${mysql_password}"
+function set_db_config() {
+  local db_engine=$1
+  local db_host=$2
+  local db_port=$3
+  local db_user=$4
+  local db_password=$5
+  local db_name=$6
 
-  set_config DB_HOST "${mysql_host}"
-  set_config DB_PORT "${mysql_port}"
-  set_config DB_USER "${mysql_user}"
-  set_config DB_PASSWORD "${mysql_password}"
-  set_config DB_NAME "${mysql_db}"
+  set_config DB_ENGINE "${db_engine}"
+  set_config DB_HOST "${db_host}"
+  set_config DB_PORT "${db_port}"
+  set_config DB_USER "${db_user}"
+  set_config DB_PASSWORD "${db_password}"
+  set_config DB_NAME "${db_name}"
 }
 
-function set_internal_mysql() {
-  mysql_password=$(get_config DB_PASSWORD)
-  if [[ -z "${mysql_password}" ]]; then
-    DB_PASSWORD=$(random_str 26)
-    set_config DB_PASSWORD "${DB_PASSWORD}"
+function set_external_db() {
+  local db_engine=$1
+  db_host=$(get_config DB_HOST)
+  read_from_input db_host "$(gettext 'Please enter DB server IP')" "" "${db_host}"
+  if [[ "${db_host}" == "127.0.0.1" || "${db_host}" == "localhost" ]]; then
+    log_error "$(gettext 'Can not use localhost as DB server IP')"
   fi
-  mysql_db=$(get_config DB_NAME)
-  if [[ -z "${mysql_db}" ]]; then
-    set_config DB_NAME jumpserver
-  fi
-  set_config DB_HOST mysql
-  set_config DB_PORT 3306
-  set_config DB_USER root
+  db_port=$(get_config DB_PORT)
+  read_from_input db_port "$(gettext 'Please enter DB server port')" "" "${db_port}"
+  db_name=$(get_config DB_NAME)
+  read_from_input db_name "$(gettext 'Please enter DB database name')" "" "${db_name}"
+  db_user=$(get_config DB_USER)
+  read_from_input db_user "$(gettext 'Please enter DB username')" "" "${db_user}"
+  db_password=$(get_config DB_PASSWORD)
+  read_from_input db_password "$(gettext 'Please enter DB password')" "" "${db_password}"
+
+  set_db_config "${db_engine}" "${db_host}" "${db_port}" "${db_user}" "${db_password}" "${db_name}"
 }
 
-function set_mysql() {
-  echo_yellow "\n3. $(gettext 'Configure MySQL')"
-  mysql_host=$(get_config DB_HOST)
-  confirm="n"
-  if [[ "${mysql_host}" != "mysql" ]]; then
-    confirm="y"
+function set_internal_db() {
+  local db_engine=$1
+  local db_host=$2
+  local db_port=$3
+  local db_user=$4
+  db_password=$(get_config DB_PASSWORD)
+  if [[ -z "${db_password}" ]]; then
+    db_password=$(random_str 26)
   fi
-  read_from_input confirm "$(gettext 'Do you want to use external MySQL')?" "y/n" "${confirm}"
-  if [[ "${confirm}" == "y" ]]; then
-    set_external_mysql
-  else
-    set_internal_mysql
+  db_name=$(get_config DB_NAME)
+  if [[ -z "${db_name}" ]]; then
+    db_name=jumpserver
   fi
+
+  set_db_config "${db_engine}" "${db_host}" "${db_port}" "${db_user}" "${db_password}" "${db_name}"
+}
+
+function set_db() {
+  echo_yellow "\n3. $(gettext 'Configure DB')"
+  db_engine=$(get_config DB_ENGINE "mysql")
+  db_host=$(get_config DB_HOST)
+
+  case "${db_engine}" in
+    mysql)
+      confirm="n"
+      if [[ "${db_host}" != "mysql" ]]; then
+        confirm="y"
+      fi
+      read_from_input confirm "$(gettext 'Do you want to use external MySQL')?" "y/n" "${confirm}"
+      if [[ "${confirm}" == "y" ]]; then
+        set_external_db "mysql"
+      else
+        set_internal_db "mysql" "mysql" "3306" "root"
+      fi
+      ;;
+    postgresql)
+      confirm="n"
+      if [[ "${db_host}" != "postgresql" ]]; then
+        confirm="y"
+      fi
+      read_from_input confirm "$(gettext 'Do you want to use external PostgreSQL')?" "y/n" "${confirm}"
+      if [[ "${confirm}" == "y" ]]; then
+        set_external_db "postgresql"
+      else
+        set_internal_db "postgresql" "postgresql" "5432" "postgres"
+      fi
+      ;;
+    *)
+      echo "$(gettext 'Invalid DB Engine selection')"
+      exit 1
+      ;;
+  esac
 }
 
 function set_external_redis() {
   redis_host=$(get_config REDIS_HOST)
   read_from_input redis_host "$(gettext 'Please enter Redis server IP')" "" "${redis_host}"
   if [[ "${redis_host}" == "127.0.0.1" || "${redis_host}" == "localhost" ]]; then
-    redis_host=$(hostname -I | cut -d ' ' -f1)
+    log_error "$(gettext 'Can not use localhost as Redis server IP')"
   fi
   redis_port=$(get_config REDIS_PORT)
   read_from_input redis_port "$(gettext 'Please enter Redis server port')" "" "${redis_port}"
@@ -118,33 +155,59 @@ function set_external_redis() {
   set_config REDIS_PASSWORD "${redis_password}"
 }
 
+function set_external_redis_sentinel() {
+  redis_sentinel_hosts=$(get_config REDIS_SENTINEL_HOSTS)
+  read_from_input redis_sentinel_hosts "$(gettext 'Please enter Redis Sentinel hosts')" "" "${redis_sentinel_hosts}"
+  redis_sentinel_password=$(get_config REDIS_SENTINEL_PASSWORD)
+  read_from_input redis_sentinel_password "$(gettext 'Please enter Redis Sentinel password')" "" "${redis_sentinel_password}"
+  redis_password=$(get_config REDIS_PASSWORD)
+  read_from_input redis_password "$(gettext 'Please enter Redis password')" "" "${redis_password}"
+
+  disable_config REDIS_HOST
+  disable_config REDIS_PORT
+  set_config REDIS_SENTINEL_HOSTS "${redis_sentinel_hosts}"
+  set_config REDIS_SENTINEL_PASSWORD "${redis_sentinel_password}"
+  set_config REDIS_PASSWORD "${redis_password}"
+}
+
 function set_internal_redis() {
   redis_password=$(get_config REDIS_PASSWORD)
   if [[ -z "${redis_password}" ]]; then
     REDIS_PASSWORD=$(random_str 26)
     set_config REDIS_PASSWORD "${REDIS_PASSWORD}"
   fi
+  disable_config REDIS_SENTINEL_HOSTS
+  disable_config REDIS_SENTINEL_PASSWORD
   set_config REDIS_HOST redis
   set_config REDIS_PORT 6379
 }
 
 function set_redis() {
   echo_yellow "\n4. $(gettext 'Configure Redis')"
-  redis_sentinel_hosts=$(get_config REDIS_SENTINEL_HOSTS)
-  if [ -n "${redis_sentinel_hosts}" ]; then
-    return
-  fi
-  redis_host=$(get_config REDIS_HOST)
-  confirm="n"
-  if [[ "${redis_host}" != "redis" ]]; then
-    confirm="y"
-  fi
-  read_from_input confirm "$(gettext 'Do you want to use external Redis')?" "y/n" "${confirm}"
-  if [[ "${confirm}" == "y" ]]; then
-    set_external_redis
-  else
-    set_internal_redis
-  fi
+  redis_engine="redis"
+  read_from_input redis_engine "$(gettext 'Please enter Redis Engine')?" "redis/sentinel" "${redis_engine}"
+
+  case "${redis_engine}" in
+    redis)
+        redis_host=$(get_config REDIS_HOST)
+        confirm="n"
+        if [[ "${redis_host}" != "redis" ]]; then
+            confirm="y"
+        fi
+        read_from_input confirm "$(gettext 'Do you want to use external Redis')?" "y/n" "${confirm}"
+        if [[ "${confirm}" == "y" ]]; then
+            set_external_redis
+        else
+            set_internal_redis
+        fi
+        ;;
+    sentinel)
+        set_external_redis_sentinel
+        ;;
+    *)
+        log_error "$(gettext 'Invalid Redis Engine selection')"
+        ;;
+  esac
 }
 
 function set_service() {
@@ -183,7 +246,7 @@ function main() {
   if set_volume_dir; then
     echo_done
   fi
-  if set_mysql; then
+  if set_db; then
     echo_done
   fi
   if set_redis; then
