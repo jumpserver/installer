@@ -6,12 +6,14 @@ services:
     ulimits:
       core: 0
     restart: always
+    privileged: true
     env_file:
       - ${CONFIG_FILE}
+    ports:
+      - ${SSH_PORT}:2222
     volumes:
       - ${CONFIG_DIR}/certs:/opt/koko/data/certs
       - ${VOLUME_DIR}/koko/data:/opt/koko/data
-    privileged: true
     healthcheck:
       test: "check http://localhost:5000/koko/health/"
       interval: 10s

@@ -283,6 +283,11 @@ function get_docker_compose_services() {
 
   services="core celery koko lion chen web"
 
+  receptor_enabled=$(get_config RECEPTOR_ENABLED)
+  if [[ "${receptor_enabled}" == "1" ]]; then
+    services+=" receptor"
+  fi
+
   if [[ "${ignore_db}" != "ignore_db" ]]; then
     case "${db_engine}" in
       mysql)
@@ -328,7 +333,7 @@ function get_docker_compose_cmd_line() {
   fi
   services=$(get_docker_compose_services "$ignore_db")
 
-  for service in core celery koko lion chen web redis; do
+  for service in core celery receptor koko lion chen web redis; do
     if [[ "${services}" =~ ${service} ]]; then
       cmd+=" -f compose/${service}.yml"
     fi

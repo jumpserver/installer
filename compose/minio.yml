@@ -5,16 +5,16 @@ services:
     hostname: jms_minio
     restart: always
     command: "server /data --console-address :9001"
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: $BOOTSTRAP_TOKEN
     ports:
       - 9000:9000
       - 9001:9001
     volumes:
       - ${VOLUME_DIR}/minio/data:/data
       - ${CONFIG_DIR}/minio/config:/root/.minio
-    environment:
-      TZ: ${TZ:-Asia/Shanghai}
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: $BOOTSTRAP_TOKEN
     healthcheck:
       test: "mc ready local"
       interval: 10s

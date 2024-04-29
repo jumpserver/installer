@@ -67,29 +67,29 @@ function set_port() {
             set_config HTTPS_PORT "${https_port}"
         fi
     fi
-    if [[ "${koko_enable}" != "0" ]]; then
-        ssh_port=$(get_config SSH_PORT)
-        read_from_input ssh_port "$(gettext 'Please enter SSH PORT')" "" "${ssh_port}"
-        set_config SSH_PORT "${ssh_port}"
-    fi
-    if [[ "${magnus_enable}" != "0" ]]; then
-        magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
-        read_from_input magnus_mysql_port "$(gettext 'Please enter MAGNUS MYSQL PORT')" "" "${magnus_mysql_port}"
-        set_config MAGNUS_MYSQL_PORT "${magnus_mysql_port}"
-        magnus_mariadb_port=$(get_config MAGNUS_MARIADB_PORT)
-        read_from_input magnus_mariadb_port "$(gettext 'Please enter MAGNUS MARIADB PORT')" "" "${magnus_mariadb_port}"
-        set_config MAGNUS_MARIADB_PORT "${magnus_mariadb_port}"
-        magnus_redis_port=$(get_config MAGNUS_REDIS_PORT)
-        read_from_input magnus_redis_port "$(gettext 'Please enter MAGNUS REDIS PORT')" "" "${magnus_redis_port}"
-        set_config MAGNUS_REDIS_PORT "${magnus_redis_port}"
-        magnus_postgresql_port=$(get_config MAGNUS_POSTGRESQL_PORT)
-        read_from_input magnus_postgresql_port "$(gettext 'Please enter MAGNUS POSTGRESQL PORT')" "" "${magnus_postgresql_port}"
-        set_config MAGNUS_POSTGRESQL_PORT "${magnus_postgresql_port}"
-        magnus_sqlserver_port=$(get_config MAGNUS_SQLSERVER_PORT)
-        read_from_input magnus_sqlserver_port "$(gettext 'Please enter MAGNUS SQLSERVER PORT')" "" "${magnus_sqlserver_port}"
-        set_config MAGNUS_SQLSERVER_PORT "${magnus_sqlserver_port}"
-    fi
     if [[ "${use_xpack}" == "1" ]]; then
+        if [[ "${koko_enable}" != "0" ]]; then
+            ssh_port=$(get_config SSH_PORT)
+            read_from_input ssh_port "$(gettext 'Please enter SSH PORT')" "" "${ssh_port}"
+            set_config SSH_PORT "${ssh_port}"
+        fi
+        if [[ "${magnus_enable}" != "0" ]]; then
+            magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
+            read_from_input magnus_mysql_port "$(gettext 'Please enter MAGNUS MYSQL PORT')" "" "${magnus_mysql_port}"
+            set_config MAGNUS_MYSQL_PORT "${magnus_mysql_port}"
+            magnus_mariadb_port=$(get_config MAGNUS_MARIADB_PORT)
+            read_from_input magnus_mariadb_port "$(gettext 'Please enter MAGNUS MARIADB PORT')" "" "${magnus_mariadb_port}"
+            set_config MAGNUS_MARIADB_PORT "${magnus_mariadb_port}"
+            magnus_redis_port=$(get_config MAGNUS_REDIS_PORT)
+            read_from_input magnus_redis_port "$(gettext 'Please enter MAGNUS REDIS PORT')" "" "${magnus_redis_port}"
+            set_config MAGNUS_REDIS_PORT "${magnus_redis_port}"
+            magnus_postgresql_port=$(get_config MAGNUS_POSTGRESQL_PORT)
+            read_from_input magnus_postgresql_port "$(gettext 'Please enter MAGNUS POSTGRESQL PORT')" "" "${magnus_postgresql_port}"
+            set_config MAGNUS_POSTGRESQL_PORT "${magnus_postgresql_port}"
+            magnus_sqlserver_port=$(get_config MAGNUS_SQLSERVER_PORT)
+            read_from_input magnus_sqlserver_port "$(gettext 'Please enter MAGNUS SQLSERVER PORT')" "" "${magnus_sqlserver_port}"
+            set_config MAGNUS_SQLSERVER_PORT "${magnus_sqlserver_port}"
+        fi
         if [[ "${xrdp_enable}" != "0" ]]; then
             xrdp_port=$(get_config XRDP_PORT)
             read_from_input xrdp_port "$(gettext 'Please enter XRDP PORT')" "" "${xrdp_port}"
