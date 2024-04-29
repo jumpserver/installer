@@ -469,40 +469,40 @@ msgstr ""
 msgid "Backup succeeded! The backup file has been saved to"
 msgstr ""
 
-#: jmsctl.sh:16
-msgid "If you are upgrading from v1.5.x, please copy the config.txt To"
+#: scripts/0_prepare.sh:16
+msgid "Download docker fails, check the network is normal"
 msgstr ""
 
-#: jmsctl.sh:21
-msgid "There is a problem with the soft connection, Please update it again"
+#: scripts/0_prepare.sh:21
+msgid "Using Docker cache"
 msgstr ""
 
-#: jmsctl.sh:40
-msgid "JumpServer Deployment Management Script"
+#: scripts/0_prepare.sh:36
+msgid "Starting to download Docker Compose binary"
 msgstr ""
 
-#: jmsctl.sh:47
-msgid "Install JumpServer"
+#: scripts/0_prepare.sh:38
+msgid "Download docker-compose fails, check the network is normal"
 msgstr ""
 
-#: jmsctl.sh:48
-msgid "Upgrade JumpServer"
+#: scripts/0_prepare.sh:43
+msgid "Using Docker Compose cache"
 msgstr ""
 
-#: jmsctl.sh:49
-msgid "Check for updates JumpServer"
+#: scripts/0_prepare.sh:55
+msgid "Docker is not running, please install and start"
 msgstr ""
 
-#: jmsctl.sh:50
-msgid "Reconfiguration JumpServer"
+#: scripts/0_prepare.sh:81
+msgid "The image has been saved, skipping"
 msgstr ""
 
-#: jmsctl.sh:53
-msgid "Start   JumpServer"
+#: scripts/0_prepare.sh:85
+msgid "Save image"
 msgstr ""
 
-#: jmsctl.sh:54
-msgid "Stop    JumpServer"
+#: scripts/0_prepare.sh:95
+msgid "Preparing Docker offline package"
 msgstr ""
 
 #: jmsctl.sh:55

@@ -472,41 +472,41 @@ msgstr "备份失败"
 msgid "Backup succeeded! The backup file has been saved to"
 msgstr "备份成功! 备份文件已存放至"
 
-#: jmsctl.sh:16
-msgid "If you are upgrading from v1.5.x, please copy the config.txt To"
-msgstr "如果你是从 v1.5.x 升级的, 请 copy 之前目录中的 config.txt 到"
+#: scripts/0_prepare.sh:16
+msgid "Download docker fails, check the network is normal"
+msgstr "下载 docker 失败, 请检查网络是否正常"
 
-#: jmsctl.sh:21
-msgid "There is a problem with the soft connection, Please update it again"
-msgstr "软连接存在问题, 重新更新"
+#: scripts/0_prepare.sh:21
+msgid "Using Docker cache"
+msgstr "使用 Docker 缓存文件"
 
-#: jmsctl.sh:40
-msgid "JumpServer Deployment Management Script"
-msgstr "JumpServer 部署管理脚本"
+#: scripts/0_prepare.sh:36
+msgid "Starting to download Docker Compose binary"
+msgstr "开始下载 Docker Compose 程序"
 
-#: jmsctl.sh:47
-msgid "Install JumpServer"
-msgstr "安装 JumpServer"
+#: scripts/0_prepare.sh:38
+msgid "Download docker-compose fails, check the network is normal"
+msgstr "下载 docker-compose 失败, 请检查网络是否正常"
 
-#: jmsctl.sh:48
-msgid "Upgrade JumpServer"
-msgstr "升级 JumpServer"
+#: scripts/0_prepare.sh:43
+msgid "Using Docker Compose cache"
+msgstr "使用 Docker Compose 缓存文件"
 
-#: jmsctl.sh:49
-msgid "Check for updates JumpServer"
-msgstr "检查 JumpServer"
+#: scripts/0_prepare.sh:55
+msgid "Docker is not running, please install and start"
+msgstr "Docker 没有运行, 请安装并启动"
 
-#: jmsctl.sh:50
-msgid "Reconfiguration JumpServer"
-msgstr "重新配置 JumpServer"
+#: scripts/0_prepare.sh:81
+msgid "The image has been saved, skipping"
+msgstr "已保存过该镜像, 跳过"
 
-#: jmsctl.sh:53
-msgid "Start   JumpServer"
-msgstr "启动 JumpServer"
+#: scripts/0_prepare.sh:85
+msgid "Save image"
+msgstr "保存镜像"
 
-#: jmsctl.sh:54
-msgid "Stop    JumpServer"
-msgstr "停止 JumpServer"
+#: scripts/0_prepare.sh:95
+msgid "Preparing Docker offline package"
+msgstr "准备 Docker 离线包"
 
 #: jmsctl.sh:55
 msgid "Restart JumpServer"
