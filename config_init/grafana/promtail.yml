@@ -1,0 +1,95 @@
+server:
+  disable: false
+  http_listen_port: 0
+  grpc_listen_port: 0
+
+positions:
+  filename: /data/jumpserver/grafana/promtail/positions.yaml
+
+clients:
+  - url: http://jms_loki:3100/loki/api/v1/push
+    tenant_id: tenant1
+
+scrape_configs:
+  - job_name: core
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          component: core
+          job_name: core
+          __path__: /data/jumpserver/core/data/logs/*.log
+  - job_name: koko
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          component: koko
+          job_name: koko
+          __path__: /data/jumpserver/koko/data/logs/*.log
+
+  - job_name: lion
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          component: lion
+          job_name: lion
+          __path__: /data/jumpserver/lion/data/logs/*.log
+
+  - job_name: chen
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          component: chen
+          job_name: chen
+          __path__: /data/jumpserver/chen/data/logs/*.log
+
+  - job_name: web
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          component: web
+          job_name: web
+          __path__: /data/jumpserver/nginx/data/logs/*.log
+
+  - job_name: razor
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          component: razor
+          job_name: razor
+          __path__: /data/jumpserver/razor/data/logs/*.log
+  - job_name: xrdp
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          component: xrdp
+          job_name: xrdp
+          __path__: /data/jumpserver/xrdp/data/logs/*.log
+
+  - job_name: magnus
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          component: magnus
+          job_name: magnus
+          __path__: /data/jumpserver/magnus/data/logs/*.log
+
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: name
+            values: [jms_xrdp, jms_razor]
+    relabel_configs:
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: "container"
+

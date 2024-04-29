@@ -1,0 +1,59 @@
+services:
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: jms_grafana
+    hostname: jms_grafana
+    ulimits:
+      core: 0
+    restart: always
+    ports:
+      - 3000:3000
+    user: "0"
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /etc/grafana/provisioning/dashboards/
+        /run.sh
+    environment:
+      - GF_USERS_DEFAULT_THEME=light
+      - GF_DEFAULT_INSTANCE_NAME=JumpServer
+    volumes:
+      - ${CONFIG_DIR}/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ${CONFIG_DIR}/grafana/dashboard.json:/etc/grafana/provisioning/dashboards/dashboard.json
+      - ${CONFIG_DIR}/grafana/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml
+      - ${CONFIG_DIR}/grafana/datasource_loki.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ${VOLUME_DIR}/grafana/grafana:/var/lib/grafana
+    networks:
+      - net
+    depends_on:
+      - loki
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: jms_loki
+    hostname: jms_loki
+    user: "0"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ${CONFIG_DIR}/grafana/loki.yaml:/etc/loki/local-config.yaml
+      - ${VOLUME_DIR}/grafana/loki:/loki
+    networks:
+      - net
+
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: jms_promtail
+    hostname: jms_promtail
+    env_file:
+      - ${CONFIG_FILE}
+    volumes:
+      - ${CONFIG_DIR}/grafana/promtail.yml:/etc/promtail/config.yml
+      - ${VOLUME_DIR}/grafana/promtail/:/data/jumpserver/grafana/promtail/
+      - ${VOLUME_DIR}:/data/jumpserver/
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml -config.expand-env=true
+    networks:
+      - net
+    depends_on:
+      - loki
