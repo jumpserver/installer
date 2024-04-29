@@ -1,0 +1,11 @@
+apiVersion: 1
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    orgId: 1
+    url: http://jms_loki:3100
+    basicAuth: false
+    isDefault: true
+    version: 1
+    editable: false
