@@ -26,20 +26,20 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=26.1.0
+export DOCKER_VERSION=26.1.1
 export DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
 export DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
 if [[ "$(uname -m)" == "x86_64" ]]; then
-  DOCKER_MD5=344e9cc48a523725fc1b3b2ce0d9fb30
+  DOCKER_MD5=0224c312b66629fe62f1b658d7424188
 fi
 if [[ "$(uname -m)" == "aarch64" ]]; then
-  DOCKER_MD5=81ff95d539a16a7382819d026d64d918
+  DOCKER_MD5=97f956ed2098b331c94640370fe96c19
 fi
 if [[ "$(uname -m)" == "loongarch64" ]]; then
-  DOCKER_MD5=0071150b3931cf6bc2d9e5d23dc112c7
+  DOCKER_MD5=08420ea7a6904e061a755edd053a1f21
 fi
 if [[ "$(uname -m)" == "s390x" ]]; then
-  DOCKER_MD5=09bd1754c83e683e7caf826c5fb788c3
+  DOCKER_MD5=a5172303a906b610796ba71970a549aa
 fi
 export DOCKER_MD5
 
