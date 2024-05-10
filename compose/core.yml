@@ -1,12 +1,11 @@
 services:
   core:
-    image: ${REGISTRY:-docker.io}/jumpserver/core-ce:${VERSION}
+    image: ${REGISTRY:-docker.io}/jumpserver/core:${VERSION}
     container_name: jms_core
     hostname: jms_core
     ulimits:
       core: 0
     restart: always
-    tty: true
     command: start web
     env_file:
       - ${CONFIG_FILE}
@@ -14,7 +13,7 @@ services:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
     healthcheck:
-      test: "curl -fsL http://localhost:8080/api/health/ > /dev/null"
+      test: "check http://localhost:8080/api/health/"
       interval: 10s
       timeout: 5s
       retries: 3

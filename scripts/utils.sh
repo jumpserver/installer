@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 #
 
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/const.sh"
+
+function check_root() {
+  [[ "$(id -u)" == 0 ]]
+}
 
 function is_confirm() {
   read -r confirmed
@@ -20,7 +24,7 @@ function random_str() {
     len=24
   fi
   uuid=""
-  if command -v dmidecode &>/dev/null; then
+  if check_root && command -v dmidecode &>/dev/null; then
     if [[ ${len} -gt 24 ]]; then
       uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | sha256sum | awk '{print $1}' | head -c ${len})
     fi
@@ -94,66 +98,90 @@ function set_config() {
   sed -i "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
-function check_mysql_data() {
+function disable_config() {
+  key=$1
+
+  has=$(has_config "${key}")
+  if [[ ${has} == "1" ]]; then
+    sed -i "s,^[ \t]*${key}=.*$,# ${key}=,g" "${CONFIG_FILE}"
+  fi
+}
+
+function check_db_data() {
+   db_type=$1
    if [[ ! -f "${CONFIG_FILE}" ]]; then
      return
    fi
    volume_dir=$(get_config VOLUME_DIR)
    db_name=$(get_config DB_NAME)
-   if [[ -d "${volume_dir}/mysql/data/${db_name}" ]]; then
+   if [[ -d "${volume_dir}/${db_type}/data/${db_name}" ]]; then
      echo "1"
    fi
 }
 
-function get_mysql_images() {
-  mysql_data_exists=$(check_mysql_data)
-  if [[ "${mysql_data_exists}" == "1" ]]; then
-    mysql_images=jumpserver/mysql:5.7
-  else
-    mysql_images=jumpserver/mariadb:10.6
-  fi
-  echo "${mysql_images}"
+function get_db_info() {
+  info_type=$1
+  mysql_data_exists=$(check_db_data "mysql")
+  mariadb_data_exists=$(check_db_data "mariadb")
+
+  case "${info_type}" in
+    "image")
+      if [[ "${mysql_data_exists}" == "1" ]]; then
+        echo "mysql:5.7"
+      elif [[ "${mariadb_data_exists}" == "1" ]]; then
+        echo "mariadb:10.6"
+      else
+        echo "postgres:16.2-bullseye"
+      fi
+      ;;
+    "file")
+      if [[ "${mysql_data_exists}" == "1" ]]; then
+        echo "compose/mysql.yml"
+      elif [[ "${mariadb_data_exists}" == "1" ]]; then
+        echo "compose/mariadb.yml"
+      else
+        echo "compose/postgres.yml"
+      fi
+      ;;
+    *)
+      exit 1 ;;
+  esac
 }
 
-function get_mysql_images_file() {
-  mysql_data_exists=$(check_mysql_data)
-  if [[ "${mysql_data_exists}" == "1" ]]; then
-    mysql_images_file=compose/docker-compose-mysql.yml
-  else
-    mysql_images_file=compose/docker-compose-mariadb.yml
-  fi
-  echo "${mysql_images_file}"
+function get_db_images() {
+  get_db_info "image"
+}
+
+function get_db_images_file() {
+  get_db_info "file"
 }
 
 function get_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
-  mysql_images=$(get_mysql_images)
+  db_images=$(get_db_images)
   images=(
-    "jumpserver/redis:6.2"
-    "${mysql_images}"
+    "redis:7.0-bullseye"
+    "${db_images}"
   )
   for image in "${images[@]}"; do
     echo "${image}"
   done
   if [[ "$use_xpack" == "1" ]];then
-    echo "registry.fit2cloud.com/jumpserver/core-ee:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/core:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/lion:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/chen:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/kael:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/panda:${VERSION}"
   else
-    echo "jumpserver/core-ce:${VERSION}"
+    echo "jumpserver/core:${VERSION}"
     echo "jumpserver/koko:${VERSION}"
     echo "jumpserver/lion:${VERSION}"
-    echo "jumpserver/magnus:${VERSION}"
     echo "jumpserver/chen:${VERSION}"
-    echo "jumpserver/kael:${VERSION}"
     echo "jumpserver/web:${VERSION}"
   fi
 }
@@ -246,82 +274,48 @@ function log_error() {
 
 function get_docker_compose_services() {
   ignore_db="$1"
-  core_enabled=$(get_config CORE_ENABLED)
-  celery_enabled=$(get_config CELERY_ENABLED)
+  db_engine=$(get_config DB_ENGINE "mysql")
+  db_host=$(get_config DB_HOST)
+  redis_host=$(get_config REDIS_HOST)
+  use_es=$(get_config USE_ES)
+  use_minio=$(get_config USE_MINIO)
+  use_xpack=$(get_config_or_env USE_XPACK)
+
+  services="core celery koko lion chen web"
+
   receptor_enabled=$(get_config RECEPTOR_ENABLED)
-  koko_enabled=$(get_config KOKO_ENABLED)
-  lion_enabled=$(get_config LION_ENABLED)
-  magnus_enabled=$(get_config MAGNUS_ENABLED)
-  chen_enabled=$(get_config CHEN_ENABLED)
-  kael_enabled=$(get_config KAEL_ENABLED)
-  web_enabled=$(get_config WEB_ENABLED)
-  services="core celery koko lion magnus chen kael web"
   if [[ "${receptor_enabled}" == "1" ]]; then
     services+=" receptor"
   fi
-  if [[ "${core_enabled}" == "0" ]]; then
-    services="${services//core/}"
+
+  if [[ "${ignore_db}" != "ignore_db" ]]; then
+    case "${db_engine}" in
+      mysql)
+        [[ "${db_host}" == "mysql" ]] && services+=" mysql"
+        ;;
+      postgresql)
+        [[ "${db_host}" == "postgresql" ]] && services+=" postgresql"
+        ;;
+    esac
+    [[ "${redis_host}" == "redis" ]] && services+=" redis"
   fi
-  if [[ "${celery_enabled}" == "0" ]]; then
-    services="${services//celery/}"
-  fi
-  if [[ "${receptor_enabled}" == "0" ]]; then
-    services="${services//receptor/}"
-  fi
-  if [[ "${koko_enabled}" == "0" ]]; then
-    services="${services//koko/}"
-  fi
-  if [[ "${lion_enabled}" == "0" ]]; then
-    services="${services//lion/}"
-  fi
-  if [[ "${magnus_enabled}" == "0" ]]; then
-    services="${services//magnus/}"
-  fi
-  if [[ "${chen_enabled}" == "0" ]]; then
-    services="${services//chen/}"
-  fi
-  if [[ "${kael_enabled}" == "0" ]]; then
-    services="${services//kael/}"
-  fi
-  if [[ "${web_enabled}" == "0" ]]; then
-    services="${services//web/}"
-  fi
-  mysql_host=$(get_config DB_HOST)
-  if [[ "${mysql_host}" == "mysql" && "${ignore_db}" != "ignore_db" ]]; then
-    services+=" mysql"
-  fi
-  redis_host=$(get_config REDIS_HOST)
-  if [[ "${redis_host}" == "redis" && "${ignore_db}" != "ignore_db" ]]; then
-    services+=" redis"
-  fi
-  use_es=$(get_config USE_ES)
-  if [[ "${use_es}" == "1" ]]; then
-    services+=" es"
-  fi
-  use_minio=$(get_config USE_MINIO)
-  if [[ "${use_minio}" == "1" ]]; then
-    services+=" minio"
-  fi
-  use_xpack=$(get_config_or_env USE_XPACK)
+
+  for service in core celery koko lion chen web; do
+    enabled=$(get_config "${service^^}_ENABLED")
+    [[ "${enabled}" == "0" ]] && services="${services//${service}/}"
+  done
+
+  [[ "${use_es}" == "1" ]] && services+=" es"
+  [[ "${use_minio}" == "1" ]] && services+=" minio"
+
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" razor xrdp video panda"
-    razor_enabled=$(get_config RAZOR_ENABLED)
-    xrdp_enabled=$(get_config XRDP_ENABLED)
-    video_enabled=$(get_config VIDEO_ENABLED)
-    panda_enabled=$(get_config PANDA_ENABLED)
-    if [[ "${razor_enabled}" == "0" ]]; then
-      services="${services//razor/}"
-    fi
-    if [[ "${xrdp_enabled}" == "0" ]]; then
-      services="${services//xrdp/}"
-    fi
-    if [[ "${video_enabled}" == "0" ]]; then
-      services="${services//video/}"
-    fi
-    if [[ "${panda_enabled}" == "0" ]]; then
-      services="${services//panda/}"
-    fi
+    services+=" magnus razor xrdp video panda"
+    for service in magnus razor xrdp video panda; do
+      enabled=$(get_config "${service^^}_ENABLED")
+      [[ "${enabled}" == "0" ]] && services="${services//${service}/}"
+    done
   fi
+
   echo "${services}"
 }
 
@@ -330,85 +324,47 @@ function get_docker_compose_cmd_line() {
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
   https_port=$(get_config HTTPS_PORT)
-  mysql_images_file=$(get_mysql_images_file)
-  cmd="docker-compose"
+  db_images_file=$(get_db_images_file)
+  cmd="docker compose"
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd+=" -f compose/docker-compose-network.yml"
+    cmd+=" -f compose/network.yml"
   else
-    cmd+=" -f compose/docker-compose-network_v6.yml"
+    cmd+=" -f compose/network-v6.yml"
   fi
   services=$(get_docker_compose_services "$ignore_db")
-  if [[ "${services}" =~ core ]]; then
-    cmd+=" -f compose/docker-compose-core.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-core-xpack.yml"
+
+  for service in core celery receptor koko lion chen web redis; do
+    if [[ "${services}" =~ ${service} ]]; then
+      cmd+=" -f compose/${service}.yml"
     fi
+  done
+
+  if [[ "${services}" =~ "mysql" || "${services}" =~ "postgresql" ]]; then
+    cmd+=" -f ${db_images_file}"
   fi
-  if [[ "${services}" =~ celery ]]; then
-    cmd+=" -f compose/docker-compose-celery.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-celery-xpack.yml"
-    fi
+
+  use_es=$(get_config USE_ES)
+  if [[ "${use_es}" == "1" ]]; then
+    cmd+=" -f compose/es.yml"
   fi
-  if [[ "${services}" =~ receptor ]]; then
-    cmd+=" -f compose/docker-compose-receptor.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-receptor-xpack.yml"
-    fi
+
+  use_minio=$(get_config USE_MINIO)
+  if [[ "${use_minio}" == "1" ]]; then
+    cmd+=" -f compose/minio.yml"
   fi
-  if [[ "${services}" =~ koko ]]; then
-    cmd+=" -f compose/docker-compose-koko.yml"
-  fi
-  if [[ "${services}" =~ lion ]]; then
-    cmd+=" -f compose/docker-compose-lion.yml"
-  fi
-  if [[ "${services}" =~ magnus ]]; then
-    cmd+=" -f compose/docker-compose-magnus.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-magnus-xpack.yml"
-    fi
-  fi
-  if [[ "${services}" =~ chen ]]; then
-    cmd+=" -f compose/docker-compose-chen.yml"
-  fi
-  if [[ "${services}" =~ kael ]]; then
-    cmd+=" -f compose/docker-compose-kael.yml"
-  fi
-  if [[ "${services}" =~ web ]]; then
-    cmd+=" -f compose/docker-compose-web.yml"
-    if [[ "${use_xpack}" == '1' ]]; then
-      cmd+=" -f compose/docker-compose-web-xpack.yml"
-    fi
-  fi
-  if [[ "${services}" =~ mysql ]]; then
-    cmd+=" -f ${mysql_images_file}"
-  fi
-  if [[ "${services}" =~ redis ]]; then
-    cmd+=" -f compose/docker-compose-redis.yml"
-  fi
-  if [[ "${services}" =~ es ]]; then
-    cmd+=" -f compose/docker-compose-es.yml"
-  fi
-  if [[ "${services}" =~ minio ]]; then
-    cmd+=" -f compose/docker-compose-minio.yml"
-  fi
+
   if [[ -n "${https_port}" ]]; then
-    cmd+=" -f compose/docker-compose-lb.yml"
+    cmd+=" -f compose/lb.yml"
   fi
+
   if [[ "${use_xpack}" == '1' ]]; then
-    if [[ "${services}" =~ razor ]]; then
-      cmd+=" -f compose/docker-compose-razor.yml"
-    fi
-    if [[ "${services}" =~ xrdp ]]; then
-      cmd+=" -f compose/docker-compose-xrdp.yml"
-    fi
-    if [[ "${services}" =~ video ]]; then
-      cmd+=" -f compose/docker-compose-video.yml"
-    fi
-    if [[ "${services}" =~ panda ]]; then
-      cmd+=" -f compose/docker-compose-panda.yml"
-    fi
+    for service in magnus razor xrdp video panda; do
+      if [[ "${services}" =~ ${service} ]]; then
+        cmd+=" -f compose/${service}.yml"
+      fi
+    done
   fi
+
   echo "${cmd}"
 }
 
@@ -418,19 +374,19 @@ function get_video_worker_cmd_line() {
     return
   fi
   use_ipv6=$(get_config USE_IPV6)
-  cmd="docker-compose"
+  cmd="docker compose"
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd+=" -f compose/docker-compose-network.yml"
+    cmd+=" -f compose/network.yml"
   else
-    cmd+=" -f compose/docker-compose-network_v6.yml"
+    cmd+=" -f compose/network-v6.yml"
   fi
-  cmd+=" -f compose/docker-compose-video-worker.yml"
+  cmd+=" -f compose/video-worker.yml"
   echo "${cmd}"
 }
 
 function prepare_check_required_pkg() {
   for i in curl wget tar iptables gettext; do
-    command -v $i >/dev/null || {
+    command -v $i &>/dev/null || {
         echo_red "$i: $(gettext 'command not found, Please install it first') $i"
         flag=1
     }
@@ -443,10 +399,10 @@ function prepare_check_required_pkg() {
 }
 
 function prepare_set_redhat_firewalld() {
-  if command -v firewall-cmd >/dev/null; then
-    if firewall-cmd --state >/dev/null 2>&1; then
+  if command -v firewall-cmd&>/dev/null; then
+    if firewall-cmd --state &>/dev/null; then
       docker_subnet=$(get_config DOCKER_SUBNET)
-      if ! firewall-cmd --list-rich-rule | grep "${docker_subnet}" >/dev/null; then
+      if ! firewall-cmd --list-rich-rule | grep "${docker_subnet}"&>/dev/null; then
         firewall-cmd --zone=public --add-rich-rule="rule family=ipv4 source address=${docker_subnet} accept" >/dev/null
         firewall-cmd --permanent --zone=public --add-rich-rule="rule family=ipv4 source address=${docker_subnet} accept" >/dev/null
       fi
@@ -456,7 +412,7 @@ function prepare_set_redhat_firewalld() {
 
 function prepare_config() {
   cd "${PROJECT_DIR}" || exit 1
-  if [[ "$OS" != 'Darwin' ]];then
+  if check_root; then
     echo -e "#!/usr/bin/env bash\n#" > /usr/bin/jmsctl
     echo -e "cd ${PROJECT_DIR}" >> /usr/bin/jmsctl
     echo -e './jmsctl.sh $@' >> /usr/bin/jmsctl
@@ -558,26 +514,23 @@ function image_has_prefix() {
 }
 
 function get_db_migrate_compose_cmd() {
-  mysql_host=$(get_config DB_HOST)
+  db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
 
-  cmd="docker-compose -f compose/docker-compose-init-db.yml"
-  if [[ "${use_xpack}" == "1" ]]; then
-    cmd+=" -f compose/docker-compose-init-db-xpack.yml"
-  fi
-  if [[ "${mysql_host}" == "mysql" ]]; then
-    mysql_images_file=$(get_mysql_images_file)
-    cmd+=" -f ${mysql_images_file}"
+  cmd="docker compose -f compose/init-db.yml"
+  if [[ "${db_host}" == "mysql" ]] || [[ "${db_host}" == "postgresql" ]]; then
+    db_images_file=$(get_db_images_file)
+    cmd+=" -f ${db_images_file}"
   fi
   if [[ "${redis_host}" == "redis" ]]; then
-    cmd+=" -f compose/docker-compose-redis.yml"
+    cmd+=" -f compose/redis.yml"
   fi
   if [[ "${use_ipv6}" != "1" ]]; then
-    cmd+=" -f compose/docker-compose-network.yml"
+    cmd+=" -f compose/network.yml"
   else
-    cmd+=" -f compose/docker-compose-network_v6.yml"
+    cmd+=" -f compose/network-v6.yml"
   fi
   echo "$cmd"
 }
@@ -595,15 +548,18 @@ function down_db_ops_env() {
 }
 
 function perform_db_migrations() {
-  mysql_host=$(get_config DB_HOST)
+  db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
 
   create_db_ops_env
-  if [[ "${mysql_host}" == "mysql" ]]; then
-    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
-      sleep 5s
-    done
-  fi
+  case "${db_host}" in
+    mysql|postgresql)
+      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_${db_host})" != "healthy" ]]; do
+        sleep 5s
+      done
+      ;;
+  esac
+
   if [[ "${redis_host}" == "redis" ]]; then
     while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
       sleep 5s
@@ -647,7 +603,7 @@ function pull_image() {
 
   IMAGE_PULL_POLICY=$(get_config_or_env 'IMAGE_PULL_POLICY')
 
-  if docker image inspect -f '{{ .Id }}' "$image" &> /dev/null; then
+  if docker image inspect -f '{{ .Id }}' "$image" &>/dev/null; then
     exits=0
   else
     exits=1
@@ -674,12 +630,12 @@ function check_images() {
   failed=0
 
   for image in ${images_to}; do
-    if ! docker image inspect -f '{{ .Id }}' "$image" &> /dev/null; then
+    if ! docker image inspect -f '{{ .Id }}' "$image" &>/dev/null; then
       pull_image "$image"
     fi
   done
   for image in ${images_to}; do
-    if ! docker image inspect -f '{{ .Id }}' "$image" &> /dev/null; then
+    if ! docker image inspect -f '{{ .Id }}' "$image" &>/dev/null; then
       echo_red "$(gettext 'Failed to pull image') ${image}"
       failed=1
     fi
@@ -715,11 +671,11 @@ function installation_log() {
   install_type=$1
   version=$(get_current_version)
   url="https://community.fit2cloud.com/installation-analytics?product=${product}&type=${install_type}&version=${version}"
-  curl --connect-timeout 5 -m 10 -k $url > /dev/null 2>&1
+  curl --connect-timeout 5 -m 10 -k $url &>/dev/null
 }
 
 function get_host_ip() {
-  host=$(command -v ip &> /dev/null && ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
+  host=$(command -v ip &>/dev/null && ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
   if [ ! "${host}" ]; then
       host=$(hostname -I | cut -d ' ' -f1)
   fi

@@ -6,14 +6,13 @@ services:
     ulimits:
       core: 0
     restart: always
-    tty: true
     env_file:
       - ${CONFIG_FILE}
     volumes:
       - ${VOLUME_DIR}/chen/data:/opt/chen/data
       - ${CONFIG_DIR}/certs:/opt/chen/data/certs
     healthcheck:
-      test: "curl -f 127.0.0.1:8082/chen"
+      test: "check http://localhost:8082/chen/"
       interval: 10s
       timeout: 5s
       retries: 3

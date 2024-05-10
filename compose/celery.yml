@@ -1,12 +1,11 @@
 services:
   celery:
-    image: ${REGISTRY:-docker.io}/jumpserver/core-ce:${VERSION}
+    image: ${REGISTRY:-docker.io}/jumpserver/core:${VERSION}
     container_name: jms_celery
     hostname: jms_celery
     ulimits:
       core: 0
     restart: always
-    tty: true
     command: start task
     env_file:
       - ${CONFIG_FILE}
