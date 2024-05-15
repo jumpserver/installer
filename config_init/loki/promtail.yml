@@ -4,7 +4,7 @@ server:
   grpc_listen_port: 0
 
 positions:
-  filename: /data/jumpserver/grafana/promtail/positions.yaml
+  filename: /data/jumpserver/loki/promtail/positions.yaml
 
 clients:
   - url: http://jms_loki:3100/loki/api/v1/push
@@ -63,6 +63,7 @@ scrape_configs:
           component: razor
           job_name: razor
           __path__: /data/jumpserver/razor/data/logs/*.log
+
   - job_name: xrdp
     static_configs:
       - targets:
@@ -87,9 +88,11 @@ scrape_configs:
         refresh_interval: 5s
         filters:
           - name: name
-            values: [jms_xrdp, jms_razor]
+            values: [jms_web, jms_core, jms_koko, jms_lion,
+                    jms_chen, jms_magnus, jms_xrdp, jms_razor,
+                     jms_receptor]
     relabel_configs:
       - source_labels: ["__meta_docker_container_name"]
         regex: "/(.*)"
-        target_label: "container"
+        target_label: "component"
 

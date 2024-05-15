@@ -19,7 +19,7 @@ schema_config:
     - from: 2020-10-24
       store: boltdb-shipper
       object_store: filesystem
-      schema: v11
+      schema: v13
       index:
         prefix: index_
         period: 24h
@@ -39,11 +39,3 @@ ruler:
 # If you would like to disable reporting, uncomment the following lines:
 analytics:
   reporting_enabled: false
-
-querier:
-  max_concurrent: 8
-
-query_scheduler:
-  max_outstanding_requests_per_tenant: 10000
-frontend:
-  max_outstanding_per_tenant: 10000
