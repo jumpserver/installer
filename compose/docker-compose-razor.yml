@@ -10,7 +10,7 @@ services:
     env_file:
       - ${CONFIG_FILE}
     ports:
-      - ${RDP_PORT}:3389
+      - ${RDP_PORT:-3389}:${RDP_PORT:-3389}
     volumes:
       - ${VOLUME_DIR}/razor/data:/opt/razor/data
       - ${CONFIG_DIR}/nginx/cert:/opt/razor/cert
