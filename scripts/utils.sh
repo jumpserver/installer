@@ -279,6 +279,8 @@ function get_docker_compose_services() {
   redis_host=$(get_config REDIS_HOST)
   use_es=$(get_config USE_ES)
   use_minio=$(get_config USE_MINIO)
+  use_loki=$(get_config USE_LOKI)
+
   use_xpack=$(get_config_or_env USE_XPACK)
 
   services="core celery koko lion chen web"
@@ -307,6 +309,7 @@ function get_docker_compose_services() {
 
   [[ "${use_es}" == "1" ]] && services+=" es"
   [[ "${use_minio}" == "1" ]] && services+=" minio"
+  [[ "${use_loki}" == "1" ]] && services+=" loki"
 
   if [[ "${use_xpack}" == "1" ]]; then
     services+=" magnus razor xrdp video panda"
@@ -355,6 +358,10 @@ function get_docker_compose_cmd_line() {
 
   if [[ -n "${https_port}" ]]; then
     cmd+=" -f compose/lb.yml"
+  fi
+
+  if [[ "${services}" =~ loki ]]; then
+    cmd+=" -f compose/loki.yml"
   fi
 
   if [[ "${use_xpack}" == '1' ]]; then
