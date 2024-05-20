@@ -622,7 +622,7 @@ function pull_image() {
   fi
 
   echo "[${image}] pulling"
-  if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "0" ]]; then
+  if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "1" ]]; then
     docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
     docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
     docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
