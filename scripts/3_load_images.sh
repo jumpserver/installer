@@ -39,7 +39,7 @@ function load_image_files() {
 }
 
 function main() {
-  if [[ -d "${IMAGE_DIR}" && -f "${IMAGE_DIR}/redis:6.2.tar" ]]; then
+  if [[ -d "${IMAGE_DIR}" && $(find "${IMAGE_DIR}" -type f -name "*.tar" -print -quit 2>/dev/null) ]]; then
     load_image_files
   else
     pull_images
