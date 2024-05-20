@@ -513,7 +513,7 @@ function get_latest_version() {
 }
 
 function image_has_prefix() {
-  if [[ $1 =~ registry.fit2cloud.com.* ]]; then
+  if [[ $1 =~ jumpserver.* ]]; then
     echo "1"
   else
     echo "0"
