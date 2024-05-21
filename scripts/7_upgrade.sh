@@ -262,6 +262,7 @@ function main() {
   fi
   echo
   update_config_if_need
+  check_compose_install
 
   echo_yellow "\n2. $(gettext 'Loading Docker Image')"
   bash "${BASE_DIR}/3_load_images.sh"
