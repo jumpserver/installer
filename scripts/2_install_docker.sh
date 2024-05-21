@@ -13,15 +13,15 @@ function copy_docker() {
   if [[ ! -d "/usr/local/bin" ]]; then
     mkdir -p /usr/local/bin
   fi
-  \cp -f ./docker/* /usr/local/bin/
-  \cp -f ./docker.service /etc/systemd/system/
+  \cp -f ${BASE_DIR}/docker/* /usr/local/bin/
+  \cp -f ${BASE_DIR}/docker.service /etc/systemd/system/
 }
 
 function install_docker() {
-  if [[ ! -f ./docker/dockerd ]]; then
+  if [[ ! -f ${BASE_DIR}/docker/dockerd ]]; then
     prepare_docker_bin
   fi
-  if [[ ! -f ./docker/dockerd ]]; then
+  if [[ ! -f ${BASE_DIR}/docker/dockerd ]]; then
     echo_red "Error: $(gettext 'Docker program does not exist')"
     exit 1
   fi
@@ -29,7 +29,7 @@ function install_docker() {
   docker_exist=1
   docker_version_match=1
   old_docker_md5=$(get_file_md5 /usr/local/bin/dockerd)
-  new_docker_md5=$(get_file_md5 ./docker/dockerd)
+  new_docker_md5=$(get_file_md5 ${BASE_DIR}/docker/dockerd)
 
   if [[ ! -f "/usr/local/bin/dockerd" ]]; then
     docker_exist=0
@@ -43,32 +43,30 @@ function install_docker() {
 }
 
 function install_compose() {
-  if [[ ! -f ./docker/docker-compose ]]; then
+  if [[ ! -f ${BASE_DIR}/docker/docker-compose ]]; then
     prepare_compose_bin
   fi
   old_docker_compose_md5=$(get_file_md5 /usr/local/libexec/docker/cli-plugins/docker-compose)
-  new_docker_compose_md5=$(get_file_md5 ./docker/docker-compose)
+  new_docker_compose_md5=$(get_file_md5 ${BASE_DIR}/docker/docker-compose)
   if [[ ! -f "/usr/local/libexec/docker/cli-plugins/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
     if [[ ! -d "/usr/local/libexec/docker/cli-plugins" ]]; then
       mkdir -p /usr/local/libexec/docker/cli-plugins
     fi
-    \cp -f ./docker/docker-compose /usr/local/libexec/docker/cli-plugins/
-    chmod +x /usr/local/libexec/docker/cli-plugins/docker-compose
+    \cp -f ${BASE_DIR}/docker/docker-compose /usr/local/libexec/docker/cli-plugins/
   fi
 }
 
 function install_compose_home() {
-  if [[ ! -f ./docker/docker-compose ]]; then
+  if [[ ! -f ${BASE_DIR}/docker/docker-compose ]]; then
     prepare_compose_bin
   fi
   old_docker_compose_md5=$(get_file_md5 $HOME/.docker/cli-plugins/docker-compose)
-  new_docker_compose_md5=$(get_file_md5 ./docker/docker-compose)
+  new_docker_compose_md5=$(get_file_md5 ${BASE_DIR}/docker/docker-compose)
   if [[ ! -f "$HOME/.docker/cli-plugins/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
     if [[ ! -d "$HOME/.docker/cli-plugins" ]]; then
       mkdir -p $HOME/.docker/cli-plugins
     fi
-    \cp -f ./docker/docker-compose $HOME/.docker/cli-plugins/
-    chmod +x $HOME/.docker/cli-plugins/docker-compose
+    \cp -f ${BASE_DIR}/docker/docker-compose $HOME/.docker/cli-plugins/
   fi
 }
 

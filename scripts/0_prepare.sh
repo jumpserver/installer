@@ -4,7 +4,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/utils.sh"
 
-IMAGE_DIR="images"
+IMAGE_DIR="${BASE_DIR}/images"
 
 function prepare_docker_bin() {
   md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
@@ -20,12 +20,12 @@ function prepare_docker_bin() {
   else
     echo "$(gettext 'Using Docker cache'): /tmp/docker.tar.gz"
   fi
-  tar -xf /tmp/docker.tar.gz -C ./ || {
-    rm -rf docker /tmp/docker.tar.gz
+  tar -xf /tmp/docker.tar.gz -C "${BASE_DIR}/" || {
+    rm -rf "${BASE_DIR}/docker" /tmp/docker.tar.gz
     exit 1
   }
-  chown -R root:root docker
-  chmod +x docker/*
+  chown -R root:root "${BASE_DIR}/docker"
+  chmod +x "${BASE_DIR}/docker/*"
 }
 
 function prepare_compose_bin() {
@@ -42,12 +42,12 @@ function prepare_compose_bin() {
   else
     echo "$(gettext 'Using Docker Compose cache'): /tmp/docker-compose"
   fi
-  if [[ ! -d "$BASE_DIR/docker" ]]; then
+  if [[ ! -d "${BASE_DIR}/docker" ]]; then
     mkdir -p "${BASE_DIR}/docker"
   fi
-  \cp -rf /tmp/docker-compose docker/
-  chown -R root:root docker
-  chmod +x docker/*
+  \cp -f /tmp/docker-compose "${BASE_DIR}/docker/"
+  chown -R root:root "${BASE_DIR}/docker/docker-compose"
+  chmod +x "${BASE_DIR}/docker/docker-compose"
 }
 
 function prepare_image_files() {
@@ -62,7 +62,7 @@ function prepare_image_files() {
     filename=$(basename "${image}").tar
     image_path="${IMAGE_DIR}/${filename}"
     md5_filename=$(basename "${image}").md5
-    md5_path=${IMAGE_DIR}/${md5_filename}
+    md5_path="${IMAGE_DIR}/${md5_filename}"
 
     image_id=$(docker inspect -f "{{.ID}}" "${image}")
     saved_id=""
