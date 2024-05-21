@@ -25,7 +25,7 @@ function prepare_docker_bin() {
     exit 1
   }
   chown -R root:root "${BASE_DIR}/docker"
-  chmod +x "${BASE_DIR}/docker/*"
+  chmod +x ${BASE_DIR}/docker/*
 }
 
 function prepare_compose_bin() {
