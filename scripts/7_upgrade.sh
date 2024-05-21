@@ -24,7 +24,7 @@ function upgrade_config() {
     log_error "$(gettext 'Docker is not running, please install and start')"
     exit 1
   fi
-  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb")
+  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_kael" "jms_magnus")
   for container in "${containers[@]}"; do
     if docker ps -a | grep ${container} &>/dev/null; then
       docker stop ${container} &>/dev/null
@@ -262,6 +262,7 @@ function main() {
   fi
   echo
   update_config_if_need
+  echo
   check_compose_install
 
   echo_yellow "\n2. $(gettext 'Loading Docker Image')"

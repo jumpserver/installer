@@ -488,7 +488,6 @@ function prepare_config() {
   if [[ "$(uname -m)" == "aarch64" ]]; then
     sed -i "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
   fi
-  echo_done
 }
 
 function echo_logo() {
