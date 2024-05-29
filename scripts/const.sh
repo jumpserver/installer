@@ -43,19 +43,19 @@ if [[ "$(uname -m)" == "s390x" ]]; then
 fi
 export DOCKER_MD5
 
-export DOCKER_COMPOSE_VERSION=v2.27.0
+export DOCKER_COMPOSE_VERSION=v2.27.1
 export DOCKER_COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
 export DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-$(uname -m)"
 if [[ "$(uname -m)" == "x86_64" ]]; then
-  DOCKER_COMPOSE_MD5=891a283d0e11bbff04b8347d7611500a
+  DOCKER_COMPOSE_MD5=24120814a7df4f78aca2a31b17067e64
 fi
 if [[ "$(uname -m)" == "aarch64" ]]; then
-  DOCKER_COMPOSE_MD5=798dde95d63ebff0e92d986848848967
+  DOCKER_COMPOSE_MD5=553e16f35beca0e3ee09425db7ceb546
 fi
 if [[ "$(uname -m)" == "loongarch64" ]]; then
-  DOCKER_COMPOSE_MD5=83f554dafd26e6892d1a4c73ea95bc12
+  DOCKER_COMPOSE_MD5=af46b5338ec398e2d1c3b68f6e7ace2e
 fi
 if [[ "$(uname -m)" == "s390x" ]]; then
-  DOCKER_COMPOSE_MD5=f7cbe603e2a0b8921f392549a6480a1a
+  DOCKER_COMPOSE_MD5=ef119360c5f1a0d4dc9c10bef5e9c1b7
 fi
 export DOCKER_COMPOSE_MD5
