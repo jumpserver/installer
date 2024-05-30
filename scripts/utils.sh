@@ -681,11 +681,14 @@ function installation_log() {
 }
 
 function get_host_ip() {
-  host=$(command -v ip &>/dev/null && ip addr | grep 'state UP' -A2 | grep inet | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | tr -d "addr:" | head -n 1 | cut -d / -f1)
+  local default_ip="127.0.0.1"
+  host=$(command -v hostname &>/dev/null && hostname -I | cut -d ' ' -f1)
   if [ ! "${host}" ]; then
-      host=$(hostname -I | cut -d ' ' -f1)
+      host=$(command -v ip &>/dev/null && ip addr | grep 'inet ' | grep -Ev '(127.0.0.1|inet6|docker)' | awk '{print $2}' | head -n 1 | cut -d / -f1)
   fi
   if [[ ${host} =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
       echo "${host}"
+  else
+      echo "${default_ip}"
   fi
 }
