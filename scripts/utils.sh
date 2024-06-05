@@ -131,7 +131,7 @@ function get_db_info() {
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "mariadb:10.6"
       else
-        echo "postgres:16.2-bullseye"
+        echo "postgres:16.3-bullseye"
       fi
       ;;
     "file")
