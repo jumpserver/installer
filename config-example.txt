@@ -1,57 +1,57 @@
 # JumpServer configuration file example.
 #
-# 如果不了解用途可以跳过修改此配置文件, 系统会自动填入
-# 完整参数文档 https://docs.jumpserver.org/zh/v3/guide/env/
+# If you don't understand the purpose, you can skip modifying this configuration file, the system will automatically fill in
+# Complete parameter documentation https://docs.jumpserver.org/zh/v3/guide/env/
 
-################################## 镜像配置 ###################################
+################################# Image Configuration #################################
 #
-# 国内连接 docker.io 会超时或下载速度较慢, 开启此选项使用华为云镜像加速
-# 取代旧版本 DOCKER_IMAGE_PREFIX
+# The connection to docker.io in China will timeout or the download speed will be slow, enable this option to use Huawei Cloud image acceleration
+# Replace the old version DOCKER_IMAGE_PREFIX
 #
 # DOCKER_IMAGE_MIRROR=1
 
-# 镜像拉取规则 Always, IfNotPresent
-# Always 表示每次都会拉取最新镜像, IfNotPresent 表示本地不存在镜像时才会拉取
+# Image pull policy Always, IfNotPresent
+# Always means that the latest image will be pulled every time, IfNotPresent means that the image will be pulled only if it does not exist locally
 #
 # IMAGE_PULL_POLICY=Always
 
-################################## 安装配置 ###################################
+############################## Installation Configuration #############################
 #
-# JumpServer 数据库持久化目录, 默认情况下录像、任务日志都在此目录
-# 请根据实际情况修改, 升级时备份的数据库文件(.sql)和配置文件也会保存到该目录
+# JumpServer database persistence directory, by default, recordings, task logs are in this directory
+# Please modify according to the actual situation, the database file (.sql) and configuration file backed up during the upgrade will also be saved to this directory
 #
 VOLUME_DIR=/data/jumpserver
 
-# 加密密钥, 迁移请保证 SECRET_KEY 与旧环境一致, 请勿使用特殊字符串
+# Encryption key, please ensure that SECRET_KEY is consistent with the old environment when migrating, do not use special strings
 # (*) Warning: Keep this value secret.
-# (*) 勿向任何人泄露 SECRET_KEY
+# (*) Do not disclose SECRET_KEY to anyone
 #
 SECRET_KEY=
 
-# 组件向 core 注册使用的 token, 迁移请保持 BOOTSTRAP_TOKEN 与旧环境一致,
-# 请勿使用特殊字符串
+# The token used by the component to register with core, please keep BOOTSTRAP_TOKEN consistent with the old environment when migrating,
+# Do not use special strings
 # (*) Warning: Keep this value secret.
-# (*) 勿向任何人泄露 BOOTSTRAP_TOKEN
+# (*) Do not disclose BOOTSTRAP_TOKEN to anyone
 #
 BOOTSTRAP_TOKEN=
 
-# 日志等级 INFO, WARN, ERROR
+# Log level INFO, WARN, ERROR
 #
 LOG_LEVEL=ERROR
 
-# JumpServer 容器使用的网段, 请勿与现有的网络冲突, 根据实际情况自行修改
+# The network segment used by the JumpServer container, please do not conflict with the existing network, modify according to the actual situation
 #
 DOCKER_SUBNET=192.168.250.0/24
 
-# ipv6 nat, 正常情况下无需开启
-# 如果宿主不支持 ipv6 开启此选项将会导致无法获取真实的客户端 ip 地址
+# ipv6 nat, no need to enable under normal circumstances
+# If the host does not support ipv6, enabling this option will prevent the real client ip address from being obtained
 #
 USE_IPV6=0
 DOCKER_SUBNET_IPV6=fc00:1010:1111:200::/64
 
-################################# DB 配置 ##################################
-# 外置数据库需要输入正确的数据库信息, 内置数据库系统会自动处理
-# (*) 密码部分不得包含单引号和双引号
+################################# DB Configuration ####################################
+# For external databases, you need to enter the correct database information, the system will automatically handle the built-in database
+# (*) The password part must not contain single quotes and double quotes
 #
 DB_ENGINE=postgresql
 DB_HOST=postgresql
@@ -60,36 +60,36 @@ DB_USER=postgres
 DB_PASSWORD=
 DB_NAME=jumpserver
 
-# 如果外置 MySQL 需要开启 TLS/SSL 连接, 参考 https://docs.jumpserver.org/zh/v3/installation/security_setup/mysql_ssl/
+# If external MySQL needs to enable TLS/SSL connection, refer to https://docs.jumpserver.org/zh/v3/installation/security_setup/mysql_ssl/
 #
 # DB_USE_SSL=true
 
-################################# Redis 配置 ##################################
-# 外置 Redis 需要请输入正确的 Redis 信息, 内置 Redis 系统会自动处理
-# (*) 密码部分不得包含单引号和双引号
+################################# Redis Configuration #################################
+# For external Redis, please enter the correct Redis information, the system will automatically handle the built-in Redis
+# (*) The password part must not contain single quotes and double quotes
 #
 REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_PASSWORD=
 
-# 如果使用外置 Redis Sentinel, 请手动填写下面内容
+# If you are using external Redis Sentinel, please manually fill in the following content
 #
 # REDIS_SENTINEL_HOSTS=mymaster/192.168.100.1:26379,192.168.100.1:26380,192.168.100.1:26381
 # REDIS_SENTINEL_PASSWORD=your_sentinel_password
 # REDIS_PASSWORD=your_redis_password
 # REDIS_SENTINEL_SOCKET_TIMEOUT=5
 
-# 如果外置 Redis 需要开启 TLS/SSL 连接, 参考 https://docs.jumpserver.org/zh/v3/installation/security_setup/redis_ssl/
+# If external Redis needs to enable TLS/SSL connection, refer to https://docs.jumpserver.org/zh/v3/installation/security_setup/redis_ssl/
 #
 # REDIS_USE_SSL=true
 
-################################## 访问配置 ###################################
-# 对外提供服务端口, 如果与现有服务冲突请自行修改
+################################# Access Configuration ################################
+# The service port provided to the outside, if it conflicts with the existing service, please modify it yourself
 #
 HTTP_PORT=80
 
-################################# HTTPS 配置 #################################
-# 参考 https://docs.jumpserver.org/zh/v3/installation/proxy/ 配置
+################################# HTTPS Configuration #################################
+# Refer to https://docs.jumpserver.org/zh/v3/installation/proxy/ for configuration
 #
 # HTTPS_PORT=443
 # SERVER_NAME=your_domain_name
@@ -97,31 +97,31 @@ HTTP_PORT=80
 # SSL_CERTIFICATE_KEY=your_cert_key
 #
 
-# Nginx 文件上传下载大小限制
+# Nginx file upload and download size limit
 #
 CLIENT_MAX_BODY_SIZE=4096m
 
-################################## 组件配置 ###################################
-# 组件注册使用, 默认情况下向 core 容器注册, 集群环境需要修改为集群 vip 地址
+################################# Component Configuration #############################
+# Component registration use, by default, register to the core container, the cluster environment needs to be modified to the cluster vip address
 #
 CORE_HOST=http://core:8080
 PERIOD_TASK_ENABLED=true
 
-# Core Session 定义,
-# SESSION_COOKIE_AGE 表示闲置多少秒后 session 过期,
-# SESSION_EXPIRE_AT_BROWSER_CLOSE=true 表示关闭浏览器即 session 过期
+# Core Session definition,
+# SESSION_COOKIE_AGE indicates how many seconds the session expires after idling,
+# SESSION_EXPIRE_AT_BROWSER_CLOSE=true means that the session expires as soon as the browser is closed
 #
 # SESSION_COOKIE_AGE=86400
 SESSION_EXPIRE_AT_BROWSER_CLOSE=false
 
-# 可信任 DOMAINS 定义,
-# 定义可信任的访问 IP, 请根据实际情况修改, 如果是公网 IP 请改成对应的公网 IP,
+# Trusted DOMAINS definition,
+# Define the trusted access IP, please modify according to the actual situation, if it is a public IP, please change to the corresponding public IP,
 # DOMAINS="demo.jumpserver.org:443"
 # DOMAINS="172.17.200.191:80"
 # DOMAINS="demo.jumpserver.org:443,172.17.200.191:80"
 DOMAINS=
 
-# 配置不需要启动的组件, 默认所有组件都会开启, 如果不需要某个组件可以通过设置 {组件名称}_ENABLED 为 0 关闭
+# Configure the components that do not need to be started, by default all components will be started, if you do not need a certain component, you can set {component name}_ENABLED to 0 to turn it off
 # CORE_ENABLED=0
 # CELERY_ENABLED=0
 # KOKO_ENABLED=0
@@ -129,12 +129,12 @@ DOMAINS=
 # CHEN_ENABLED=0
 # WEB_ENABLED=0
 
-# Lion 开启字体平滑, 优化体验
+# Lion enables font smoothing to optimize the experience
 #
 JUMPSERVER_ENABLE_FONT_SMOOTHING=true
 
-################################# XPack 配置 #################################
-# XPack 包, 开源版本设置无效
+################################# XPack Configuration #################################
+# XPack package, invalid setting in open source version
 #
 SSH_PORT=2222
 RDP_PORT=3389
@@ -146,17 +146,17 @@ MAGNUS_POSTGRESQL_PORT=54320
 MAGNUS_SQLSERVER_PORT=14330
 MAGNUS_ORACLE_PORTS=30000-30030
 
-################################## 其他配置 ##################################
-# 终端使用宿主 HOSTNAME 标识, 首次安装自动生成
+################################## Other Configuration ################################
+# The terminal uses the host HOSTNAME as the identifier, automatically generated during the first installation
 #
 SERVER_HOSTNAME=${HOSTNAME}
 
-# 使用内置 SLB, 如果 Web 页面获取到的客户端 IP 地址不正确, 请将 USE_LB 设置为 0
-# USE_LB 设置为 1 时, 使用配置 proxy_set_header X-Forwarded-For $remote_addr
-# USE_LB 设置为 0 时, 使用配置 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for
+# Use built-in SLB, if the client IP address obtained by the Web page is not correct, please set USE_LB to 0
+# When USE_LB is set to 1, use the configuration proxy_set_header X-Forwarded-For $remote_addr
+# When USE_LB is set to 0, use the configuration proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for
 USE_LB=1
 
-# 当前运行的 JumpServer 版本号, 安装和升级完成后自动生成
+# The current running version number of JumpServer, automatically generated after installation and upgrade
 #
 TZ=Asia/Shanghai
 CURRENT_VERSION=
