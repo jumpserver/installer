@@ -603,6 +603,9 @@ function pull_image() {
     if [[ "$(uname -m)" == "loongarch64" ]]; then
       DOCKER_IMAGE_PREFIX="swr.cn-southwest-2.myhuaweicloud.com"
     fi
+    if [[ "$(uname -m)" == "s390x" ]]; then
+      DOCKER_IMAGE_PREFIX="swr.sa-brazil-1.myhuaweicloud.com"
+    fi
   else
     DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
   fi
@@ -620,13 +623,31 @@ function pull_image() {
     return
   fi
 
+  pull_args=""
+  if [[ -n "${BUILD_ARCH}" ]]; then
+    case "${BUILD_ARCH}" in
+      "x86_64")
+        pull_args="--platform linux/amd64"
+        ;;
+      "aarch64")
+        pull_args="--platform linux/arm64"
+        ;;
+      "loongarch64")
+        pull_args="--platform linux/loong64"
+        ;;
+      "s390x")
+        pull_args="--platform linux/s390x"
+        ;;
+    esac
+  fi
+
   echo "[${image}] pulling"
   if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "1" ]]; then
-    docker pull "${DOCKER_IMAGE_PREFIX}/${image}"
+    docker pull ${pull_args} "${DOCKER_IMAGE_PREFIX}/${image}"
     docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
     docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
   else
-    docker pull "${image}"
+    docker pull ${pull_args} "${image}"
   fi
   echo ""
 }
