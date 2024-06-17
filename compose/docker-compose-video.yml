@@ -7,7 +7,6 @@ services:
     ulimits:
       core: 0
     restart: always
-    tty: true
     env_file:
       - ${CONFIG_FILE}
     volumes:

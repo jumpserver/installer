@@ -6,7 +6,6 @@ services:
     ulimits:
       core: 0
     restart: always
-    tty: true
     command: start web
     env_file:
       - ${CONFIG_FILE}

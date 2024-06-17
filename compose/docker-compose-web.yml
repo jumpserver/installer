@@ -6,7 +6,6 @@ services:
     ulimits:
       core: 0
     restart: always
-    tty: true
     environment:
       HTTP_PORT: ${HTTP_PORT:-80}
       USE_LB: ${USE_LB:-1}
