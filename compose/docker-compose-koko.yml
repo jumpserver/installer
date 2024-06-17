@@ -6,7 +6,7 @@ services:
     ulimits:
       core: 0
     restart: always
-    tty: true
+    privileged: true
     env_file:
       - ${CONFIG_FILE}
     environment:
@@ -16,7 +16,7 @@ services:
     volumes:
       - ${CONFIG_DIR}/certs:/opt/koko/data/certs
       - ${VOLUME_DIR}/koko/data:/opt/koko/data
-    privileged: true
+    
     healthcheck:
       test: "curl -fsL http://localhost:5000/koko/health/ > /dev/null"
       interval: 10s
