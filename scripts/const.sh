@@ -29,7 +29,7 @@ export OS=$(uname -s)
 export DOCKER_VERSION=26.1.4
 export DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
 
-export DOCKER_COMPOSE_VERSION=v2.27.1
+export DOCKER_COMPOSE_VERSION=v2.28.0
 export DOCKER_COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
 
 ARCH=$(uname -m)
@@ -43,24 +43,24 @@ export ARCH
 case "${ARCH}" in
   "x86_64")
     DOCKER_MD5=99ba6d75fe9972405083b2bd911fd37b
-    DOCKER_COMPOSE_MD5=24120814a7df4f78aca2a31b17067e64
+    DOCKER_COMPOSE_MD5=fa5fe3bca5d12435d07e05ad53cf55a6
     ;;
   "aarch64")
     DOCKER_MD5=eac2f5b6ad2c29d1ca46d22b29c5edd3
-    DOCKER_COMPOSE_MD5=553e16f35beca0e3ee09425db7ceb546
+    DOCKER_COMPOSE_MD5=7f270f803805c8a72033c5186b0f3b84
     ;;
   "loongarch64")
     DOCKER_MD5=a3d5d528210cd29872622513c6533078
-    DOCKER_COMPOSE_MD5=af46b5338ec398e2d1c3b68f6e7ace2e
+    DOCKER_COMPOSE_MD5=38530057002b8517759262e501869adb
     ;;
   "s390x")
     DOCKER_MD5=2b910e8455d36aa3f6733c7c43126200
-    DOCKER_COMPOSE_MD5=ef119360c5f1a0d4dc9c10bef5e9c1b7
+    DOCKER_COMPOSE_MD5=610fc7074048f122e1b23752ba612f3a
     ;;
 esac
 
 export DOCKER_MD5
 export DOCKER_BIN_URL="${DOCKER_MIRROR}/${ARCH}/docker-${DOCKER_VERSION}.tgz"
 
-export DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"
 export DOCKER_COMPOSE_MD5
+export DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"
