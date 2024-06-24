@@ -6,7 +6,6 @@ services:
     ulimits:
       core: 0
     restart: always
-    tty: true
     command: start receptor
     environment:
       LOG_LEVEL: ${LOG_LEVEL}
