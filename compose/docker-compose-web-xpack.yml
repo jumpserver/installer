@@ -1,5 +1,0 @@
-services:
-  web:
-    environment:
-      USE_XPACK: ${USE_XPACK:-0}
-      RAZOR_ENABLED: ${RAZOR_ENABLED:-1}

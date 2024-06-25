@@ -12,7 +12,7 @@ services:
       - ${CONFIG_DIR}/certs:/opt/lion/data/certs
       - ${VOLUME_DIR}/lion/data:/opt/lion/data
     healthcheck:
-      test: "curl -fsL http://localhost:8081/lion/health/ > /dev/null"
+      test: "check http://localhost:8081/lion/health/"
       interval: 10s
       timeout: 5s
       retries: 3

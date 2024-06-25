@@ -1,11 +1,11 @@
 services:
   mysql:
-    image: jumpserver/mysql:5.7
+    image: mysql:5.7-debian
     container_name: jms_mysql
-    hostname: jms_mysql
     restart: always
     command: --character-set-server=utf8
     environment:
+      TZ: ${TZ:-Asia/Shanghai}
       DB_PORT: $DB_PORT
       MYSQL_ROOT_PASSWORD: $DB_PASSWORD
       MYSQL_DATABASE: $DB_NAME

@@ -16,9 +16,8 @@ services:
     volumes:
       - ${CONFIG_DIR}/certs:/opt/koko/data/certs
       - ${VOLUME_DIR}/koko/data:/opt/koko/data
-    
     healthcheck:
-      test: "curl -fsL http://localhost:5000/koko/health/ > /dev/null"
+      test: "check http://localhost:5000/koko/health/"
       interval: 10s
       timeout: 5s
       retries: 3

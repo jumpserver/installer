@@ -1,0 +1,29 @@
+services:
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: jms_loki
+    hostname: jms_loki
+    user: "0"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ${CONFIG_DIR}/loki/loki.yaml:/etc/loki/local-config.yaml
+      - ${VOLUME_DIR}/loki/loki:/loki
+    networks:
+      - net
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: jms_promtail
+    hostname: jms_promtail
+    env_file:
+      - ${CONFIG_FILE}
+    volumes:
+      - ${CONFIG_DIR}/loki/promtail.yml:/etc/promtail/config.yml
+      - ${VOLUME_DIR}/loki/promtail/:/data/jumpserver/loki/promtail/
+      - ${VOLUME_DIR}:/data/jumpserver/
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml -config.expand-env=true
+    networks:
+      - net
+    depends_on:
+      - loki

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/utils.sh"
 
@@ -23,7 +23,7 @@ function load_image_files() {
     echo -n "${image} <= ${IMAGE_DIR}/${filename} "
     md5_filename=$(basename "${image}").md5
     md5_path=${IMAGE_DIR}/${md5_filename}
-    image_id=$(docker inspect -f "{{.ID}}" "${image}" 2>/dev/null || echo "")
+    image_id=$(docker inspect -f "{{.ID}}" "${image}" 2&>/dev/null || echo "")
     saved_id=""
 
     if [[ -f "${md5_path}" ]]; then
@@ -39,7 +39,7 @@ function load_image_files() {
 }
 
 function main() {
-  if [[ -d "${IMAGE_DIR}" && -f "${IMAGE_DIR}/redis:6.2.tar" ]]; then
+  if [[ -d "${IMAGE_DIR}" && $(find "${IMAGE_DIR}" -type f -name "*.tar" -print -quit 2>/dev/null) ]]; then
     load_image_files
   else
     pull_images
