@@ -1,0 +1,26 @@
+services:
+  windows:
+    image: dockurr/windows
+    container_name: windows
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      VERSION: ${WINDOWS_VERSION:-2022}
+      DISK_SIZE: ${WINDOWS_DISK_SIZE:-64G}
+      LANGUAGE: ${WINDOWS_LANGUAGE:-Chinese}
+      USERNAME: ${WINDOWS_USERNAME:-administrator}
+      PASSWORD: $BOOTSTRAP_TOKEN
+    devices:
+      - /dev/kvm
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 8006:8006
+      - 3389:3389/tcp
+      - 3389:3389/udp
+      # - 5985:5985
+      # - 5986:5986
+    # volumes:
+      # - ${VOLUME_DIR}/windows/data/windows.iso:/custom.iso
+    stop_grace_period: 2m
+    networks:
+      - net
