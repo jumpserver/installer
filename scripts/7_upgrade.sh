@@ -31,6 +31,12 @@ function upgrade_config() {
       docker rm ${container} &>/dev/null
     fi
   done
+  local images=("jumpserver/mariadb:10.6" "jumpserver/mysql:5.7")
+  for image in "${images[@]}"; do
+    if docker image inspect -f '{{.Id}}' ${image} &>/dev/null; then
+      docker tag ${image} ${image#*/}
+    fi
+  done
   if docker ps -a | grep jms_xpack &>/dev/null; then
     docker volume rm jms_share-volume &>/dev/null
   fi
