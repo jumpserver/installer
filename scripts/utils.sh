@@ -26,7 +26,7 @@ function random_str() {
   uuid=""
   if check_root && command -v dmidecode &>/dev/null; then
     if [[ ${len} -gt 24 ]]; then
-      uuid=$(dmidecode -t 1 | grep UUID | awk '{print $2}' | sha256sum | awk '{print $1}' | head -c ${len})
+      uuid=$(dmidecode -s system-uuid | sha256sum | awk '{print $1}' | head -c ${len})
     fi
   fi
   if [[ "${#uuid}" == "${len}" ]]; then
