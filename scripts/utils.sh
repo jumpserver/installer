@@ -279,6 +279,7 @@ function get_docker_compose_services() {
   redis_host=$(get_config REDIS_HOST)
   use_es=$(get_config USE_ES)
   use_minio=$(get_config USE_MINIO)
+  use_windows=$(get_config USE_WINDOWS)
   use_loki=$(get_config USE_LOKI)
 
   use_xpack=$(get_config_or_env USE_XPACK)
@@ -309,6 +310,7 @@ function get_docker_compose_services() {
 
   [[ "${use_es}" == "1" ]] && services+=" es"
   [[ "${use_minio}" == "1" ]] && services+=" minio"
+  [[ "${use_windows}" == "1" ]] && services+=" windows"
   [[ "${use_loki}" == "1" ]] && services+=" loki"
 
   if [[ "${use_xpack}" == "1" ]]; then
@@ -327,7 +329,6 @@ function get_docker_compose_cmd_line() {
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
   https_port=$(get_config HTTPS_PORT)
-  db_images_file=$(get_db_images_file)
   cmd="docker compose"
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
@@ -343,25 +344,12 @@ function get_docker_compose_cmd_line() {
   done
 
   if [[ "${services}" =~ "mysql" || "${services}" =~ "postgresql" ]]; then
+    db_images_file=$(get_db_images_file)
     cmd+=" -f ${db_images_file}"
-  fi
-
-  use_es=$(get_config USE_ES)
-  if [[ "${use_es}" == "1" ]]; then
-    cmd+=" -f compose/es.yml"
-  fi
-
-  use_minio=$(get_config USE_MINIO)
-  if [[ "${use_minio}" == "1" ]]; then
-    cmd+=" -f compose/minio.yml"
   fi
 
   if [[ -n "${https_port}" ]]; then
     cmd+=" -f compose/lb.yml"
-  fi
-
-  if [[ "${services}" =~ loki ]]; then
-    cmd+=" -f compose/loki.yml"
   fi
 
   if [[ "${use_xpack}" == '1' ]]; then
