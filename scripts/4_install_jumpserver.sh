@@ -47,7 +47,7 @@ function post_install() {
     echo "http://${host}:${http_port}"
   fi
 
-  echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): admin"
+  echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): ChangeMe"
 
   if [[ "${use_xpack}" == "1" ]]; then
     echo_yellow "\n4. SSH/SFTP $(gettext 'access')"
