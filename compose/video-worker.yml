@@ -1,15 +1,15 @@
 services:
   video:
     image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/video-worker:${VERSION}
-    container_name: jms_video
-    hostname: jms_video
-    cpus: 2
+    container_name: jms_video_worker
+    hostname: jms_video_worker
     ulimits:
       core: 0
     restart: always
-    tty: true
     env_file:
       - ${CONFIG_FILE}
+    ports:
+      - 9000:9000
     volumes:
       - ${VOLUME_DIR}/video/data:/opt/video-worker/data
     healthcheck:

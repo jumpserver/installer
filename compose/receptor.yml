@@ -1,12 +1,11 @@
 services:
   receptor:
-    image: ${REGISTRY:-docker.io}/jumpserver/core-ce:${VERSION}
+    image: ${REGISTRY:-docker.io}/jumpserver/core:${VERSION}
     container_name: jms_receptor
     hostname: jms_receptor
     ulimits:
       core: 0
     restart: always
-    tty: true
     command: start receptor
     environment:
       LOG_LEVEL: ${LOG_LEVEL}

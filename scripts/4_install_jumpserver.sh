@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 #
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/utils.sh"
 
 function pre_install() {
   if ! command -v systemctl &>/dev/null; then
-    command -v docker >/dev/null || {
+    docker version &>/dev/null || {
       log_error "$(gettext 'The current Linux system does not support systemd management. Please deploy docker by yourself before running this script again')"
       exit 1
     }
-    command -v docker-compose >/dev/null || {
+    docker compose version &>/dev/null || {
       log_error "$(gettext 'The current Linux system does not support systemd management. Please deploy docker-compose by yourself before running this script again')"
       exit 1
     }
@@ -27,6 +27,7 @@ function post_install() {
   https_port=$(get_config HTTPS_PORT)
   server_name=$(get_config SERVER_NAME)
   ssh_port=$(get_config SSH_PORT)
+  use_xpack=$(get_config_or_env USE_XPACK)
 
   echo_yellow "1. $(gettext 'You can use the following command to start, and then visit')"
   echo "cd ${PROJECT_DIR}"
@@ -46,13 +47,15 @@ function post_install() {
     echo "http://${host}:${http_port}"
   fi
 
-  echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): admin"
+  echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): ChangeMe"
 
-  echo_yellow "\n4. SSH/SFTP $(gettext 'access')"
-  echo "ssh -p${ssh_port} admin@${host}"
-  echo "sftp -P${ssh_port} admin@${host}"
+  if [[ "${use_xpack}" == "1" ]]; then
+    echo_yellow "\n4. SSH/SFTP $(gettext 'access')"
+    echo "ssh -p${ssh_port} admin@${host}"
+    echo "sftp -P${ssh_port} admin@${host}"
+  fi
 
-  echo_yellow "\n5. $(gettext 'More information')"
+  echo_yellow "\n $(gettext 'More information')"
   echo "$(gettext 'Official Website'): https://www.jumpserver.org/"
   echo "$(gettext 'Documentation'): https://docs.jumpserver.org/"
   echo -e "\n"
@@ -68,6 +71,7 @@ function main() {
   if ! bash "${BASE_DIR}/2_install_docker.sh"; then
     exit 1
   fi
+
   echo_green "\n>>> $(gettext 'Loading Docker Image')"
   if ! bash "${BASE_DIR}/3_load_images.sh"; then
     exit 1

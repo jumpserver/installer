@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 export SCRIPT_DIR="$BASE_DIR"
 PROJECT_DIR=$(dirname "${SCRIPT_DIR}")
@@ -26,36 +26,41 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=26.1.2
+export DOCKER_VERSION=27.0.3
 export DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
-export DOCKER_BIN_URL="${DOCKER_MIRROR}/$(uname -m)/docker-${DOCKER_VERSION}.tgz"
-if [[ "$(uname -m)" == "x86_64" ]]; then
-  DOCKER_MD5=b6401f2abd3c8955fbbec851933c6ebe
-fi
-if [[ "$(uname -m)" == "aarch64" ]]; then
-  DOCKER_MD5=dedcbe72fca2fb9f125c5689e8a4432e
-fi
-if [[ "$(uname -m)" == "loongarch64" ]]; then
-  DOCKER_MD5=0a216869715a45d2a6d97d8dfb815d37
-fi
-if [[ "$(uname -m)" == "s390x" ]]; then
-  DOCKER_MD5=e458b7fa40f27b4a70a2d30505d30ceb
-fi
-export DOCKER_MD5
 
-export DOCKER_COMPOSE_VERSION=v2.27.0
+export DOCKER_COMPOSE_VERSION=v2.28.1
 export DOCKER_COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
-export DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-$(uname -m)"
-if [[ "$(uname -m)" == "x86_64" ]]; then
-  DOCKER_COMPOSE_MD5=891a283d0e11bbff04b8347d7611500a
+
+ARCH=$(uname -m)
+if [ -n "${BUILD_ARCH}" ]; then
+  ARCH=${BUILD_ARCH}
 fi
-if [[ "$(uname -m)" == "aarch64" ]]; then
-  DOCKER_COMPOSE_MD5=798dde95d63ebff0e92d986848848967
-fi
-if [[ "$(uname -m)" == "loongarch64" ]]; then
-  DOCKER_COMPOSE_MD5=83f554dafd26e6892d1a4c73ea95bc12
-fi
-if [[ "$(uname -m)" == "s390x" ]]; then
-  DOCKER_COMPOSE_MD5=f7cbe603e2a0b8921f392549a6480a1a
-fi
+
+export ARCH
+
+# 使用 case 语句处理不同的架构
+case "${ARCH}" in
+  "x86_64")
+    DOCKER_MD5=f2dd63a7ec8d56b3b4fad28c59967f5c
+    DOCKER_COMPOSE_MD5=9f03db8f978af10dc4c6913c60cbabd8
+    ;;
+  "aarch64")
+    DOCKER_MD5=a6e096151704a89a8d3a2beb70e6bb6b
+    DOCKER_COMPOSE_MD5=593936c9bfddd61572194c849289bd34
+    ;;
+  "loongarch64")
+    DOCKER_MD5=a6bed0b96f12c14263ccea9a40d4961c
+    DOCKER_COMPOSE_MD5=65875721c20ad90b58a3b35387d1cd89
+    ;;
+  "s390x")
+    DOCKER_MD5=b303546b603ff472830ea9ff141c431b
+    DOCKER_COMPOSE_MD5=51a205076f33972e8995a0d9db1fbfab
+    ;;
+esac
+
+export DOCKER_MD5
+export DOCKER_BIN_URL="${DOCKER_MIRROR}/${ARCH}/docker-${DOCKER_VERSION}.tgz"
+
 export DOCKER_COMPOSE_MD5
+export DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"

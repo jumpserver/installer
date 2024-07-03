@@ -1,126 +1,61 @@
 #!/usr/bin/env bash
 #
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/utils.sh"
 . "${BASE_DIR}/2_install_docker.sh"
 
 target=$1
 
+function check_and_set_config() {
+  local config_key=$1
+  local default_value=$2
+  local current_value=$(get_config ${config_key})
+  if [ -z "${current_value}" ]; then
+    set_config ${config_key} "${default_value}"
+  fi
+}
+
 function upgrade_config() {
-  # 如果配置文件有更新, 则添加到新的配置文件
-  check_docker_start
-  if docker ps -a | grep jms_guacamole &>/dev/null; then
-    docker stop jms_guacamole &>/dev/null
-    docker rm jms_guacamole &>/dev/null
+  if check_root; then
+    check_docker_start
   fi
-  if docker ps -a | grep jms_lina &>/dev/null; then
-    docker stop jms_lina &>/dev/null
-    docker rm jms_lina &>/dev/null
+  if ! docker ps &>/dev/null; then
+    log_error "$(gettext 'Docker is not running, please install and start')"
+    exit 1
   fi
-  if docker ps -a | grep jms_luna &>/dev/null; then
-    docker stop jms_luna &>/dev/null
-    docker rm jms_luna &>/dev/null
-  fi
-  if docker ps -a | grep jms_nginx &>/dev/null; then
-    docker stop jms_nginx &>/dev/null
-    docker rm jms_nginx &>/dev/null
-  fi
+  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_kael" "jms_magnus")
+  for container in "${containers[@]}"; do
+    if docker ps -a | grep ${container} &>/dev/null; then
+      docker stop ${container} &>/dev/null
+      docker rm ${container} &>/dev/null
+    fi
+  done
+  local images=("jumpserver/mariadb:10.6" "jumpserver/mysql:5.7")
+  for image in "${images[@]}"; do
+    if docker image inspect -f '{{.Id}}' ${image} &>/dev/null; then
+      docker tag ${image} ${image#*/}
+    fi
+  done
   if docker ps -a | grep jms_xpack &>/dev/null; then
-    docker stop jms_xpack &>/dev/null
-    docker rm jms_xpack &>/dev/null
     docker volume rm jms_share-volume &>/dev/null
   fi
-  if docker ps -a | grep jms_xrdp &>/dev/null; then
-    docker stop jms_xrdp &>/dev/null
-    docker rm jms_xrdp &>/dev/null
-  fi
-  if docker ps -a | grep jms_lb &>/dev/null; then
-    docker stop jms_lb &>/dev/null
-    docker rm jms_lb &>/dev/null
-  fi
-  if docker ps -a | grep jms_omnidb &>/dev/null; then
-    docker stop jms_omnidb &>/dev/null
-    docker rm jms_omnidb &>/dev/null
-  fi
-  current_version=$(get_config CURRENT_VERSION)
-  if [ -z "${current_version}" ]; then
-    set_config CURRENT_VERSION "${VERSION}"
-  fi
-  client_max_body_size=$(get_config CLIENT_MAX_BODY_SIZE)
-  if [ -z "${client_max_body_size}" ]; then
-    CLIENT_MAX_BODY_SIZE=4096m
-    set_config CLIENT_MAX_BODY_SIZE "${CLIENT_MAX_BODY_SIZE}"
-  fi
-  server_hostname=$(get_config SERVER_HOSTNAME)
-  if [ -z "${server_hostname}" ]; then
-    SERVER_HOSTNAME="${HOSTNAME}"
-    set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
-  fi
-  # 字体平滑
-  font_smoothing=$(get_config JUMPSERVER_ENABLE_FONT_SMOOTHING)
-  if [ -z "${font_smoothing}" ]; then
-    set_config JUMPSERVER_ENABLE_FONT_SMOOTHING "true"
-  fi
-  if grep -q "server nginx" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
-    sed -i "s/server nginx/server web/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
-  fi
-  if grep -q "sticky name=jms_route;" "${CONFIG_DIR}/nginx/lb_http_server.conf"; then
-    sed -i "s/sticky name=jms_route;/ip_hash;/g" "${CONFIG_DIR}/nginx/lb_http_server.conf"
-  fi
-  # MAGNUS 数据库
-  magnus_ports=$(get_config MAGNUS_PORTS)
-  if [ -n "${magnus_ports}" ]; then
-    sed -i "s/MAGNUS_PORTS/MAGNUS_ORACLE_PORTS/g" ${CONFIG_FILE}
-  fi
-  magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
-  if [ -z "${magnus_mysql_port}" ]; then
-    MAGNUS_MYSQL_PORT=33061
-    set_config MAGNUS_MYSQL_PORT "${MAGNUS_MYSQL_PORT}"
-  fi
-  magnus_mariadb_port=$(get_config MAGNUS_MARIADB_PORT)
-  if [ -z "${magnus_mariadb_port}" ]; then
-    MAGNUS_MARIADB_PORT=33062
-    set_config MAGNUS_MARIADB_PORT "${MAGNUS_MARIADB_PORT}"
-  fi
-  magnus_redis_port=$(get_config MAGNUS_REDIS_PORT)
-  if [ -z "${magnus_redis_port}" ]; then
-    MAGNUS_REDIS_PORT=63790
-    set_config MAGNUS_REDIS_PORT "${MAGNUS_REDIS_PORT}"
-  fi
-  use_lb=$(get_config USE_LB)
-  if [ -z "${use_lb}" ]; then
-    USE_LB=1
-    set_config USE_LB "${USE_LB}"
-  fi
+  check_and_set_config "CURRENT_VERSION" "${VERSION}"
+  check_and_set_config "CLIENT_MAX_BODY_SIZE" "4096m"
+  check_and_set_config "SERVER_HOSTNAME" "${HOSTNAME}"
+  check_and_set_config "JUMPSERVER_ENABLE_FONT_SMOOTHING" "true"
+  check_and_set_config "USE_LB" "1"
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    rdp_port=$(get_config RDP_PORT)
-    if [[ -z "${rdp_port}" ]]; then
-      RDP_PORT=3389
-      set_config RDP_PORT "${RDP_PORT}"
-    fi
-    xrdp_port=$(get_config XRDP_PORT)
-    if [ -z "${xrdp_port}" ]; then
-      XRDP_PORT=3390
-      set_config XRDP_PORT "${XRDP_PORT}"
-    fi
-    magnus_postgresql_port=$(get_config MAGNUS_POSTGRESQL_PORT)
-    if [ -z "${magnus_postgresql_port}" ]; then
-      MAGNUS_POSTGRESQL_PORT=54320
-      set_config MAGNUS_POSTGRESQL_PORT "${MAGNUS_POSTGRESQL_PORT}"
-    fi
-    magnus_sqlserver_port=$(get_config MAGNUS_SQLSERVER_PORT)
-    if [ -z "${magnus_sqlserver_port}" ]; then
-      MAGNUS_SQLSERVER_PORT=14330
-      set_config MAGNUS_SQLSERVER_PORT "${MAGNUS_SQLSERVER_PORT}"
-    fi
-    magnus_oracle_ports=$(get_config MAGNUS_ORACLE_PORTS)
-    if [ -z "${magnus_oracle_ports}" ]; then
-      MAGNUS_ORACLE_PORTS=30000-30030
-      set_config MAGNUS_ORACLE_PORTS "${MAGNUS_ORACLE_PORTS}"
-    fi
+    check_and_set_config "RDP_PORT" "3389"
+    check_and_set_config "XRDP_PORT" "3390"
+    check_and_set_config "MAGNUS_MYSQL_PORT" "33061"
+    check_and_set_config "MAGNUS_MARIADB_PORT" "33062"
+    check_and_set_config "MAGNUS_REDIS_PORT" "63790"
+    check_and_set_config "MAGNUS_POSTGRESQL_PORT" "54320"
+    check_and_set_config "MAGNUS_SQLSERVER_PORT" "14330"
+    check_and_set_config "MAGNUS_ORACLE_PORTS" "30000-30030"
   fi
 }
 
@@ -238,7 +173,7 @@ function backup_db() {
 }
 
 function db_migrations() {
-  if docker ps | grep -E "core|koko|lion" >/dev/null; then
+  if docker ps | grep -E "core|koko|lion"&>/dev/null; then
     confirm="y"
     read_from_input confirm "$(gettext 'Detected that the JumpServer container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
@@ -265,18 +200,20 @@ function db_migrations() {
 function clean_images() {
   current_version=$(get_config CURRENT_VERSION)
   if [[ "${current_version}" != "${to_version}" ]]; then
-    confirm="y"
-    read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
-    if [[ "${confirm}" == "y" ]]; then
-      echo
-      docker images --format "{{.Repository}}:{{.Tag}}" | grep "jumpserver/" | grep "${current_version}" | xargs docker rmi -f
+    old_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "jumpserver/" | grep "${current_version}")
+    if [[ -n "${old_images}" ]]; then
+      confirm="y"
+      read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
+      if [[ "${confirm}" == "y" ]]; then
+        echo "${old_images}" | xargs docker rmi -f
+      fi
     fi
   fi
 }
 
 function upgrade_docker() {
-  if [[ -f "/usr/local/bin/docker" ]]; then
-    if [[ ! "$(/usr/local/bin/docker -v | grep ${DOCKER_VERSION})" ]]; then
+  if check_root && [[ -f "/usr/local/bin/docker" ]]; then
+    if ! /usr/local/bin/docker -v | grep ${DOCKER_VERSION} &>/dev/null; then
       echo -e "$(docker -v) \033[33m-->\033[0m Docker version \033[32m${DOCKER_VERSION}\033[0m"
       confirm="n"
       read_from_input confirm "$(gettext 'Do you need upgrade Docker binaries')?" "y/n" "${confirm}"
@@ -294,17 +231,20 @@ function upgrade_docker() {
       fi
     fi
   fi
-  if [[ -f "/usr/local/bin/docker-compose" ]]; then
-    if [[ ! "$(/usr/local/bin/docker-compose version | grep ${DOCKER_COMPOSE_VERSION})" ]]; then
+}
+
+function upgrade_compose() {
+  if check_root && [[ -f "/usr/local/libexec/docker/cli-plugins/docker-compose" || -f "$HOME/.docker/cli-plugins/docker-compose" ]]; then
+    if ! docker compose version | grep ${DOCKER_COMPOSE_VERSION} &>/dev/null; then
       echo
-      echo -e "$(docker-compose version) \033[33m-->\033[0m Docker Compose version \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
+      echo -e "$(docker compose version) \033[33m-->\033[0m Docker Compose version \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
       confirm="n"
       read_from_input confirm "$(gettext 'Do you need upgrade Docker Compose')?" "y/n" "${confirm}"
       if [[ "${confirm}" == "y" ]]; then
         echo
         cd "${BASE_DIR}" || exit 1
-        install_compose
         check_compose_install
+        check_docker_compose
       fi
     fi
   fi
@@ -328,6 +268,8 @@ function main() {
   fi
   echo
   update_config_if_need
+  echo
+  check_compose_install
 
   echo_yellow "\n2. $(gettext 'Loading Docker Image')"
   bash "${BASE_DIR}/3_load_images.sh"
@@ -347,6 +289,7 @@ function main() {
 
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
   upgrade_docker
+  upgrade_compose
 
   installation_log "upgrade"
 

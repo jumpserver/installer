@@ -1,23 +1,22 @@
 services:
-  celery:
-    image: ${REGISTRY:-docker.io}/jumpserver/core-ce:${VERSION}
-    container_name: jms_celery
-    hostname: jms_celery
+  core:
+    image: ${REGISTRY:-docker.io}/jumpserver/core:${VERSION}
+    container_name: jms_core
+    hostname: jms_core
     ulimits:
       core: 0
     restart: always
-    tty: true
-    command: start task
+    command: start web
     env_file:
       - ${CONFIG_FILE}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
     healthcheck:
-      test: "bash /opt/jumpserver/utils/check_celery.sh"
+      test: "check http://localhost:8080/api/health/"
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 90s
     networks:
       - net

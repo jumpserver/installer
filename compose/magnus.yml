@@ -1,18 +1,20 @@
 services:
   magnus:
-    image: ${REGISTRY:-docker.io}/jumpserver/magnus:${VERSION}
+    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/magnus:${VERSION}
     container_name: jms_magnus
     hostname: jms_magnus
     ulimits:
       core: 0
     restart: always
-    tty: true
     env_file:
       - ${CONFIG_FILE}
     ports:
       - ${MAGNUS_MYSQL_PORT:-33061}:33061
       - ${MAGNUS_MARIADB_PORT:-33062}:33062
       - ${MAGNUS_REDIS_PORT:-63790}:63790
+      - ${MAGNUS_POSTGRESQL_PORT:-54320}:54320
+      - ${MAGNUS_SQLSERVER_PORT:-14330}:14330
+      - ${MAGNUS_ORACLE_PORTS:-30000-30030}:${MAGNUS_ORACLE_PORTS:-30000-30030}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/magnus/data/certs
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
