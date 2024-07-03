@@ -26,10 +26,10 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=26.1.4
+export DOCKER_VERSION=27.0.3
 export DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
 
-export DOCKER_COMPOSE_VERSION=v2.28.0
+export DOCKER_COMPOSE_VERSION=v2.28.1
 export DOCKER_COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
 
 ARCH=$(uname -m)
@@ -42,20 +42,20 @@ export ARCH
 # 使用 case 语句处理不同的架构
 case "${ARCH}" in
   "x86_64")
-    DOCKER_MD5=99ba6d75fe9972405083b2bd911fd37b
-    DOCKER_COMPOSE_MD5=fa5fe3bca5d12435d07e05ad53cf55a6
+    DOCKER_MD5=f2dd63a7ec8d56b3b4fad28c59967f5c
+    DOCKER_COMPOSE_MD5=9f03db8f978af10dc4c6913c60cbabd8
     ;;
   "aarch64")
-    DOCKER_MD5=eac2f5b6ad2c29d1ca46d22b29c5edd3
-    DOCKER_COMPOSE_MD5=7f270f803805c8a72033c5186b0f3b84
+    DOCKER_MD5=a6e096151704a89a8d3a2beb70e6bb6b
+    DOCKER_COMPOSE_MD5=593936c9bfddd61572194c849289bd34
     ;;
   "loongarch64")
-    DOCKER_MD5=a3d5d528210cd29872622513c6533078
-    DOCKER_COMPOSE_MD5=38530057002b8517759262e501869adb
+    DOCKER_MD5=a6bed0b96f12c14263ccea9a40d4961c
+    DOCKER_COMPOSE_MD5=65875721c20ad90b58a3b35387d1cd89
     ;;
   "s390x")
-    DOCKER_MD5=2b910e8455d36aa3f6733c7c43126200
-    DOCKER_COMPOSE_MD5=610fc7074048f122e1b23752ba612f3a
+    DOCKER_MD5=b303546b603ff472830ea9ff141c431b
+    DOCKER_COMPOSE_MD5=51a205076f33972e8995a0d9db1fbfab
     ;;
 esac
 
