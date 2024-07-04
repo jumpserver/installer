@@ -41,12 +41,7 @@ jobs:
           md5sum jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz > jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz.md5
           
       - name: Release Upload Assets
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          draft: true
-          files: |
-            build/jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz
-            build/jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz.md5
+        run: |
+          gh release upload ${{ steps.get_version.outputs.TAG }} build/* -R $GITHUB_REPOSITORY
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
