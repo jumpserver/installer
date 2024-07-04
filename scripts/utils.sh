@@ -108,21 +108,38 @@ function disable_config() {
 }
 
 function check_db_data() {
-   db_type=$1
-   if [[ ! -f "${CONFIG_FILE}" ]]; then
-     return
-   fi
-   volume_dir=$(get_config VOLUME_DIR)
-   db_name=$(get_config DB_NAME)
-   if [[ -d "${volume_dir}/${db_type}/data/${db_name}" ]]; then
-     echo "1"
-   fi
+  db_type=$1
+  if [[ ! -f "${CONFIG_FILE}" ]]; then
+    return
+  fi
+  volume_dir=$(get_config VOLUME_DIR)
+  if [[ -d "${volume_dir}/${db_type}/data" ]]; then
+    echo "1"
+  else
+    echo "0"
+  fi
 }
 
 function get_db_info() {
   info_type=$1
-  mysql_data_exists=$(check_db_data "mysql")
-  mariadb_data_exists=$(check_db_data "mariadb")
+  db_engine=$(get_config DB_ENGINE "mysql")
+  db_host=$(get_config DB_HOST)
+
+  mysql_data_exists="0"
+  mariadb_data_exists="0"
+  postgres_data_exists="0"
+
+  case "${db_engine}" in
+    "mysql")
+      if [[ "${db_host}" == "mysql" ]]; then
+        mysql_data_exists=$(check_db_data "mysql")
+      fi
+      mariadb_data_exists="1"
+      ;;
+    "postgresql")
+      postgres_data_exists="1"
+      ;;
+  esac
 
   case "${info_type}" in
     "image")
@@ -130,7 +147,7 @@ function get_db_info() {
         echo "mysql:5.7"
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "mariadb:10.6"
-      else
+      elif [[ "${postgres_data_exists}" == "1" ]]; then
         echo "postgres:16.3-bullseye"
       fi
       ;;
@@ -139,7 +156,7 @@ function get_db_info() {
         echo "compose/mysql.yml"
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "compose/mariadb.yml"
-      else
+      elif [[ "${postgres_data_exists}" == "1" ]]; then
         echo "compose/postgres.yml"
       fi
       ;;
