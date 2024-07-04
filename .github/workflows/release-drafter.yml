@@ -7,40 +7,41 @@ on:
 name: Create Release And Upload assets
 
 jobs:
-  create-realese:
+  create-release: # 修正了拼写错误
     name: Create Release
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
       - name: Get version
         id: get_version
         run: |
           TAG=$(basename ${GITHUB_REF})
-          VERSION=${TAG/v/}
-          echo "::set-output name=TAG::$TAG"
-          echo "::set-output name=VERSION::$VERSION"
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+
       - name: Create Release
         id: create_release
-        uses: release-drafter/release-drafter@v5
+        uses: release-drafter/release-drafter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           config-name: release-config.yml
           version: ${{ steps.get_version.outputs.TAG }}
           tag: ${{ steps.get_version.outputs.TAG }}
-
-  build-and-release:
-    needs: create-realese
-    name: Build and Release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Build it and upload
-        uses: jumpserver/action-build-upload-assets@master
+      
+      - name: Create Upload Assets
+        run: |
+          mkdir -p build jumpserver-installer-${{ steps.get_version.outputs.TAG }}
+          git archive --format tar HEAD | tar x -C jumpserver-installer-${{ steps.get_version.outputs.TAG }}
+          tar -czf build/jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz jumpserver-installer-${{ steps.get_version.outputs.TAG }}
+          cd build
+          md5sum jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz > jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz.md5
+          
+      - name: Release Upload Assets
+        run: |
+          gh release upload ${{ steps.get_version.outputs.TAG }} build/* -R $GITHUB_REPOSITORY
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-realese.outputs.upload_url }}
