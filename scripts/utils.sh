@@ -144,7 +144,7 @@ function get_db_info() {
   case "${info_type}" in
     "image")
       if [[ "${mysql_data_exists}" == "1" ]]; then
-        echo "mysql:5.7"
+        echo "mysql:5.7-debian"
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "mariadb:10.6"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
@@ -610,61 +610,60 @@ function get_current_version() {
 function pull_image() {
   image=$1
   DOCKER_IMAGE_MIRROR=$(get_config_or_env 'DOCKER_IMAGE_MIRROR')
+  IMAGE_PULL_POLICY=$(get_config_or_env 'IMAGE_PULL_POLICY')
+
   if [[ "${DOCKER_IMAGE_MIRROR}" == "1" ]]; then
-    if [[ "$(uname -m)" == "x86_64" ]]; then
-      DOCKER_IMAGE_PREFIX="swr.cn-north-1.myhuaweicloud.com"
-    fi
-    if [[ "$(uname -m)" == "aarch64" ]]; then
-      DOCKER_IMAGE_PREFIX="swr.cn-north-4.myhuaweicloud.com"
-    fi
-    if [[ "$(uname -m)" == "loongarch64" ]]; then
-      DOCKER_IMAGE_PREFIX="swr.cn-southwest-2.myhuaweicloud.com"
-    fi
-    if [[ "$(uname -m)" == "s390x" ]]; then
-      DOCKER_IMAGE_PREFIX="swr.sa-brazil-1.myhuaweicloud.com"
-    fi
+    case "$(uname -m)" in
+      "x86_64")
+        DOCKER_IMAGE_PREFIX="swr.cn-north-1.myhuaweicloud.com"
+        ;;
+      "aarch64")
+        DOCKER_IMAGE_PREFIX="swr.cn-north-4.myhuaweicloud.com"
+        ;;
+      "loongarch64")
+        DOCKER_IMAGE_PREFIX="swr.cn-southwest-2.myhuaweicloud.com"
+        ;;
+      "s390x")
+        DOCKER_IMAGE_PREFIX="swr.sa-brazil-1.myhuaweicloud.com"
+        ;;
+    esac
   else
     DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
   fi
 
-  IMAGE_PULL_POLICY=$(get_config_or_env 'IMAGE_PULL_POLICY')
-
   if docker image inspect -f '{{ .Id }}' "$image" &>/dev/null; then
-    exits=0
+    exists=0
   else
-    exits=1
+    exists=1
   fi
 
-  if [[ "$exits" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]]; then
+  if [[ "$exists" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]]; then
     echo "[${image}] exist, pass"
     return
   fi
 
   pull_args=""
-  if [[ -n "${BUILD_ARCH}" ]]; then
-    case "${BUILD_ARCH}" in
-      "x86_64")
-        pull_args="--platform linux/amd64"
-        ;;
-      "aarch64")
-        pull_args="--platform linux/arm64"
-        ;;
-      "loongarch64")
-        pull_args="--platform linux/loong64"
-        ;;
-      "s390x")
-        pull_args="--platform linux/s390x"
-        ;;
-    esac
-  fi
+  case "${BUILD_ARCH}" in
+    "x86_64") pull_args="--platform linux/amd64" ;;
+    "aarch64") pull_args="--platform linux/arm64" ;;
+    "loongarch64") pull_args="--platform linux/loong64" ;;
+    "s390x") pull_args="--platform linux/s390x" ;;
+  esac
 
   echo "[${image}] pulling"
-  if [[ -n "${DOCKER_IMAGE_PREFIX}" && $(image_has_prefix "${image}") == "1" ]]; then
-    docker pull ${pull_args} "${DOCKER_IMAGE_PREFIX}/${image}"
-    docker tag "${DOCKER_IMAGE_PREFIX}/${image}" "${image}"
-    docker rmi -f "${DOCKER_IMAGE_PREFIX}/${image}"
-  else
-    docker pull ${pull_args} "${image}"
+  full_image_path="${image}"
+  if [[ -n "${DOCKER_IMAGE_PREFIX}" ]]; then
+    if [[ $(image_has_prefix "${image}") != "1" ]]; then
+      full_image_path="${DOCKER_IMAGE_PREFIX}/jumpserver/${image}"
+    else
+      full_image_path="${DOCKER_IMAGE_PREFIX}/${image}"
+    fi
+  fi
+
+  docker pull ${pull_args} "${full_image_path}"
+  if [[ "${full_image_path}" != "${image}" ]]; then
+    docker tag "${full_image_path}" "${image}"
+    docker rmi -f "${full_image_path}"
   fi
   echo ""
 }
