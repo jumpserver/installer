@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-04-09 18:25+0800\n"
+"POT-Creation-Date: 2024-07-10 15:57+0800\n"
 "PO-Revision-Date: 2024-04-09 18:25+0800\n"
 "Last-Translator: 小冯 <xiaofeng@localhost>\n"
 "Language-Team: Language locale/zh\n"
@@ -15,85 +15,6 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-
-#: scripts/5_db_backup.sh:18
-msgid "Backing up"
-msgstr "正在備份"
-
-#: scripts/5_db_backup.sh:34 scripts/5_db_backup.sh:35
-msgid "Backup failed"
-msgstr "備份失敗"
-
-#: scripts/5_db_backup.sh:39
-msgid "Backup succeeded! The backup file has been saved to"
-msgstr "備份成功! 備份文件已存放至"
-
-#: scripts/utils.sh:170
-msgid "no default"
-msgstr "無預設值"
-
-#: scripts/utils.sh:172
-msgid "default"
-msgstr "預設為"
-
-#: scripts/utils.sh:220
-msgid "complete"
-msgstr "完成"
-
-#: scripts/utils.sh:232
-msgid "fail"
-msgstr "失敗"
-
-#: scripts/utils.sh:418
-msgid "command not found, Please install it first"
-msgstr "未找到命令, 請先安裝"
-
-#: scripts/utils.sh:450
-msgid "Check Configuration File"
-msgstr "檢查配置文件"
-
-#: scripts/utils.sh:451
-msgid "Path to Configuration file"
-msgstr "配置檔案位置"
-
-#: scripts/utils.sh:598 scripts/1_config_jumpserver.sh:173
-#: scripts/7_upgrade.sh:256
-msgid "Failed to change the table structure"
-msgstr "表結構變更失敗"
-
-#: scripts/utils.sh:667
-msgid "Failed to pull image"
-msgstr "拉取鏡像失敗"
-
-#: scripts/6_db_restore.sh:11 scripts/8_uninstall.sh:8
-msgid "Make sure you have a backup of data, this operation is not reversible"
-msgstr "請確認已經備份好相關數據, 此操作不可逆"
-
-#: scripts/6_db_restore.sh:14
-msgid "file does not exist"
-msgstr "文件不存在"
-
-#: scripts/6_db_restore.sh:20
-msgid "Start restoring database"
-msgstr "開始還原資料庫"
-
-#: scripts/6_db_restore.sh:34
-msgid ""
-"Database recovery failed. Please check whether the database file is complete "
-"or try to recover manually"
-msgstr "資料庫恢復失敗. 請檢查資料庫文件是否完整, 或嘗試手動恢復"
-
-#: scripts/6_db_restore.sh:37
-msgid "Database recovered successfully"
-msgstr "資料庫恢復成功"
-
-#: scripts/6_db_restore.sh:48
-msgid "Format error"
-msgstr "格式錯誤"
-
-#: scripts/6_db_restore.sh:52
-msgid "The backup file does not exist"
-msgstr "備份文件不存在"
 
 #: scripts/2_install_docker.sh:25
 msgid "Docker program does not exist"
@@ -114,6 +35,55 @@ msgstr "配置 Docker"
 #: scripts/2_install_docker.sh:180
 msgid "Start Docker"
 msgstr "啟動 Docker"
+
+#: scripts/utils.sh:170
+msgid "no default"
+msgstr "無預設值"
+
+#: scripts/utils.sh:172
+msgid "default"
+msgstr "預設為"
+
+#: scripts/utils.sh:220
+msgid "complete"
+msgstr "完成"
+
+#: scripts/utils.sh:232
+msgid "fail"
+msgstr "失敗"
+
+#: scripts/utils.sh:434
+msgid "command not found, Please install it first"
+msgstr "未找到命令, 請先安裝"
+
+#: scripts/utils.sh:466
+msgid "Check Configuration File"
+msgstr "檢查配置文件"
+
+#: scripts/utils.sh:467
+msgid "Path to Configuration file"
+msgstr "配置檔案位置"
+
+#: scripts/utils.sh:614 scripts/1_config_jumpserver.sh:173
+#: scripts/7_upgrade.sh:256
+msgid "Failed to change the table structure"
+msgstr "表結構變更失敗"
+
+#: scripts/utils.sh:683
+msgid "Failed to pull image"
+msgstr "拉取鏡像失敗"
+
+#: scripts/5_db_backup.sh:18
+msgid "Backing up"
+msgstr "正在備份"
+
+#: scripts/5_db_backup.sh:34 scripts/5_db_backup.sh:35
+msgid "Backup failed"
+msgstr "備份失敗"
+
+#: scripts/5_db_backup.sh:39
+msgid "Backup succeeded! The backup file has been saved to"
+msgstr "備份成功! 備份文件已存放至"
 
 #: scripts/1_config_jumpserver.sh:8
 msgid "Configure Private Key"
@@ -215,13 +185,79 @@ msgstr "JumpServer rdp 埠"
 msgid "Init JumpServer Database"
 msgstr "初始化資料庫"
 
-#: scripts/3_load_images.sh:19
-msgid "Docker image not found"
-msgstr "鏡像文件沒有發現"
+#: scripts/7_upgrade.sh:223
+msgid "Back up to"
+msgstr "備份至"
 
-#: scripts/3_load_images.sh:36
-msgid "Docker image loaded, skipping"
-msgstr "鏡像已載入, 跳過"
+#: scripts/7_upgrade.sh:230
+msgid "Failed to backup the database. Continue to upgrade"
+msgstr "備份資料庫失敗, 繼續升級嗎"
+
+#: scripts/7_upgrade.sh:236
+msgid "Skip database backup"
+msgstr "跳過備份資料庫"
+
+#: scripts/7_upgrade.sh:243
+msgid ""
+"Detected that the JumpServer container is running. Do you want to close the "
+"container and continue to upgrade"
+msgstr "檢測到 JumpServer 正在運行, 是否需要關閉並繼續升級"
+
+#: scripts/7_upgrade.sh:258
+msgid "Failed to change the table structure. Continue to upgrade"
+msgstr "表結構變更失敗, 是否繼續"
+
+#: scripts/7_upgrade.sh:269
+msgid "Do you need to clean up the old version image"
+msgstr "是否需要清理舊版本鏡像文件"
+
+#: scripts/7_upgrade.sh:282
+msgid "Do you need upgrade Docker binaries"
+msgstr "是否升級 Docker binaries"
+
+#: scripts/7_upgrade.sh:302
+msgid "Do you need upgrade Docker Compose"
+msgstr "是否升級 Docker Compose"
+
+#: scripts/7_upgrade.sh:320
+msgid "Are you sure you want to update the current version to"
+msgstr "是否將版本更新至"
+
+#: scripts/7_upgrade.sh:332 scripts/4_install_jumpserver.sh:71
+msgid "Loading Docker Image"
+msgstr "載入 Docker 鏡像"
+
+#: scripts/7_upgrade.sh:335 jmsctl.sh:61
+msgid "Backup database"
+msgstr "備份資料庫"
+
+#: scripts/7_upgrade.sh:338
+msgid "Backup Configuration File"
+msgstr "備份配置文件"
+
+#: scripts/7_upgrade.sh:341
+msgid "Apply database changes"
+msgstr "進行資料庫變更"
+
+#: scripts/7_upgrade.sh:342
+msgid "Changing database schema may take a while, please wait patiently"
+msgstr "資料表結構變更可能需要一段時間, 請耐心等待"
+
+#: scripts/7_upgrade.sh:345
+msgid "Cleanup Image"
+msgstr "清理鏡像"
+
+#: scripts/7_upgrade.sh:348
+msgid "Upgrade Docker"
+msgstr "升級 Docker"
+
+#: scripts/7_upgrade.sh:353
+msgid "Upgrade successfully. You can now restart the program"
+msgstr "升級成功, 可以重新啟動程序了"
+
+#: scripts/8_uninstall.sh:8 scripts/6_db_restore.sh:11
+msgid "Make sure you have a backup of data, this operation is not reversible"
+msgstr "請確認已經備份好相關數據, 此操作不可逆"
 
 #: scripts/8_uninstall.sh:12
 msgid "Are you clean up JumpServer files"
@@ -245,7 +281,7 @@ msgstr "是否清理 Docker binaries"
 msgid "Cleanup complete"
 msgstr "清理完成"
 
-#: scripts/8_uninstall.sh:63 jmsctl.sh:56
+#: scripts/8_uninstall.sh:63 jmsctl.sh:57
 msgid "Uninstall JumpServer"
 msgstr "卸載 JumpServer"
 
@@ -293,11 +329,20 @@ msgstr "準備 Docker 離線包"
 msgid "Preparing image offline package"
 msgstr "準備鏡像離線包"
 
+#: scripts/3_load_images.sh:19
+msgid "Docker image not found"
+msgstr "鏡像文件沒有發現"
+
+#: scripts/3_load_images.sh:36
+msgid "Docker image loaded, skipping"
+msgstr "鏡像已載入, 跳過"
+
 #: scripts/4_install_jumpserver.sh:10
 msgid ""
 "The current Linux system does not support systemd management. Please deploy "
 "docker by yourself before running this script again"
-msgstr "當前 Linux 系統不支持 systemd 管理, 請先自行部署 docker 後再重新運行此腳本"
+msgstr ""
+"當前 Linux 系統不支持 systemd 管理, 請先自行部署 docker 後再重新運行此腳本"
 
 #: scripts/4_install_jumpserver.sh:14
 msgid ""
@@ -355,79 +400,35 @@ msgstr "我們的文件"
 msgid "Install and Configure Docker"
 msgstr "安裝配置 Docker"
 
-#: scripts/4_install_jumpserver.sh:71 scripts/7_upgrade.sh:332
-msgid "Loading Docker Image"
-msgstr "載入 Docker 鏡像"
-
 #: scripts/4_install_jumpserver.sh:75
 msgid "Install and Configure JumpServer"
 msgstr "安裝配置 JumpServer"
 
-#: scripts/7_upgrade.sh:223
-msgid "Back up to"
-msgstr "備份至"
+#: scripts/6_db_restore.sh:14
+msgid "file does not exist"
+msgstr "文件不存在"
 
-#: scripts/7_upgrade.sh:230
-msgid "Failed to backup the database. Continue to upgrade"
-msgstr "備份資料庫失敗, 繼續升級嗎"
+#: scripts/6_db_restore.sh:20
+msgid "Start restoring database"
+msgstr "開始還原資料庫"
 
-#: scripts/7_upgrade.sh:236
-msgid "Skip database backup"
-msgstr "跳過備份資料庫"
-
-#: scripts/7_upgrade.sh:243
+#: scripts/6_db_restore.sh:34
 msgid ""
-"Detected that the JumpServer container is running. Do you want to close the "
-"container and continue to upgrade"
-msgstr "檢測到 JumpServer 正在運行, 是否需要關閉並繼續升級"
+"Database recovery failed. Please check whether the database file is complete "
+"or try to recover manually"
+msgstr "資料庫恢復失敗. 請檢查資料庫文件是否完整, 或嘗試手動恢復"
 
-#: scripts/7_upgrade.sh:258
-msgid "Failed to change the table structure. Continue to upgrade"
-msgstr "表結構變更失敗, 是否繼續"
+#: scripts/6_db_restore.sh:37
+msgid "Database recovered successfully"
+msgstr "資料庫恢復成功"
 
-#: scripts/7_upgrade.sh:269
-msgid "Do you need to clean up the old version image"
-msgstr "是否需要清理舊版本鏡像文件"
+#: scripts/6_db_restore.sh:48
+msgid "Format error"
+msgstr "格式錯誤"
 
-#: scripts/7_upgrade.sh:282
-msgid "Do you need upgrade Docker binaries"
-msgstr "是否升級 Docker binaries"
-
-#: scripts/7_upgrade.sh:302
-msgid "Do you need upgrade Docker Compose"
-msgstr "是否升級 Docker Compose"
-
-#: scripts/7_upgrade.sh:320
-msgid "Are you sure you want to update the current version to"
-msgstr "是否將版本更新至"
-
-#: scripts/7_upgrade.sh:335 jmsctl.sh:60
-msgid "Backup database"
-msgstr "備份資料庫"
-
-#: scripts/7_upgrade.sh:338
-msgid "Backup Configuration File"
-msgstr "備份配置文件"
-
-#: scripts/7_upgrade.sh:341
-msgid "Apply database changes"
-msgstr "進行資料庫變更"
-
-#: scripts/7_upgrade.sh:342
-msgid "Changing database schema may take a while, please wait patiently"
-msgstr "資料表結構變更可能需要一段時間, 請耐心等待"
-
-#: scripts/7_upgrade.sh:345
-msgid "Cleanup Image"
-msgstr "清理鏡像"
-
-#: scripts/7_upgrade.sh:348
-msgid "Upgrade Docker"
-msgstr "升級 Docker"
-
-#: scripts/7_upgrade.sh:353
-msgid "Upgrade successfully. You can now restart the program"
-msgstr "升級成功, 可以重新啟動程序了"
+#: scripts/6_db_restore.sh:52
+msgid "The backup file does not exist"
+msgstr "備份文件不存在"
 
 #: scripts/config.sh:16
 msgid "Configuration ntp sync"
@@ -563,72 +564,76 @@ msgstr "軟連接存在問題, 重新更新"
 
 #: jmsctl.sh:40
 msgid "JumpServer Deployment Management Script"
-msgstr "umpServer 部署管理腳本"
+msgstr "JumpServer 部署管理腳本"
 
 #: jmsctl.sh:47
 msgid "Install JumpServer"
 msgstr "安裝 JumpServer"
 
-#: jmsctl.sh:50
-msgid "Configuration  Tools"
+#: jmsctl.sh:48
+msgid "Upgrade JumpServer"
 msgstr "升級 JumpServer"
 
 #: jmsctl.sh:51
+msgid "Configuration  Tools"
+msgstr "配置工具"
+
+#: jmsctl.sh:52
 msgid "Start     JumpServer"
 msgstr "啟動   JumpServer"
 
-#: jmsctl.sh:52
+#: jmsctl.sh:53
 msgid "Stop      JumpServer"
 msgstr "停止   JumpServer"
 
-#: jmsctl.sh:53
+#: jmsctl.sh:54
 msgid "Restart   JumpServer"
 msgstr "重啟   JumpServer"
 
-#: jmsctl.sh:54
+#: jmsctl.sh:55
 msgid "Check     JumpServer"
 msgstr "檢查   JumpServer"
 
-#: jmsctl.sh:55
+#: jmsctl.sh:56
 msgid "Offline   JumpServer"
 msgstr "下線   JumpServer"
 
-#: jmsctl.sh:59
+#: jmsctl.sh:60
 msgid "Loading docker image"
 msgstr "載入 Docker 鏡像"
 
-#: jmsctl.sh:61
+#: jmsctl.sh:62
 msgid "Data recovery through database backup file"
 msgstr "通過資料庫備份文件恢復數據"
 
-#: jmsctl.sh:62
+#: jmsctl.sh:63
 msgid "Execute the original docker-compose command"
 msgstr "執行原始 docker-compose 命令"
 
-#: jmsctl.sh:63
+#: jmsctl.sh:64
 msgid "View log"
 msgstr "查看日誌"
 
-#: jmsctl.sh:118
+#: jmsctl.sh:119
 msgid "The current version is up to date"
 msgstr "當前版本已是最新"
 
-#: jmsctl.sh:123
+#: jmsctl.sh:124
 msgid "The latest version is"
 msgstr "最新版本是"
 
-#: jmsctl.sh:127
+#: jmsctl.sh:128
 msgid "The current version is"
 msgstr "當前版本是"
 
-#: jmsctl.sh:172 jmsctl.sh:178
+#: jmsctl.sh:173 jmsctl.sh:179
 msgid "Unsupported Operating System Error"
 msgstr "錯誤: 不支持的操作系統"
 
-#: jmsctl.sh:173
+#: jmsctl.sh:174
 msgid "macOS installer please see"
 msgstr "macOS 安裝請參考"
 
-#: jmsctl.sh:179
+#: jmsctl.sh:180
 msgid "Windows installer please see"
 msgstr "Windows 安裝請參考"
