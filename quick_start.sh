@@ -50,7 +50,6 @@ function get_installer() {
 
 function config_installer() {
   cd /opt/jumpserver-installer-${VERSION} || exit 1
-  sed -i "s/VERSION=.*/VERSION=${VERSION}/g" /opt/jumpserver-installer-${VERSION}/static.env
   ./jmsctl.sh install
   ./jmsctl.sh start
 }
