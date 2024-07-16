@@ -107,6 +107,15 @@ function disable_config() {
   fi
 }
 
+function check_volume_dir() {
+  volume_dir=$(get_config VOLUME_DIR)
+  if [[ -d "${volume_dir}" ]]; then
+    echo "1"
+  else
+    echo "0"
+  fi
+}
+
 function check_db_data() {
   db_type=$1
   if [[ ! -f "${CONFIG_FILE}" ]]; then
@@ -124,7 +133,11 @@ function get_db_info() {
   info_type=$1
   db_engine=$(get_config DB_ENGINE "mysql")
   db_host=$(get_config DB_HOST)
-
+  check_volume_dir=$(check_volume_dir)
+  if [[ "${check_volume_dir}" == "0" ]]; then
+    db_engine=$(get_config DB_ENGINE "postgresql")
+  fi
+  
   mysql_data_exists="0"
   mariadb_data_exists="0"
   postgres_data_exists="0"
