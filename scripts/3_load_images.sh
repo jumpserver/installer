@@ -10,7 +10,7 @@ IMAGE_DIR="images"
 function load_image_files() {
   images=$(get_images)
   for image in ${images}; do
-    filename=$(basename "${image}").tar
+    filename=$(basename "${image}").zst
     filename_windows=${filename/:/_}
     if [[ -f ${IMAGE_DIR}/${filename_windows} ]]; then
       filename=${filename_windows}
@@ -39,7 +39,7 @@ function load_image_files() {
 }
 
 function main() {
-  if [[ -d "${IMAGE_DIR}" && $(find "${IMAGE_DIR}" -type f -name "*.tar" -print -quit 2>/dev/null) ]]; then
+  if [[ -d "${IMAGE_DIR}" && $(find "${IMAGE_DIR}" -type f -name "*.zst" -print -quit 2>/dev/null) ]]; then
     load_image_files
   else
     pull_images
