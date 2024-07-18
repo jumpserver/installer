@@ -59,7 +59,7 @@ function prepare_image_files() {
 
   images=$(get_images)
   for image in ${images}; do
-    filename=$(basename "${image}").tar
+    filename=$(basename "${image}").zst
     image_path="${IMAGE_DIR}/${filename}"
     md5_filename=$(basename "${image}").md5
     md5_path="${IMAGE_DIR}/${md5_filename}"
@@ -83,7 +83,8 @@ function prepare_image_files() {
       fi
     fi
     echo "$(gettext 'Save image') ${image} -> ${image_path}"
-    docker save -o "${image_path}" "${image}" &
+    # docker save -o "${image_path}" "${image}" &
+    docker save "${image}" | zstd -f -q -o "${image_path}" &
     echo "${image_id}" >"${md5_path}" &
   done
   wait
