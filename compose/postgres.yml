@@ -11,7 +11,7 @@ services:
     volumes:
       - ${VOLUME_DIR}/postgresql/data:/var/lib/postgresql/data
     healthcheck:
-      test: "pg_isready"
+      test: "pg_isready -q -U $$POSTGRES_USER"
       interval: 10s
       timeout: 5s
       retries: 3
