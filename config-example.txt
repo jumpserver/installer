@@ -159,4 +159,5 @@ USE_LB=1
 # The current running version number of JumpServer, automatically generated after installation and upgrade
 #
 TZ=Asia/Shanghai
+TIME_ZONE=Asia/Shanghai
 CURRENT_VERSION=
