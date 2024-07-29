@@ -144,6 +144,7 @@ def buildEE(appName, appVersion, extraBuildArgs = '') {
 }
 
 def CE_APPS = ["lion", "chen"]
+def EE_APPS = ["core-xpack"]
 
 def buildCEStages = CE_APPS.collectEntries { app ->
     ["Build CE ${app}" : generateBuildStage(app)]
@@ -173,6 +174,23 @@ pipeline {
         EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
     }
     stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    def apps = env.build_ee ? CE_APPS + EE_APPS : CE_APPS
+
+                    apps.each { app ->
+                        dir(app) {
+                            checkout([
+                                    $class           : 'GitSCM',
+                                    branches         : [[name: "dev"]],
+                                    userRemoteConfigs: [[url: "git@github.com:jumpserver/${app}.git"]]
+                            ])
+                        }
+                    }
+                }
+            }
+        }
         stage('Build CE Apps') {
             steps {
                 script {
