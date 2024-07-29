@@ -198,13 +198,9 @@ pipeline {
                     def ceStages = [:]
                     CEApps.each { app ->
                         ceStages["Build ${app}"] = {
-                            stage("Build ${app}") {
-                                steps {
-                                    dir(app) {
-                                        script {
-                                            buildImage(app, env.release_version)
-                                        }
-                                    }
+                            dir(app) {
+                                script {
+                                    buildImage(app, env.release_version)
                                 }
                             }
                         }
