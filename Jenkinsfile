@@ -174,7 +174,9 @@ pipeline {
         EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
     }
     stages {
-        parallel stages,
+        stage('Build repos') {
+            parallel stages
+        }
         stage('Done') {
             steps {
                 echo "All done!"
