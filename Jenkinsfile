@@ -143,20 +143,16 @@ def buildEE(appName, appVersion, extraBuildArgs = '') {
     buildImage(appName, appVersion, extraBuildArgs)
 }
 
-def jobs = ["JobA", "JobB", "JobC"]
+def CE_APPS = ["lion", "chen"]
 
-def parallelStagesMap = jobs.collectEntries {
-    ["${it}" : {
-        stage("stage: ${it}") {
-            echo "This is ${it}."
-        }
-    }]
+def buildCEStages = jobs.collectEntries { app ->
+    ["Build CE ${app}" : generateBuildStage(app)]
 }
 
-def generateStage(job) {
+def generateBuildStage(app) {
     return {
-        stage("stage: ${job}") {
-            echo "This is ${job}."
+        stage("stage: ${app}") {
+            echo "This is ${app}."
         }
     }
 }
@@ -175,10 +171,10 @@ pipeline {
         EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
     }
     stages {
-        stage('parallel stage') {
+        stage('Build CE Apps') {
             steps {
                 script {
-                    parallel parallelStagesMap
+                    parallel buildCEStages
                 }
             }
         }
