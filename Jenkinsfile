@@ -94,46 +94,47 @@ def releaseToGitHubIfNeed() {
 }
 
 def buildImage(appName, appVersion, extraBuildArgs = '') {
-    def buildArgs = getBuildArgs()
-    if (extraBuildArgs) {
-        buildArgs += " ${extraBuildArgs}"
-    }
-
-    def passArgs = getPassArgs()
-    buildArgs += " ${passArgs}"
-
-    if (appName == "jumpserver") {
-        appName = "core"
-    } else if (appName == "docker-web") {
-        appName = "web"
-    } else if (appName == "core-xpack") {
-        appName = "xpack"
-    }
-
-    def imageName = "jumpserver/${appName}:${appVersion}"
-    def fullName = "registry.fit2cloud.com/${imageName}"
-    if (env.only_docker_image == "Yes") {
-        fullName = imageName
-    }
-
-    sh("pwd; ls")
-
-    for (i in 1..5) {
-        if (sh(
-                script: "docker buildx build ${buildArgs} -t ${fullName} . --push",
-                returnStatus: true
-        ) == 0) {
-            break
-        }
-        sleep(5)
-        if (i == 3) {
-            sendErrorMsg(imageName)
-            println "[Error]: build 失败"
-            return 1
-        }
-    }
-    syncToDockerHubIfNeed(fullName, imageName)
-    releaseToGitHubIfNeed()
+    echo "Building ${appName}:${appVersion}"
+//    def buildArgs = getBuildArgs()
+//    if (extraBuildArgs) {
+//        buildArgs += " ${extraBuildArgs}"
+//    }
+//
+//    def passArgs = getPassArgs()
+//    buildArgs += " ${passArgs}"
+//
+//    if (appName == "jumpserver") {
+//        appName = "core"
+//    } else if (appName == "docker-web") {
+//        appName = "web"
+//    } else if (appName == "core-xpack") {
+//        appName = "xpack"
+//    }
+//
+//    def imageName = "jumpserver/${appName}:${appVersion}"
+//    def fullName = "registry.fit2cloud.com/${imageName}"
+//    if (env.only_docker_image == "Yes") {
+//        fullName = imageName
+//    }
+//
+//    sh("pwd; ls")
+//
+//    for (i in 1..5) {
+//        if (sh(
+//                script: "docker buildx build ${buildArgs} -t ${fullName} . --push",
+//                returnStatus: true
+//        ) == 0) {
+//            break
+//        }
+//        sleep(5)
+//        if (i == 3) {
+//            sendErrorMsg(imageName)
+//            println "[Error]: build 失败"
+//            return 1
+//        }
+//    }
+//    syncToDockerHubIfNeed(fullName, imageName)
+//    releaseToGitHubIfNeed()
 }
 
 def buildEE(appName, appVersion, extraBuildArgs = '') {
