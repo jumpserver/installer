@@ -151,8 +151,10 @@ def buildCEStages = CE_APPS.collectEntries { app ->
 
 def generateBuildStage(app) {
     return {
-        stage("stage: ${app}") {
-            echo "This is ${app}."
+        stage("Build CE ${app}") {
+            dir(app) {
+                buildImage(app, env.release_version)
+            }
         }
     }
 }
