@@ -146,16 +146,11 @@ def buildEE(appName, appVersion, extraBuildArgs = '') {
 def jobs = ["JobA", "JobB", "JobC"]
 
 def parallelStagesMap = jobs.collectEntries {
-    ["${it}" : generateStage(it)]
+    ["${it}" :  stage("stage: ${job}") {
+        echo "This is ${job}."
+    }]
 }
 
-def generateStage(job) {
-    return {
-        stage("stage: ${job}") {
-            echo "This is ${job}."
-        }
-    }
-}
 
 pipeline {
     agent {
