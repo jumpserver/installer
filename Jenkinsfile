@@ -153,7 +153,7 @@ pipeline {
         checkoutToSubdirectory('installer')
     }
     environment {
-        CE_APPS = "jumpserver,koko,lina,luna,lion,chen"
+        CE_APPS = "lion,chen"
         EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
     }
     stages {
@@ -205,7 +205,7 @@ pipeline {
                             }
                         }
                     }
-                    parallel ceStages
+                    ceStages
                 }
             }
         }
