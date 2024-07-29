@@ -195,7 +195,20 @@ pipeline {
         stage('Build CE Apps') {
             steps {
                 script {
-                    parallel buildCEStages
+                    def ceStages = CE_APPS.collectEntries{ app ->
+                        ["Build ${app}": {
+                            stage("Build ${app}") {
+                                steps {
+                                    dir(app) {
+                                        script {
+                                            buildImage(app, env.release_version)
+                                        }
+                                    }
+                                }
+                            }
+                        }]
+                    }
+                    parallel ceStages
                 }
             }
         }
