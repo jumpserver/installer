@@ -145,7 +145,7 @@ def buildEE(appName, appVersion, extraBuildArgs = '') {
 
 def CE_APPS = ["lion", "chen"]
 
-def buildCEStages = jobs.collectEntries { app ->
+def buildCEStages = CE_APPS.collectEntries { app ->
     ["Build CE ${app}" : generateBuildStage(app)]
 }
 
