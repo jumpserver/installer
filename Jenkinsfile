@@ -192,25 +192,18 @@ pipeline {
             }
         }
         stage('Build CE Apps') {
-            steps {
-                script {
-                    def CEApps = env.CE_APPS.split(',')
-                    def ceStages = [:]
-                    for (int i = 0; i < CEApps.size(); i++) {
-                        def app = CEApps[i]
-                        ceStages["Build ${app}"] = {
-                            stage("Build ${app}") {
-                                steps {
-                                    dir(app) {
-                                        script {
-                                            buildImage(app, env.release_version)
-                                        }
-                                    }
+            parallel {
+                def apps = ["lion", "chen"]
+                apps.each { app ->
+                    stage(app) {
+                        steps {
+                            dir(app) {
+                                script {
+                                    buildImage(app, env.release_version)
                                 }
                             }
                         }
                     }
-                    parallel ceStages
                 }
             }
         }
