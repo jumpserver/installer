@@ -195,14 +195,20 @@ pipeline {
             steps {
                 script {
                     def CEApps = env.CE_APPS.split(',')
-                    def ceStages = CEApps.collectEntries{ app ->
-                        ["Build ${app}": {
-                            dir(app) {
-                                script {
-                                    buildImage(app, env.release_version)
+                    def ceStages = [:]
+                    for (int i = 0; i < CEApps.size(); i++) {
+                        def app = CEApps[i]
+                        ceStages["Build ${app}"] = {
+                            stage("Build ${app}") {
+                                steps {
+                                    dir(app) {
+                                        script {
+                                            buildImage(app, env.release_version)
+                                        }
+                                    }
                                 }
                             }
-                        }]
+                        }
                     }
                     parallel ceStages
                 }
