@@ -149,7 +149,7 @@ def tasks = [
         "echo 3"
 ]
 
-def stages = [
+def other_stages = [
     failFast: true,
     "后端构建": {
         tasks.each { task ->
@@ -175,7 +175,7 @@ pipeline {
     }
     stages {
         stage('Build repos') {
-            parallel stages
+            parallel other_stages
         }
         stage('Done') {
             steps {
