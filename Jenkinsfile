@@ -191,19 +191,26 @@ pipeline {
                 }
             }
         }
-        stage('Build CE Apps') {
-            parallel {
-                def apps = ["lion", "chen"]
-                apps.each { app ->
-                    stage(app) {
-                        steps {
-                            dir(app) {
-                                script {
-                                    buildImage(app, env.release_version)
+        stage('Build repos') {
+            steps {
+                script {
+                    def apps = ['lina', 'luna']
+                    def parallelStages = apps.collectEntries { app ->
+                        ["${app}": {
+                            stage(app) {
+                                dir(app) {
+                                    echo "Start build ${app}"
+                                    runShellCommand("""
+                                docker buildx build \
+                                --platform linux/amd64,linux/arm64 \
+                                --build-arg VERSION=$RELEASE_VERSION \
+                                -t jumpserver/${app}:${RELEASE_VERSION} .
+                            """)
                                 }
                             }
-                        }
+                        }]
                     }
+                    parallel parallelStages
                 }
             }
         }
