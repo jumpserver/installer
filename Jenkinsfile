@@ -143,22 +143,19 @@ def buildEE(appName, appVersion, extraBuildArgs = '') {
     buildImage(appName, appVersion, extraBuildArgs)
 }
 
-def tasks = [
-        "echo 1",
-        "echo 2",
-        "echo 3"
-]
+def jobs = ["JobA", "JobB", "JobC"]
 
-def other_stages = [
-    failFast: true,
-    "后端构建": {
-        tasks.each { task ->
-            stage("build ${task}") {
-                sh task
-            }
+def parallelStagesMap = jobs.collectEntries {
+    ["${it}" : generateStage(it)]
+}
+
+def generateStage(job) {
+    return {
+        stage("stage: ${job}") {
+            echo "This is ${job}."
         }
     }
-]
+}
 
 pipeline {
     agent {
@@ -169,20 +166,17 @@ pipeline {
     options {
         checkoutToSubdirectory('installer')
     }
-    parameters {
-        string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
-        text(name: 'BIOGRAPHY', defaultValue: '', description: 'Enter some information about the person')
-        booleanParam(name: 'TOGGLE', defaultValue: true, description: 'Toggle this value')
-        choice(name: 'CHOICE', choices: ['One', 'Two', 'Three'], description: 'Pick something')
-        password(name: 'PASSWORD', defaultValue: 'SECRET', description: 'Enter a password')
-    }
     environment {
         CE_APPS = "lion,chen"
         EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
     }
     stages {
-        stage('Build repos') {
-            parallel other_stages
+        stage('parallel stage') {
+            steps {
+                script {
+                    parallel parallelStagesMap
+                }
+            }
         }
         stage('Done') {
             steps {
