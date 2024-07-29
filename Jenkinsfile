@@ -47,11 +47,11 @@ def sendErrorMsg(imageName) {
         "msgtype": "text",
         "text": {
             "content": "【构建通知】
-任务名称: ${env.JOB_NAME}
-构建编号: 第 ${env.BUILD_NUMBER} 次构建
-构建镜像: ${imageName}
-构建状态: 失败
-构建日志: ${env.BUILD_URL}console"
+                任务名称: ${env.JOB_NAME}
+                构建编号: 第 ${env.BUILD_NUMBER} 次构建
+                构建镜像: ${imageName}
+                构建状态: 失败
+                构建日志: ${env.BUILD_URL}console"
         }
     }
     """
@@ -102,13 +102,21 @@ def buildImage(appName, appVersion, extraBuildArgs = '') {
     def passArgs = getPassArgs()
     buildArgs += " ${passArgs}"
 
+    if (appName == "jumpserver") {
+        appName = "core"
+    } else if (appName == "docker-web") {
+        appName = "web"
+    } else if (appName == "core-xpack") {
+        appName = "xpack"
+    }
+
     def imageName = "jumpserver/${appName}:${appVersion}"
     def fullName = "registry.fit2cloud.com/${imageName}"
     if (env.only_docker_image == "Yes") {
         fullName = imageName
     }
 
-    echo "Current dir: ${PWD}"
+    sh("pwd; ls")
 
     for (i in 1..5) {
         if (sh(
@@ -141,8 +149,11 @@ pipeline {
             label 'linux-amd64-buildx'
         }
     }
+    options {
+        checkoutToSubdirectory('installer')
+    }
     environment {
-        CE_APPS = "core,koko,lina,luna,docker-web,lion,chen"
+        CE_APPS = "jumpserver,koko,lina,luna,lion,chen"
         EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
     }
     stages {
@@ -164,13 +175,17 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    def EEApps = env.CE_APPS.split(',')
-                    def CEApps = env.EE_APPS.split(',')
+                    def CEApps = env.CE_APPS.split(',')
+                    def EEApps = env.EE_APPS.split(',')
                     def apps = env.build_ee ? CEApps + EEApps : CEApps
 
                     apps.each { app ->
                         dir(app) {
-                            git url: "git@github.com:jumpserver/${app}.git", branch: "${branch}"
+                            checkout([
+                                $class: 'GitSCM',
+                                branches: [[name: "dev"]],
+                                userRemoteConfigs: [[url: "git@github.com:jumpserver/${app}.git"]]
+                            ])
                         }
                     }
                 }
@@ -180,33 +195,21 @@ pipeline {
             steps {
                 script {
                     def CEApps = env.CE_APPS.split(',')
-                    parallel CEApps.collectEntries { app ->
-                        ["Build ${app}": {
-                            dir(app) {
-                                buildImage(app, env.release_version)
+                    def ceStages = [:]
+                    CEApps.each { app ->
+                        ceStages["Build ${app}"] = {
+                            stage("Build ${app}") {
+                                steps {
+                                    dir(app) {
+                                        script {
+                                            buildImage(app, env.release_version)
+                                        }
+                                    }
+                                }
                             }
-                        }]
+                        }
                     }
-                }
-            }
-        }
-        stage('Build EE Apps') {
-            when {
-                environment name: 'build_ee', value: 'true'
-            }
-            steps {
-                script {
-                    def EEApps = env.EE_APPS.split(',')
-                    def buildEEApp = { app ->
-                        buildEE(app, env.release_version)
-                    }
-                    parallel EEApps.collectEntries { app ->
-                        ["Build ${app}": {
-                            dir(app) {
-                                buildEEApp(app)
-                            }
-                        }]
-                    }
+                    parallel ceStages
                 }
             }
         }
