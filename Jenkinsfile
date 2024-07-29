@@ -143,6 +143,23 @@ def buildEE(appName, appVersion, extraBuildArgs = '') {
     buildImage(appName, appVersion, extraBuildArgs)
 }
 
+def tasks = [
+        "echo 1",
+        "echo 2",
+        "echo 3"
+]
+
+def stages = [
+    failFast: true,
+    "后端构建": {
+        tasks.each { task ->
+            stage("build ${task}") {
+                sh task
+            }
+        }
+    }
+]
+
 pipeline {
     agent {
         node {
@@ -157,63 +174,7 @@ pipeline {
         EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
     }
     stages {
-        stage('Preparation') {
-            steps {
-                script {
-                    env.branch = params.branch
-                    if (params.release_version != null) {
-                        env.release_version = params.release_version
-                    } else {
-                        env.release_version = env.branch
-                    }
-
-                    echo "RELEASE_VERSION=${release_version}"
-                    echo "BRANCH=${branch}"
-                }
-            }
-        }
-        stage('Checkout') {
-            steps {
-                script {
-                    def CEApps = env.CE_APPS.split(',')
-                    def EEApps = env.EE_APPS.split(',')
-                    def apps = env.build_ee ? CEApps + EEApps : CEApps
-
-                    apps.each { app ->
-                        dir(app) {
-                            checkout([
-                                $class: 'GitSCM',
-                                branches: [[name: "dev"]],
-                                userRemoteConfigs: [[url: "git@github.com:jumpserver/${app}.git"]]
-                            ])
-                        }
-                    }
-                }
-            }
-        }
-        stage('Build repos') {
-            steps {
-                script {
-                    def apps = ['lina', 'luna']
-                    def parallelStages = apps.collectEntries { app ->
-                        ["${app}": {
-                            stage(app) {
-                                dir(app) {
-                                    echo "Start build ${app}"
-                                    runShellCommand("""
-                                docker buildx build \
-                                --platform linux/amd64,linux/arm64 \
-                                --build-arg VERSION=$RELEASE_VERSION \
-                                -t jumpserver/${app}:${RELEASE_VERSION} .
-                            """)
-                                }
-                            }
-                        }]
-                    }
-                    parallel parallelStages
-                }
-            }
-        }
+        parallel stages,
         stage('Done') {
             steps {
                 echo "All done!"
