@@ -139,8 +139,8 @@ def buildImage(appName, appVersion, String type='CE') {
 
 
 def MID_APPS = ["lina", "luna", "core-xpack"]
-def CE_APPS = ["lion", "chen"]
-def EE_APPS = ["panda"] + CE_APPS
+def CE_APPS = ["jumpserver", "koko", "lion", "chen", "docker-web"]
+def EE_APPS = CE_APPS + ["magnus", "panda", "razor", "xrdp", "video-worker"]
 
 
 pipeline {
