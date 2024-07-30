@@ -220,7 +220,7 @@ pipeline {
                 script {
                     def ceStages = EE_APPS.collectEntries{ app ->
                         ["Build ${app}": {
-                            stage("Build CE ${app}") {
+                            stage("Build EE ${app}") {
                                 dir(app) {
                                     script {
                                         buildImage(app, env.release_version, "EE")
