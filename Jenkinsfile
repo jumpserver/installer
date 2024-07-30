@@ -142,8 +142,6 @@ def MID_APPS = ["lina", "luna", "core-xpack"]
 def CE_APPS = ["lion", "chen"]
 def EE_APPS = ["panda"] + CE_APPS
 
-buildImage("lina", "v3.0.0", "MID")
-
 
 pipeline {
     agent {
