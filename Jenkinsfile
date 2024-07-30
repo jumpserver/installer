@@ -1,12 +1,12 @@
-def getBuildArgs() {
+def getDefaultBuildArgs() {
     def buildArgs = ''
-    if (env.pull_image == "Yes") {
+    if (env.pullImage == "Yes") {
         buildArgs = '--pull'
     }
-    if (env.no_cache == "Yes") {
+    if (env.noCache == "Yes") {
         buildArgs += ' --no-cache'
     }
-    if (env.build_arm == "Yes") {
+    if (env.buildARM == "Yes") {
         buildArgs += ' --platform linux/amd64,linux/arm64'
     } else {
         buildArgs += ' --platform linux/amd64'
@@ -14,7 +14,7 @@ def getBuildArgs() {
     return buildArgs
 }
 
-def getPassArgs() {
+def getDefaultPassArgs() {
     def passArgs = " --build-arg VERSION=${env.release_version}"
     if (env.APT_MIRROR) {
         passArgs += " --build-arg APT_MIRROR=${env.APT_MIRROR}"
@@ -31,14 +31,6 @@ def getPassArgs() {
     return passArgs
 }
 
-def beforeBuild() {
-    if (env.build_use_registry == "Yes") {
-        sh "sed -i 's@^FROM debian@FROM registry.fit2cloud.com/jumpserver/debian@g' Dockerfile"
-        sh "sed -i 's@^FROM jumpserver@FROM registry.fit2cloud.com/jumpserver@g' Dockerfile"
-        sh "sed -i 's@^FROM node@FROM registry.fit2cloud.com/jumpserver/node@g' Dockerfile"
-        sh "sed -i 's@^FROM golang@FROM registry.fit2cloud.com/jumpserver/golang@g' Dockerfile"
-    }
-}
 
 def sendErrorMsg(imageName) {
     def webhookUrl = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${WECHAT_BOT_KEY}"
@@ -58,40 +50,6 @@ def sendErrorMsg(imageName) {
     sh "curl -H 'Content-Type: application/json' -d '${payload}' ${webhookUrl}"
 }
 
-def syncToDockerHubIfNeed(fullName, imageName) {
-    if (env.upload_to_docker != "Yes") {
-        return 0
-    }
-
-    if (imageName.endsWith("-ee")) {
-        println "企业版不上传到 Docker Hub"
-        return
-    }
-
-    for (i in 1..5) {
-        if (sh(script: "crane cp ${fullName} ${imageName}", returnStatus: true) == 0) {
-            break
-        }
-        sleep(5)
-        if (i == 3) {
-            sendErrorMsg(imageName)
-            println "[Error]: push 失败"
-            return 1
-        }
-    }
-}
-
-def releaseToGitHubIfNeed() {
-    if (env.github_release == "Yes") {
-        if (sh(script: "git tag | grep '${env.release_version}'", returnStatus: true) == 0) {
-            sh "git tag -d '${env.release_version}' || true"
-            sh "git push origin --delete tag '${env.release_version}' || true"
-        }
-
-        sh "git tag '${env.release_version}'"
-        sh "git push origin ${env.release_version}"
-    }
-}
 
 def runShellCommand(script, int retries = 5) {
     for (int i = 0; i < retries; i++) {
@@ -114,36 +72,76 @@ def runShellCommand(script, int retries = 5) {
     }
 }
 
-def buildImage(appName, appVersion, extraBuildArgs = '') {
+// CE 到 docker.io
+// EE 到 registry.fit2cloud.com
+// 平常的 只 Load
+
+def appBuildOption = [
+    "core-xpack": [
+        "image": "xpack",
+    ],
+    "lina": [
+        "pushImage": "No",
+    ],
+    "luna": [
+        "pushImage": "No",
+        "beforeSh": "rm -rf dist luna"
+    ],
+    "razor": [
+        "buildArgs": "-f docker/Dockerfile"
+    ],
+    "docker-web": [
+        "image": "web"
+    ]
+]
+
+def buildImage(appName, appVersion, type='CE') {
+    // Type  EE, CE, MID, EE-MID
     echo "Building ${appName}:${appVersion}"
-    def buildArgs = getBuildArgs()
+    def buildArgs = getDefaultBuildArgs()
     if (extraBuildArgs) {
         buildArgs += " ${extraBuildArgs}"
     }
 
-    def passArgs = getPassArgs()
+    def passArgs = getDefaultPassArgs()
     buildArgs += " ${passArgs}"
 
-    if (appName == "jumpserver") {
-        appName = "core"
-    } else if (appName == "docker-web") {
-        appName = "web"
-    } else if (appName == "core-xpack") {
-        appName = "xpack"
+    def buildOption = appBuildOption[appName] ?: [:]
+
+    def image = appName
+    if (buildOption.image) {
+        image = buildOption.image
     }
 
-    def imageName = "jumpserver/${appName}:${appVersion}"
-    def fullName = "registry.fit2cloud.com/${imageName}"
-    if (env.only_docker_image == "Yes") {
-        fullName = imageName
+    def imageName = "jumpserver/${image}:${appVersion}"
+    if (type == "CE") {
+        imageName += '-ce'
+    } else if (type == "EE") {
+        imageName += '-ee'
     }
 
-    sh("pwd; ls")
+    def fullName = "${imageName}"
+    if (type == "EE" || type == "EE-MID") {
+        fullName = "registry.fit2cloud.com/${imageName}"
+    }
 
-    runShellCommand("docker buildx build ${buildArgs} -t ${fullName} . --push")
+    def pushImage = env.pushImage ?: buildOption.pushImage
+    // 优先考虑环境变量
+    if (pushImage == "No") {
+        buildArgs += " --load"
+    } else {
+        buildArgs += " --push"
+    }
 
-//    syncToDockerHubIfNeed(fullName, imageName)
-//    releaseToGitHubIfNeed()
+    if (type == "EE" && fileExists('Dockerfile-ee')) {
+        buildArgs += ' -f Dockerfile-ee'
+    }
+
+    if (buildOption.buildArgs) {
+        buildArgs += " ${buildOption.buildArgs}"
+    }
+
+    runShellCommand("docker buildx build ${buildArgs} -t ${fullName} .")
 }
 
 def buildEE(appName, appVersion, extraBuildArgs = '') {
@@ -153,8 +151,10 @@ def buildEE(appName, appVersion, extraBuildArgs = '') {
     buildImage(appName, appVersion, extraBuildArgs)
 }
 
+def MID_APPS = ["lina", "luna", "core-xpack"]
 def CE_APPS = ["lion", "chen"]
-def EE_APPS = ["core-xpack"]
+def EE_APPS = ["panda"] + CE_APPS
+
 
 pipeline {
     agent {
@@ -166,24 +166,46 @@ pipeline {
         checkoutToSubdirectory('installer')
     }
     environment {
-        CE_APPS = "lion,chen"
+        CE_APPS = "jumpserver,koko,lina,luna,lion,chen,docker-web"
         EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
     }
     stages {
         stage('Checkout') {
             steps {
                 script {
-                    def apps = env.build_ee ? CE_APPS + EE_APPS : CE_APPS
+                    def apps = env.build_ee ? EE_APPS : CE_APPS
 
                     apps.each { app ->
                         dir(app) {
                             checkout([
-                                    $class           : 'GitSCM',
-                                    branches         : [[name: "dev"]],
-                                    userRemoteConfigs: [[url: "git@github.com:jumpserver/${app}.git"]]
+                                $class           : 'GitSCM',
+                                branches         : [[name: "dev"]],
+                                userRemoteConfigs: [[url: "git@github.com:jumpserver/${app}.git"]]
                             ])
                         }
                     }
+                }
+            }
+        }
+        stage('Build Middle apps') {
+            steps {
+                script {
+                    def ceStages = MID_APPS.collectEntries{ app ->
+                        ["Build ${app}": {
+                            stage("Build Mid ${app}") {
+                                dir(app) {
+                                    script {
+                                        def type = "MID"
+                                        if (app == "core-xpack") {
+                                            type = "EE-MID"
+                                        }
+                                        buildImage(app, env.release_version, type)
+                                    }
+                                }
+                            }
+                        }]
+                    }
+                    parallel ceStages
                 }
             }
         }
@@ -195,7 +217,25 @@ pipeline {
                             stage("Build CE ${app}") {
                                 dir(app) {
                                     script {
-                                        buildImage(app, env.release_version)
+                                        buildImage(app, env.release_version, "CE")
+                                    }
+                                }
+                            }
+                        }]
+                    }
+                    parallel ceStages
+                }
+            }
+        }
+        stage('Build EE Apps') {
+            steps {
+                script {
+                    def ceStages = EE_APPS.collectEntries{ app ->
+                        ["Build ${app}": {
+                            stage("Build CE ${app}") {
+                                dir(app) {
+                                    script {
+                                        buildImage(app, env.release_version, "EE")
                                     }
                                 }
                             }
