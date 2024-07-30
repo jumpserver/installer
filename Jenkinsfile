@@ -99,10 +99,6 @@ def buildImage(appName, appVersion, type='CE') {
     // Type  EE, CE, MID, EE-MID
     echo "Building ${appName}:${appVersion}"
     def buildArgs = getDefaultBuildArgs()
-    if (extraBuildArgs) {
-        buildArgs += " ${extraBuildArgs}"
-    }
-
     def passArgs = getDefaultPassArgs()
     buildArgs += " ${passArgs}"
 
