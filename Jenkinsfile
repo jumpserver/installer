@@ -145,100 +145,100 @@ def EE_APPS = ["panda"] + CE_APPS
 buildImage("lina", "v3.0.0", "MID")
 
 
-//pipeline {
-//    agent {
-//        node {
-//            label 'linux-amd64-buildx'
-//        }
-//    }
-//    options {
-//        checkoutToSubdirectory('installer')
-//    }
-//    environment {
-//        CE_APPS = "jumpserver,koko,lina,luna,lion,chen,docker-web"
-//        EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
-//    }
-//    stages {
-//        stage('Checkout') {
-//            steps {
-//                script {
-//                    def apps = env.build_ee ? EE_APPS : CE_APPS
-//
-//                    apps.each { app ->
-//                        dir(app) {
-//                            checkout([
-//                                $class           : 'GitSCM',
-//                                branches         : [[name: "dev"]],
-//                                userRemoteConfigs: [[url: "git@github.com:jumpserver/${app}.git"]]
-//                            ])
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        stage('Build Middle apps') {
-//            steps {
-//                script {
-//                    def ceStages = MID_APPS.collectEntries{ app ->
-//                        ["Build ${app}": {
-//                            stage("Build Mid ${app}") {
-//                                dir(app) {
-//                                    script {
-//                                        def type = "MID"
-//                                        if (app == "core-xpack") {
-//                                            type = "EE-MID"
-//                                        }
-//                                        buildImage(app, env.release_version, type)
-//                                    }
-//                                }
-//                            }
-//                        }]
-//                    }
-//                    parallel ceStages
-//                }
-//            }
-//        }
-//        stage('Build CE Apps') {
-//            steps {
-//                script {
-//                    def ceStages = CE_APPS.collectEntries{ app ->
-//                        ["Build ${app}": {
-//                            stage("Build CE ${app}") {
-//                                dir(app) {
-//                                    script {
-//                                        buildImage(app, env.release_version, "CE")
-//                                    }
-//                                }
-//                            }
-//                        }]
-//                    }
-//                    parallel ceStages
-//                }
-//            }
-//        }
-//        stage('Build EE Apps') {
-//            steps {
-//                script {
-//                    def ceStages = EE_APPS.collectEntries{ app ->
-//                        ["Build ${app}": {
-//                            stage("Build CE ${app}") {
-//                                dir(app) {
-//                                    script {
-//                                        buildImage(app, env.release_version, "EE")
-//                                    }
-//                                }
-//                            }
-//                        }]
-//                    }
-//                    parallel ceStages
-//                }
-//            }
-//        }
-//        stage('Done') {
-//            steps {
-//                echo "All done!"
-//            }
-//        }
-//    }
-//}
+pipeline {
+    agent {
+        node {
+            label 'linux-amd64-buildx'
+        }
+    }
+    options {
+        checkoutToSubdirectory('installer')
+    }
+    environment {
+        CE_APPS = "jumpserver,koko,lina,luna,lion,chen,docker-web"
+        EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    def apps = env.build_ee ? EE_APPS : CE_APPS
+
+                    apps.each { app ->
+                        dir(app) {
+                            checkout([
+                                $class           : 'GitSCM',
+                                branches         : [[name: "dev"]],
+                                userRemoteConfigs: [[url: "git@github.com:jumpserver/${app}.git"]]
+                            ])
+                        }
+                    }
+                }
+            }
+        }
+        stage('Build Middle apps') {
+            steps {
+                script {
+                    def ceStages = MID_APPS.collectEntries{ app ->
+                        ["Build ${app}": {
+                            stage("Build Mid ${app}") {
+                                dir(app) {
+                                    script {
+                                        def type = "MID"
+                                        if (app == "core-xpack") {
+                                            type = "EE-MID"
+                                        }
+                                        buildImage(app, env.release_version, type)
+                                    }
+                                }
+                            }
+                        }]
+                    }
+                    parallel ceStages
+                }
+            }
+        }
+        stage('Build CE Apps') {
+            steps {
+                script {
+                    def ceStages = CE_APPS.collectEntries{ app ->
+                        ["Build ${app}": {
+                            stage("Build CE ${app}") {
+                                dir(app) {
+                                    script {
+                                        buildImage(app, env.release_version, "CE")
+                                    }
+                                }
+                            }
+                        }]
+                    }
+                    parallel ceStages
+                }
+            }
+        }
+        stage('Build EE Apps') {
+            steps {
+                script {
+                    def ceStages = EE_APPS.collectEntries{ app ->
+                        ["Build ${app}": {
+                            stage("Build CE ${app}") {
+                                dir(app) {
+                                    script {
+                                        buildImage(app, env.release_version, "EE")
+                                    }
+                                }
+                            }
+                        }]
+                    }
+                    parallel ceStages
+                }
+            }
+        }
+        stage('Done') {
+            steps {
+                echo "All done!"
+            }
+        }
+    }
+}
 
