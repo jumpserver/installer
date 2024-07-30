@@ -72,32 +72,29 @@ def runShellCommand(script, int retries = 5) {
     }
 }
 
-// CE 到 docker.io
-// EE 到 registry.fit2cloud.com
-// 平常的 只 Load
 
-def appBuildOption = [
-    "core-xpack": [
-        "image": "xpack",
-    ],
-    "lina": [
-        "pushImage": "No",
-    ],
-    "luna": [
-        "pushImage": "No",
-        "beforeSh": "rm -rf dist luna"
-    ],
-    "razor": [
-        "buildArgs": "-f docker/Dockerfile"
-    ],
-    "docker-web": [
-        "image": "web"
-    ]
-]
 
-def buildImage(appName, appVersion, type='CE') {
+def buildImage(appName, appVersion, String type='CE') {
     // Type  EE, CE, MID, EE-MID
     echo "Building ${appName}:${appVersion}"
+    def appBuildOption = [
+        "core-xpack": [
+            "image": "xpack",
+        ],
+        "lina": [
+            "pushImage": "No",
+        ],
+        "luna": [
+            "pushImage": "No",
+            "beforeSh": "rm -rf dist luna"
+        ],
+        "razor": [
+            "buildArgs": "-f docker/Dockerfile"
+        ],
+        "docker-web": [
+            "image": "web"
+        ]
+    ]
     def buildArgs = getDefaultBuildArgs()
     def passArgs = getDefaultPassArgs()
     buildArgs += " ${passArgs}"
@@ -121,8 +118,8 @@ def buildImage(appName, appVersion, type='CE') {
         fullName = "registry.fit2cloud.com/${imageName}"
     }
 
-    def pushImage = env.pushImage ?: buildOption.pushImage
     // 优先考虑环境变量
+    def pushImage = env.pushImage ?: buildOption.pushImage
     if (pushImage == "No") {
         buildArgs += " --load"
     } else {
@@ -140,112 +137,108 @@ def buildImage(appName, appVersion, type='CE') {
     runShellCommand("docker buildx build ${buildArgs} -t ${fullName} .")
 }
 
-def buildEE(appName, appVersion, extraBuildArgs = '') {
-    if (fileExists('Dockerfile-ee')) {
-        extraBuildArgs += ' -f Dockerfile-ee'
-    }
-    buildImage(appName, appVersion, extraBuildArgs)
-}
 
 def MID_APPS = ["lina", "luna", "core-xpack"]
 def CE_APPS = ["lion", "chen"]
 def EE_APPS = ["panda"] + CE_APPS
 
+buildImage("lina", "v3.0.0", "MID")
 
-pipeline {
-    agent {
-        node {
-            label 'linux-amd64-buildx'
-        }
-    }
-    options {
-        checkoutToSubdirectory('installer')
-    }
-    environment {
-        CE_APPS = "jumpserver,koko,lina,luna,lion,chen,docker-web"
-        EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
-    }
-    stages {
-        stage('Checkout') {
-            steps {
-                script {
-                    def apps = env.build_ee ? EE_APPS : CE_APPS
 
-                    apps.each { app ->
-                        dir(app) {
-                            checkout([
-                                $class           : 'GitSCM',
-                                branches         : [[name: "dev"]],
-                                userRemoteConfigs: [[url: "git@github.com:jumpserver/${app}.git"]]
-                            ])
-                        }
-                    }
-                }
-            }
-        }
-        stage('Build Middle apps') {
-            steps {
-                script {
-                    def ceStages = MID_APPS.collectEntries{ app ->
-                        ["Build ${app}": {
-                            stage("Build Mid ${app}") {
-                                dir(app) {
-                                    script {
-                                        def type = "MID"
-                                        if (app == "core-xpack") {
-                                            type = "EE-MID"
-                                        }
-                                        buildImage(app, env.release_version, type)
-                                    }
-                                }
-                            }
-                        }]
-                    }
-                    parallel ceStages
-                }
-            }
-        }
-        stage('Build CE Apps') {
-            steps {
-                script {
-                    def ceStages = CE_APPS.collectEntries{ app ->
-                        ["Build ${app}": {
-                            stage("Build CE ${app}") {
-                                dir(app) {
-                                    script {
-                                        buildImage(app, env.release_version, "CE")
-                                    }
-                                }
-                            }
-                        }]
-                    }
-                    parallel ceStages
-                }
-            }
-        }
-        stage('Build EE Apps') {
-            steps {
-                script {
-                    def ceStages = EE_APPS.collectEntries{ app ->
-                        ["Build ${app}": {
-                            stage("Build CE ${app}") {
-                                dir(app) {
-                                    script {
-                                        buildImage(app, env.release_version, "EE")
-                                    }
-                                }
-                            }
-                        }]
-                    }
-                    parallel ceStages
-                }
-            }
-        }
-        stage('Done') {
-            steps {
-                echo "All done!"
-            }
-        }
-    }
-}
+//pipeline {
+//    agent {
+//        node {
+//            label 'linux-amd64-buildx'
+//        }
+//    }
+//    options {
+//        checkoutToSubdirectory('installer')
+//    }
+//    environment {
+//        CE_APPS = "jumpserver,koko,lina,luna,lion,chen,docker-web"
+//        EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
+//    }
+//    stages {
+//        stage('Checkout') {
+//            steps {
+//                script {
+//                    def apps = env.build_ee ? EE_APPS : CE_APPS
+//
+//                    apps.each { app ->
+//                        dir(app) {
+//                            checkout([
+//                                $class           : 'GitSCM',
+//                                branches         : [[name: "dev"]],
+//                                userRemoteConfigs: [[url: "git@github.com:jumpserver/${app}.git"]]
+//                            ])
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//        stage('Build Middle apps') {
+//            steps {
+//                script {
+//                    def ceStages = MID_APPS.collectEntries{ app ->
+//                        ["Build ${app}": {
+//                            stage("Build Mid ${app}") {
+//                                dir(app) {
+//                                    script {
+//                                        def type = "MID"
+//                                        if (app == "core-xpack") {
+//                                            type = "EE-MID"
+//                                        }
+//                                        buildImage(app, env.release_version, type)
+//                                    }
+//                                }
+//                            }
+//                        }]
+//                    }
+//                    parallel ceStages
+//                }
+//            }
+//        }
+//        stage('Build CE Apps') {
+//            steps {
+//                script {
+//                    def ceStages = CE_APPS.collectEntries{ app ->
+//                        ["Build ${app}": {
+//                            stage("Build CE ${app}") {
+//                                dir(app) {
+//                                    script {
+//                                        buildImage(app, env.release_version, "CE")
+//                                    }
+//                                }
+//                            }
+//                        }]
+//                    }
+//                    parallel ceStages
+//                }
+//            }
+//        }
+//        stage('Build EE Apps') {
+//            steps {
+//                script {
+//                    def ceStages = EE_APPS.collectEntries{ app ->
+//                        ["Build ${app}": {
+//                            stage("Build CE ${app}") {
+//                                dir(app) {
+//                                    script {
+//                                        buildImage(app, env.release_version, "EE")
+//                                    }
+//                                }
+//                            }
+//                        }]
+//                    }
+//                    parallel ceStages
+//                }
+//            }
+//        }
+//        stage('Done') {
+//            steps {
+//                echo "All done!"
+//            }
+//        }
+//    }
+//}
 
