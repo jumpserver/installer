@@ -81,6 +81,9 @@ def buildImage(appName, appVersion, String type='CE') {
         "core-xpack": [
             "image": "xpack",
         ],
+        "jumpserver": [
+            "image": "core"
+        ],
         "lina": [
         ],
         "luna": [
