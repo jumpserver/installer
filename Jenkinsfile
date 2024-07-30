@@ -82,10 +82,8 @@ def buildImage(appName, appVersion, String type='CE') {
             "image": "xpack",
         ],
         "lina": [
-            "pushImage": "No",
         ],
         "luna": [
-            "pushImage": "No",
             "beforeSh": "rm -rf dist luna"
         ],
         "razor": [
@@ -119,7 +117,7 @@ def buildImage(appName, appVersion, String type='CE') {
     }
 
     // 优先考虑环境变量
-    def pushImage = env.pushImage ?: buildOption.pushImage
+    def pushImage = env.pushImage
     if (pushImage == "No") {
         buildArgs += " --load"
     } else {
