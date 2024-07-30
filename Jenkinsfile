@@ -154,14 +154,21 @@ pipeline {
         checkoutToSubdirectory('installer')
     }
     environment {
-        CE_APPS = "jumpserver,koko,lina,luna,lion,chen,docker-web"
-        EE_APPS = "core-xpack,magnus,panda,razor,xrdp,video-worker"
     }
     stages {
+        stage('Preparation') {
+            steps {
+                script {
+                    env.branch = params.branch
+                    env.release_version = params.release_version ?: env.branch
+                    env.build_args = params.build_args
+                }
+            }
+        }
         stage('Checkout') {
             steps {
                 script {
-                    def apps = env.build_ee ? EE_APPS : CE_APPS
+                    def apps = EE_APPS
 
                     apps.each { app ->
                         dir(app) {
