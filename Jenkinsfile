@@ -66,7 +66,7 @@ def runShellCommand(script, int retries = 5) {
         } catch (Exception e) {
             println("Command failed, attempt ${i + 1}, error: ${e}")
             if (i == retries - 1) {
-                error("Max retries reached. Failing the build.")
+                error("Max retries reached. Failing the build. ${script}")
             }
         }
     }
