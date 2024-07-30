@@ -173,11 +173,7 @@ pipeline {
 
                     apps.each { app ->
                         dir(app) {
-                            checkout([
-                                $class           : 'GitSCM',
-                                branches         : [[name: "dev"]],
-                                userRemoteConfigs: [[url: "git@github.com:jumpserver/${app}.git"]]
-                            ])
+                            git url: "git@github.com:jumpserver/${app}.git", branch: "${env.branch}"
                         }
                     }
                 }
