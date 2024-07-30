@@ -154,6 +154,7 @@ pipeline {
         checkoutToSubdirectory('installer')
     }
     environment {
+        build_ee = "Yes"
     }
     stages {
         stage('Preparation') {
