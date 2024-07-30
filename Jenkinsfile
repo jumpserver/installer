@@ -169,9 +169,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    def apps = EE_APPS
-
-                    apps.each { app ->
+                    EE_APPS.each { app ->
                         dir(app) {
                             git url: "git@github.com:jumpserver/${app}.git", branch: "${env.branch}"
                         }
