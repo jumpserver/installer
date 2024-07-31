@@ -51,7 +51,7 @@ def sendErrorMsg(imageName) {
 }
 
 
-def runShellCommand(script, int retries = 5) {
+def runShellCommand(script, int retries = 3) {
     for (int i = 0; i < retries; i++) {
         try {
             echo "Running shell command, attempt ${i + 1}..."
@@ -169,7 +169,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    EE_APPS.each { app ->
+                    def apps = CE_APPS + MID_APPS
+                    apps.each { app ->
                         dir(app) {
                             git url: "git@github.com:jumpserver/${app}.git", branch: "${env.branch}"
                         }
