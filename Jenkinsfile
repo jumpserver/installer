@@ -179,12 +179,12 @@ pipeline {
                 }
             }
         }
-        stage('Build Middle apps') {
+        stage('Build pre apps') {
             steps {
                 script {
                     def ceStages = MID_APPS.collectEntries{ app ->
                         ["Build ${app}": {
-                            stage("Build Mid ${app}") {
+                            stage("Build ${app}") {
                                 dir(app) {
                                     script {
                                         def type = "MID"
@@ -209,10 +209,10 @@ pipeline {
                             stage("Build ${app}") {
                                 dir(app) {
                                     script {
-                                        buildImage(app, env.release_version, "CE")
-                                        if (app in EE_APPS) {
-                                            buildImage(app, env.release_version, "EE")
+                                        if (app in CE_APPS) {
+                                            buildImage(app, env.release_version, "CE")
                                         }
+                                        buildImage(app, env.release_version, "EE")
                                     }
                                 }
                             }
