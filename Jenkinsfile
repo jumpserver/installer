@@ -141,7 +141,9 @@ def buildImage(appName, appVersion, String type='CE') {
 
 def MID_APPS = ["lina", "luna", "core-xpack"]
 def CE_APPS = ["jumpserver", "koko", "lion", "chen", "docker-web"]
-def EE_APPS = CE_APPS + ["magnus", "panda", "razor", "xrdp", "video-worker"]
+def EE_APPS =  ["magnus", "panda", "razor", "xrdp", "video-worker"]
+def BUILD_APPS = CE_APPS + EE_APPS
+def ALL_APPS = CE_APPS + EE_APPS + MID_APPS
 
 
 pipeline {
@@ -169,8 +171,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    def apps = EE_APPS + MID_APPS
-                    apps.each { app ->
+                    ALL_APPS.each { app ->
                         dir(app) {
                             git url: "git@github.com:jumpserver/${app}.git", branch: "${env.branch}"
                         }
@@ -200,39 +201,24 @@ pipeline {
                 }
             }
         }
-        stage('Build CE Apps') {
+        stage('Build Apps') {
             steps {
                 script {
-                    def ceStages = CE_APPS.collectEntries{ app ->
+                    def buildStages = BUILD_APPS.collectEntries{ app ->
                         ["Build ${app}": {
-                            stage("Build CE ${app}") {
+                            stage("Build ${app}") {
                                 dir(app) {
                                     script {
                                         buildImage(app, env.release_version, "CE")
+                                        if (app in EE_APPS) {
+                                            buildImage(app, env.release_version, "EE")
+                                        }
                                     }
                                 }
                             }
                         }]
                     }
-                    parallel ceStages
-                }
-            }
-        }
-        stage('Build EE Apps') {
-            steps {
-                script {
-                    def ceStages = EE_APPS.collectEntries{ app ->
-                        ["Build ${app}": {
-                            stage("Build EE ${app}") {
-                                dir(app) {
-                                    script {
-                                        buildImage(app, env.release_version, "EE")
-                                    }
-                                }
-                            }
-                        }]
-                    }
-                    parallel ceStages
+                    parallel buildStages
                 }
             }
         }
