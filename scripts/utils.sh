@@ -514,6 +514,7 @@ function prepare_config() {
   find "${CONFIG_DIR}" -type d -exec chmod 700 {} \;
   find "${CONFIG_DIR}" -type f -exec chmod 600 {} \;
   chmod 644 "${CONFIG_DIR}/redis/redis.conf"
+  chmod 644 "${CONFIG_DIR}/mariadb/mariadb.cnf"
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
     sed -i "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
