@@ -5,7 +5,6 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 . "${BASE_DIR}/0_prepare.sh"
 
 DOCKER_CONFIG="/etc/docker/daemon.json"
-docker_copy_failed=0
 
 cd "${BASE_DIR}" || exit 1
 
@@ -13,31 +12,22 @@ function copy_docker() {
   if [[ ! -d "/usr/local/bin" ]]; then
     mkdir -p /usr/local/bin
   fi
-  \cp -f ${BASE_DIR}/docker/* /usr/local/bin/
-  \cp -f ${BASE_DIR}/docker.service /etc/systemd/system/
+  tar --no-same-owner --strip-components=1 -xf "${BASE_DIR}/docker/docker.tar.gz" -C /usr/local/bin/ || {
+    echo_red "$(gettext 'Failed to extract docker.tar.gz')"
+    exit 1
+  }
+  \cp -f "${BASE_DIR}/docker/docker.service" /etc/systemd/system/
 }
 
 function install_docker() {
-  if [[ ! -f ${BASE_DIR}/docker/dockerd ]]; then
+  if [[ ! -f ${BASE_DIR}/docker/docker.tar.gz ]]; then
     prepare_docker_bin
   fi
-  if [[ ! -f ${BASE_DIR}/docker/dockerd ]]; then
+  if [[ ! -f ${BASE_DIR}/docker/docker.tar.gz ]]; then
     echo_red "Error: $(gettext 'Docker program does not exist')"
     exit 1
   fi
-
-  docker_exist=1
-  docker_version_match=1
-  old_docker_md5=$(get_file_md5 /usr/local/bin/dockerd)
-  new_docker_md5=$(get_file_md5 ${BASE_DIR}/docker/dockerd)
-
   if [[ ! -f "/usr/local/bin/dockerd" ]]; then
-    docker_exist=0
-  elif [[ "${old_docker_md5}" != "${new_docker_md5}" ]]; then
-    docker_version_match=0
-  fi
-
-  if [[ "${docker_exist}" != "1" ]] || [[ "${docker_version_match}" != "1" ]]; then
     copy_docker
   fi
 }
@@ -46,9 +36,7 @@ function install_compose() {
   if [[ ! -f ${BASE_DIR}/docker/docker-compose ]]; then
     prepare_compose_bin
   fi
-  old_docker_compose_md5=$(get_file_md5 /usr/local/libexec/docker/cli-plugins/docker-compose)
-  new_docker_compose_md5=$(get_file_md5 ${BASE_DIR}/docker/docker-compose)
-  if [[ ! -f "/usr/local/libexec/docker/cli-plugins/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
+  if [[ ! -f "/usr/local/libexec/docker/cli-plugins/docker-compose" ]]; then
     if [[ ! -d "/usr/local/libexec/docker/cli-plugins" ]]; then
       mkdir -p /usr/local/libexec/docker/cli-plugins
     fi
@@ -60,9 +48,7 @@ function install_compose_home() {
   if [[ ! -f ${BASE_DIR}/docker/docker-compose ]]; then
     prepare_compose_bin
   fi
-  old_docker_compose_md5=$(get_file_md5 $HOME/.docker/cli-plugins/docker-compose)
-  new_docker_compose_md5=$(get_file_md5 ${BASE_DIR}/docker/docker-compose)
-  if [[ ! -f "$HOME/.docker/cli-plugins/docker-compose" || "${old_docker_compose_md5}" != "${new_docker_compose_md5}" ]]; then
+  if [[ ! -f "$HOME/.docker/cli-plugins/docker-compose" ]]; then
     if [[ ! -d "$HOME/.docker/cli-plugins" ]]; then
       mkdir -p $HOME/.docker/cli-plugins
     fi

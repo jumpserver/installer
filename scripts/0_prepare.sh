@@ -6,46 +6,43 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 IMAGE_DIR="${BASE_DIR}/images"
 
-function prepare_docker_bin() {
-  md5_matched=$(check_md5 /tmp/docker.tar.gz "${DOCKER_MD5}")
-  if [[ ! -f /tmp/docker.tar.gz || "${md5_matched}" != "1" ]]; then
-    prepare_check_required_pkg
-    get_file_md5 /tmp/docker.tar.gz
-    echo "$(gettext 'Starting to download Docker engine') ..."
-    wget -q "${DOCKER_BIN_URL}" -O /tmp/docker.tar.gz || {
-      log_error "$(gettext 'Download docker fails, check the network is normal')"
-      rm -f /tmp/docker.tar.gz
+function download_and_verify() {
+  local url=$1
+  local target_path=$2
+  local md5_target_path="${target_path}.md5"
+
+  prepare_check_required_pkg
+  if [[ ! -f "${md5_target_path}" ]]; then
+    echo "$(gettext 'Starting to download'): ${url}.md5"
+    wget -q "${url}.md5" -O "${md5_target_path}" || {
+      log_error "$(gettext 'Download fails, check the network is normal')"
+      rm -f "${md5_target_path}"
       exit 1
     }
   else
-    echo "$(gettext 'Using Docker cache'): /tmp/docker.tar.gz"
+    echo "$(gettext 'Using cache'): ${md5_target_path}"
   fi
-  tar -xf /tmp/docker.tar.gz -C "${BASE_DIR}/" || {
-    rm -rf "${BASE_DIR}/docker" /tmp/docker.tar.gz
-    exit 1
-  }
-  chown -R root:root "${BASE_DIR}/docker"
-  chmod +x ${BASE_DIR}/docker/*
+
+  local expected_md5=$(cut -d ' ' -f1 "${md5_target_path}")
+  local md5_matched=$(check_md5 "${target_path}" "${expected_md5}")
+  if [[ ! -f "${target_path}" || "${md5_matched}" != "1" ]]; then
+    echo "$(gettext 'Starting to download'): ${url}"
+    wget -q "${url}" -O "${target_path}" || {
+      log_error "$(gettext 'Download fails, check the network is normal')"
+      rm -f "${target_path}" "${md5_target_path}"
+      exit 1
+    }
+  else
+    echo "$(gettext 'Using cache'): ${target_path}"
+  fi
+}
+
+function prepare_docker_bin() {
+  download_and_verify "${DOCKER_BIN_URL}" "${BASE_DIR}/docker/docker.tar.gz"
 }
 
 function prepare_compose_bin() {
-  md5_matched=$(check_md5 /tmp/docker-compose "${DOCKER_COMPOSE_MD5}")
-  if [[ ! -f /tmp/docker-compose || "${md5_matched}" != "1" ]]; then
-    prepare_check_required_pkg
-    get_file_md5 /tmp/docker-compose
-    echo "$(gettext 'Starting to download Docker Compose binary') ..."
-    wget -q "${DOCKER_COMPOSE_BIN_URL}" -O /tmp/docker-compose || {
-      log_error "$(gettext 'Download docker-compose fails, check the network is normal')"
-      rm -f /tmp/docker-compose
-      exit 1
-    }
-  else
-    echo "$(gettext 'Using Docker Compose cache'): /tmp/docker-compose"
-  fi
-  if [[ ! -d "${BASE_DIR}/docker" ]]; then
-    mkdir -p "${BASE_DIR}/docker"
-  fi
-  \cp -f /tmp/docker-compose "${BASE_DIR}/docker/"
+  download_and_verify "${DOCKER_COMPOSE_BIN_URL}" "${BASE_DIR}/docker/docker-compose"
   chown -R root:root "${BASE_DIR}/docker/docker-compose"
   chmod +x "${BASE_DIR}/docker/docker-compose"
 }
