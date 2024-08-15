@@ -7,6 +7,25 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 target=$1
 
+function verify_upgrade_version() {
+  required_version="v3.10.11"
+  current_version=$(get_config CURRENT_VERSION)
+
+  if ! [[ $current_version =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+    return
+  fi
+
+  if [[ -z "${current_version}" ]]; then
+    log_error "$(gettext 'The current version is not detected, please check')"
+    exit 1
+  fi
+
+  if [ "$(printf '%s\n' "$required_version" "$current_version" | sort -V | head -n1)" != "$required_version" ]; then
+    log_error "$(gettext 'Your current version does not meet the minimum requirements. Please upgrade to') ${required_version}"
+    exit 1
+  fi
+}
+
 function check_and_set_config() {
   local config_key=$1
   local default_value=$2
@@ -31,14 +50,14 @@ function upgrade_config() {
       docker rm ${container} &>/dev/null
     fi
   done
-  local images=("jumpserver/mariadb:10.6" "jumpserver/mysql:5.7")
-  for image in "${images[@]}"; do
-    if docker image inspect -f '{{.Id}}' ${image} &>/dev/null; then
-      docker tag ${image} ${image#*/}
-    fi
-  done
   if docker ps -a | grep jms_xpack &>/dev/null; then
     docker volume rm jms_share-volume &>/dev/null
+  fi
+  if docker image inspect -f '{{.Id}}' jumpserver/mariadb:10.6 &>/dev/null; then
+    docker tag jumpserver/mariadb:10.6 mariadb:10.6
+  fi
+  if docker image inspect -f '{{.Id}}' jumpserver/mysql:5.7 &>/dev/null; then
+    docker tag jumpserver/mysql:5.7 mysql:5.7-debian
   fi
   check_and_set_config "CURRENT_VERSION" "${VERSION}"
   check_and_set_config "CLIENT_MAX_BODY_SIZE" "4096m"
@@ -267,6 +286,7 @@ function main() {
     export VERSION=${to_version}
   fi
   echo
+  verify_upgrade_version
   update_config_if_need
   echo
   check_compose_install

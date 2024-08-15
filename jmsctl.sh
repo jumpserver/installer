@@ -45,6 +45,7 @@ function usage() {
   echo
   echo "Installation Commands: "
   echo "  install           $(gettext 'Install JumpServer')"
+  echo "  upgrade           $(gettext 'Upgrade JumpServer')"
   echo
   echo "Management Commands: "
   echo "  config            $(gettext 'Configuration  Tools')"
@@ -124,26 +125,6 @@ function check_update() {
   else
     exit 1
   fi
-  echo -e "$(gettext 'The current version is'): ${current_version}"
-  Install_DIR="$(cd "$(dirname "${PROJECT_DIR}")" &>/dev/null && pwd)"
-  if [[ ! -d "${Install_DIR}/jumpserver-installer-${latest_version}" ]]; then
-    if [[ ! -f "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" ]]; then
-      timeout 60s wget -qO "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" "https://github.com/jumpserver/installer/releases/download/${latest_version}/jumpserver-installer-${latest_version}.tar.gz" || {
-        rm -f "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz"
-        timeout 60s wget -qO "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" "https://demo.jumpserver.org/download/installer/${latest_version}/jumpserver-installer-${latest_version}.tar.gz" || {
-          rm -f "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz"
-          exit 1
-        }
-      }
-    fi
-    tar -xf "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz" -C "${Install_DIR}" || {
-      rm -rf "${Install_DIR}/jumpserver-installer-${latest_version}" "${Install_DIR}/jumpserver-installer-${latest_version}.tar.gz"
-      exit 1
-    }
-  fi
-  cd "${Install_DIR}/jumpserver-installer-${latest_version}" || exit 1
-  echo
-  ./jmsctl.sh upgrade "${latest_version}"
 }
 
 function video-worker() {
