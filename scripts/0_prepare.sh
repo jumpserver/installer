@@ -11,6 +11,11 @@ function download_and_verify() {
   local target_path=$2
   local md5_target_path="${target_path}.md5"
 
+  parent_dir=$(dirname "${target_path}")
+  if [[ ! -d "${parent_dir}" ]]; then
+    mkdir -p "${parent_dir}"
+  fi
+
   prepare_check_required_pkg
   if [[ ! -f "${md5_target_path}" ]]; then
     echo "$(gettext 'Starting to download'): ${url}.md5"
@@ -23,8 +28,8 @@ function download_and_verify() {
     echo "$(gettext 'Using cache'): ${md5_target_path}"
   fi
 
-  local expected_md5=$(cut -d ' ' -f1 "${md5_target_path}")
-  local md5_matched=$(check_md5 "${target_path}" "${expected_md5}")
+  expected_md5=$(cut -d ' ' -f1 "${md5_target_path}")
+  md5_matched=$(check_md5 "${target_path}" "${expected_md5}")
   if [[ ! -f "${target_path}" || "${md5_matched}" != "1" ]]; then
     echo "$(gettext 'Starting to download'): ${url}"
     wget -q "${url}" -O "${target_path}" || {
@@ -80,7 +85,6 @@ function prepare_image_files() {
       fi
     fi
     echo "$(gettext 'Save image') ${image} -> ${image_path}"
-    # docker save -o "${image_path}" "${image}" &
     docker save "${image}" | zstd -f -q -o "${image_path}" &
     echo "${image_id}" >"${md5_path}" &
   done
@@ -90,12 +94,14 @@ function prepare_image_files() {
 function main() {
   prepare_check_required_pkg
 
-  echo "$(gettext 'Preparing Docker offline package')"
-  prepare_docker_bin
-  prepare_compose_bin
+  gettext 'Preparing Docker offline package'
+  echo
+  time prepare_docker_bin
+  time prepare_compose_bin
 
-  echo -e "\n$(gettext 'Preparing image offline package')"
-  prepare_image_files
+  gettext 'Preparing image offline package'
+  echo
+  time prepare_image_files
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
