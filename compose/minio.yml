@@ -1,6 +1,6 @@
 services:
   minio:
-    image: jumpserver/minio:latest
+    image: minio/minio:latest
     container_name: jms_minio
     hostname: jms_minio
     restart: always
@@ -9,6 +9,7 @@ services:
       TZ: ${TZ:-Asia/Shanghai}
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: $BOOTSTRAP_TOKEN
+      MINIO_REGION_NAME: us-west-rack2
     ports:
       - 9000:9000
       - 9001:9001
