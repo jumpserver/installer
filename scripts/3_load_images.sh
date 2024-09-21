@@ -31,7 +31,7 @@ function load_image_files() {
     fi
     if [[ ${image_id} != "${saved_id}" ]]; then
       echo
-      docker load <"${IMAGE_DIR}/${filename}"
+      zstd -dc ${IMAGE_DIR}/${filename}|docker load
     else
       echo "$(gettext 'Docker image loaded, skipping')"
     fi
