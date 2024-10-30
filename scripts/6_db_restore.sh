@@ -7,6 +7,8 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 DB_FILE="$1"
 BACKUP_DIR=$(dirname "${DB_FILE}")
 
+DB_HOST=$(get_config DB_HOST)
+
 function main() {
   echo_warn "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
 
@@ -23,7 +25,7 @@ function main() {
     create_db_ops_env
     flag=1
   fi
-  if [[ "${HOST}" == "mysql" ]]; then
+  if [[ "${DB_HOST}" == "mysql" ]]; then
     while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
       sleep 5s
     done

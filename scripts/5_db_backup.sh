@@ -8,8 +8,9 @@ VOLUME_DIR=$(get_config VOLUME_DIR)
 BACKUP_DIR="${VOLUME_DIR}/db_backup"
 CURRENT_VERSION=$(get_config CURRENT_VERSION)
 
-DATABASE=$(get_config DB_NAME)
-DB_FILE=${BACKUP_DIR}/${DATABASE}-${CURRENT_VERSION}-$(date +%F_%T).sql
+DB_HOST=$(get_config DB_HOST)
+DB_NAME=$(get_config DB_NAME)
+DB_FILE=${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).sql
 
 function main() {
   if [[ ! -d ${BACKUP_DIR} ]]; then
@@ -23,7 +24,7 @@ function main() {
     create_db_ops_env
     flag=1
   fi
-  if [[ "${HOST}" == "mysql" ]]; then
+  if [[ "${DB_HOST}" == "mysql" ]]; then
     while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
       sleep 5s
     done
