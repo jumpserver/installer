@@ -20,10 +20,11 @@ function main() {
 
   mysql_images=$(get_mysql_images)
 
-  if ! docker ps | grep jms_ >/dev/null; then
+  if ! docker ps | grep -w "jms_core" &>/dev/null; then
     create_db_ops_env
     flag=1
   fi
+
   if [[ "${DB_HOST}" == "mysql" ]]; then
     while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_mysql)" != "healthy" ]]; do
       sleep 5s
