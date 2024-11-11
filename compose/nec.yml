@@ -9,7 +9,7 @@ services:
     env_file:
       - ${CONFIG_FILE}
     ports:
-      - ${NEC_VNC_PORT:-5900}:5900
+      - ${NEC_VNC_PORT:-15900}:5900
     volumes:
       - ${CONFIG_DIR}/certs:/opt/nec/data/certs
       - ${VOLUME_DIR}/nec/data:/opt/nec/data
