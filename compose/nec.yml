@@ -1,0 +1,23 @@
+services:
+  magnus:
+    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/nec:${VERSION}
+    container_name: jms_nec
+    hostname: jms_nec
+    ulimits:
+      core: 0
+    restart: always
+    env_file:
+      - ${CONFIG_FILE}
+    ports:
+      - ${NEC_VNC_PORT:-5900}:5900
+    volumes:
+      - ${CONFIG_DIR}/certs:/opt/nec/data/certs
+      - ${VOLUME_DIR}/nec/data:/opt/nec/data
+    healthcheck:
+      test: "nc -z 127.0.0.1 5900 || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net

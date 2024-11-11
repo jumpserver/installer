@@ -137,7 +137,7 @@ function get_db_info() {
   if [[ "${check_volume_dir}" == "0" ]]; then
     db_engine=$(get_config DB_ENGINE "postgresql")
   fi
-  
+
   mysql_data_exists="0"
   mariadb_data_exists="0"
   postgres_data_exists="0"
@@ -207,6 +207,7 @@ function get_images() {
     echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/panda:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/nec:${VERSION}"
   else
     echo "jumpserver/core:${VERSION}"
     echo "jumpserver/koko:${VERSION}"
@@ -342,8 +343,8 @@ function get_docker_compose_services() {
   [[ "${use_loki}" == "1" ]] && services+=" loki"
 
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" magnus razor xrdp video panda"
-    for service in magnus razor xrdp video panda; do
+    services+=" magnus razor xrdp video panda nec"
+    for service in magnus razor xrdp video panda nec; do
       enabled=$(get_config "${service^^}_ENABLED")
       [[ "${enabled}" == "0" ]] && services="${services//${service}/}"
     done
@@ -395,7 +396,7 @@ function get_docker_compose_cmd_line() {
   fi
 
   if [[ "${use_xpack}" == '1' ]]; then
-    for service in magnus razor xrdp video panda; do
+    for service in magnus razor xrdp video panda nec; do
       if [[ "${services}" =~ ${service} ]]; then
         cmd+=" -f compose/${service}.yml"
       fi
