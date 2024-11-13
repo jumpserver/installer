@@ -1,5 +1,5 @@
 services:
-  magnus:
+  nec:
     image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/nec:${VERSION}
     container_name: jms_nec
     hostname: jms_nec
