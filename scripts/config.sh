@@ -56,6 +56,7 @@ function set_port() {
     razor_enable=$(get_config RAZOR_ENABLE)
     web_enable=$(get_config WEB_ENABLE)
     nec_enable=$(get_config NEC_ENABLE)
+    facelive_enable=$(get_config FACELIVE_ENABLE)
 
     if [[ "${web_enable}" != "0" ]]; then
         http_port=$(get_config HTTP_PORT)

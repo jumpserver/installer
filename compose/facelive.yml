@@ -1,0 +1,18 @@
+services:
+  facelive:
+    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/facelive:${VERSION}
+    container_name: jms_facelive
+    hostname: jms_facelive
+    restart: always
+    env_file:
+      - ${CONFIG_FILE}
+    volumes:
+      - ${VOLUME_DIR}/facelive/data:/opt/facelive/data
+    healthcheck:
+      test: "curl -fsL http://localhost:9999/facelive/health/ > /dev/null"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
