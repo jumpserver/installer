@@ -55,6 +55,8 @@ function set_port() {
     xrdp_enable=$(get_config XRDP_ENABLE)
     razor_enable=$(get_config RAZOR_ENABLE)
     web_enable=$(get_config WEB_ENABLE)
+    nec_enable=$(get_config NEC_ENABLE)
+    facelive_enable=$(get_config FACELIVE_ENABLE)
 
     if [[ "${web_enable}" != "0" ]]; then
         http_port=$(get_config HTTP_PORT)
@@ -104,6 +106,11 @@ function set_port() {
             magnus_oracle_ports=$(get_config MAGNUS_ORACLE_PORTS)
             read_from_input magnus_oracle_ports "$(gettext 'Please enter MAGNUS ORACLE PORTS')" "" "${magnus_oracle_ports}"
             set_config MAGNUS_ORACLE_PORTS "${magnus_oracle_ports}"
+        fi
+        if [[ "${nec_enable}" != "0" ]]; then
+            nec_vnc_port=$(get_config NEC_VNC_PORT)
+            read_from_input nec_port "$(gettext 'Please enter NEC VNC PORT')" "" "${nec_vnc_port}"
+            set_config NEC_VNC_PORT "${nec_vnc_port}"
         fi
     fi
     flag=1

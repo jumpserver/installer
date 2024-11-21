@@ -23,7 +23,7 @@ function main() {
 
   echo "$(gettext 'Start restoring database'): $DB_FILE"
 
-  if ! docker ps | grep jms_&>/dev/null; then
+  if ! docker ps | grep -w "jms_core" &>/dev/null; then
     create_db_ops_env
     flag=1
   fi
