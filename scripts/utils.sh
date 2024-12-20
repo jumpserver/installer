@@ -661,7 +661,10 @@ function pull_image() {
     fi
   fi
 
-  docker pull "${pull_args}" "${full_image_path}"
+  if [[ "${full_image_path}" != "${image}" ]]; then
+    echo "  -> [${full_image_path}]"
+  fi
+  docker pull ${pull_args} "${full_image_path}"
   if [[ "${full_image_path}" != "${image}" ]]; then
     docker tag "${full_image_path}" "${image}"
     docker rmi -f "${full_image_path}"
