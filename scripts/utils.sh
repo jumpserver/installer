@@ -624,20 +624,7 @@ function pull_image() {
   IMAGE_PULL_POLICY=$(get_config_or_env 'IMAGE_PULL_POLICY')
 
   if [[ "${DOCKER_IMAGE_MIRROR}" == "1" ]]; then
-    case "$(uname -m)" in
-      "x86_64")
-        DOCKER_IMAGE_PREFIX="swr.cn-north-1.myhuaweicloud.com"
-        ;;
-      "aarch64")
-        DOCKER_IMAGE_PREFIX="swr.cn-north-4.myhuaweicloud.com"
-        ;;
-      "loongarch64")
-        DOCKER_IMAGE_PREFIX="swr.cn-southwest-2.myhuaweicloud.com"
-        ;;
-      "s390x")
-        DOCKER_IMAGE_PREFIX="swr.sa-brazil-1.myhuaweicloud.com"
-        ;;
-    esac
+    DOCKER_IMAGE_PREFIX="registry.cn-beijing.aliyuncs.com/jumpservice"
   else
     DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
   fi
@@ -664,14 +651,17 @@ function pull_image() {
   echo "[${image}] pulling"
   full_image_path="${image}"
   if [[ -n "${DOCKER_IMAGE_PREFIX}" ]]; then
-    if [[ $(image_has_prefix "${image}") != "1" ]]; then
+    if echo "${DOCKER_IMAGE_PREFIX}" | grep -q "/";then
+      app=$(echo "$image" | awk -F'/' '{ print $NF }')
+      full_image_path="${DOCKER_IMAGE_PREFIX}/${app}"
+    elif [[ $(image_has_prefix "${image}") != "1" ]]; then
       full_image_path="${DOCKER_IMAGE_PREFIX}/jumpserver/${image}"
     else
       full_image_path="${DOCKER_IMAGE_PREFIX}/${image}"
     fi
   fi
 
-  docker pull ${pull_args} "${full_image_path}"
+  docker pull "${pull_args}" "${full_image_path}"
   if [[ "${full_image_path}" != "${image}" ]]; then
     docker tag "${full_image_path}" "${image}"
     docker rmi -f "${full_image_path}"
