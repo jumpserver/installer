@@ -15,6 +15,7 @@ DB_NAME=$(get_config DB_NAME)
 function main() {
   if [[ ! -d ${BACKUP_DIR} ]]; then
     mkdir -p ${BACKUP_DIR}
+    chmod 600 ${BACKUP_DIR}
   fi
   echo "$(gettext 'Backing up')..."
 

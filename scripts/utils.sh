@@ -462,7 +462,7 @@ function prepare_config() {
   echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"
   if [[ ! -d ${CONFIG_DIR} ]]; then
     mkdir -p "${CONFIG_DIR}"
-    cp config-example.txt "${CONFIG_FILE}"
+    chmod 700 "${CONFIG_DIR}"
   fi
   if [[ ! -f ${CONFIG_FILE} ]]; then
     cp config-example.txt "${CONFIG_FILE}"
