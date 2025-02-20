@@ -12,7 +12,7 @@ services:
       - ${VOLUME_DIR}/chen/data:/opt/chen/data
       - ${CONFIG_DIR}/certs:/opt/chen/data/certs
     healthcheck:
-      test: "check http://localhost:8082/chen/"
+      test: "check http://localhost:8082/chen/healthy"
       interval: 10s
       timeout: 5s
       retries: 3
