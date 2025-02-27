@@ -15,6 +15,20 @@ function pre_install() {
       exit 1
     }
   fi
+  if ! command -v iptables &>/dev/null; then 
+    log_error "$(gettext 'command not found, Please install it first') iptables"
+    exit 1
+  fi
+  if command -v python&>/dev/null; then
+    :
+  elif command -v python2&>/dev/null; then
+    :
+  elif command -v python3&>/dev/null; then
+    :
+  else
+    log_error "$(gettext 'command not found, Please install it first') python"
+    exit 1
+  fi
 }
 
 function post_install() {
