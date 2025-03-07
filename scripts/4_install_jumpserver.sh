@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #
+export SHELLOPTS
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/utils.sh"
@@ -19,13 +20,16 @@ function pre_install() {
     log_error "$(gettext 'command not found, Please install it first') iptables"
     exit 1
   fi
-  if command -v python&>/dev/null; then
-    :
-  elif command -v python2&>/dev/null; then
-    :
-  elif command -v python3&>/dev/null; then
-    :
-  else
+
+  found=0
+  for cmd in python python2 python3; do
+    if command -v "$cmd" &>/dev/null; then
+      found=1
+    break
+  fi
+  done
+  
+  if [ $found -eq 0 ]; then
     log_error "$(gettext 'command not found, Please install it first') python"
     exit 1
   fi
