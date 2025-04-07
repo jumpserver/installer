@@ -74,8 +74,8 @@ function post_install() {
   fi
 
   echo_yellow "\n $(gettext 'More information')"
-  echo "$(gettext 'Official Website'): https://www.jumpserver.org/"
-  echo "$(gettext 'Documentation'): https://docs.jumpserver.org/"
+  echo "$(gettext 'Official Website'): https://www.jumpserver.com/"
+  echo "$(gettext 'Documentation'): https://www.jumpserver.com/docs"
   echo -e "\n"
 }
 
