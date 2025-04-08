@@ -103,9 +103,9 @@ function set_port() {
             set_config RDP_PORT "${rdp_port}"
         fi
         if [[ "${magnus_enable}" != "0" ]]; then
-            magnus_oracle_ports=$(get_config MAGNUS_ORACLE_PORTS)
-            read_from_input magnus_oracle_ports "$(gettext 'Please enter MAGNUS ORACLE PORTS')" "" "${magnus_oracle_ports}"
-            set_config MAGNUS_ORACLE_PORTS "${magnus_oracle_ports}"
+            magnus_oracle_port=$(get_config MAGNUS_ORACLE_PORT)
+            read_from_input magnus_oracle_port "$(gettext 'Please enter MAGNUS ORACLE PORT')" "" "${magnus_oracle_port}"
+            set_config MAGNUS_ORACLE_PORT "${magnus_oracle_port}"
         fi
         if [[ "${nec_enable}" != "0" ]]; then
             nec_vnc_port=$(get_config NEC_VNC_PORT)
