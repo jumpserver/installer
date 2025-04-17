@@ -1,40 +1,35 @@
 #!/usr/bin/env bash
 #
 
+LANGS="zh_CN en zh_Hant"
+
 function init_message() {
     find . -iname "*.sh" | xargs  xgettext --output=/tmp/jumpserver-installer.pot --from-code=UTF-8
 
-    msginit --input=/tmp/jumpserver-installer.pot --locale=locale/zh_CN/LC_MESSAGES/jumpserver-installer.po
-
-    msginit --input=/tmp/jumpserver-installer.pot --locale=locale/en/LC_MESSAGES/jumpserver-installer.po
-
-    msginit --input=/tmp/jumpserver-installer.pot --locale=locale/zh_Hant/LC_MESSAGES/jumpserver-installer.po
+    for lang in $LANGS; do
+        mkdir -p locale/${lang}/LC_MESSAGES
+        msginit --input=/tmp/jumpserver-installer.pot --locale=locale/${lang}/LC_MESSAGES/jumpserver-installer.po
+    done
 }
 
 function make_message() {
-
     find . -iname "*.sh" | xargs  xgettext --output=/tmp/jumpserver-installer.pot --from-code=UTF-8
 
-    msginit --input=/tmp/jumpserver-installer.pot --locale=locale/zh_CN/LC_MESSAGES/jumpserver-installer-tmp.po
-    msgmerge -U locale/zh_CN/LC_MESSAGES/jumpserver-installer.po locale/zh_CN/LC_MESSAGES/jumpserver-installer-tmp.po
+    for lang in $LANGS; do
+        msginit --input=/tmp/jumpserver-installer.pot --locale=locale/${lang}/LC_MESSAGES/jumpserver-installer-tmp.po
+        msgmerge -U locale/${lang}/LC_MESSAGES/jumpserver-installer-tmp.po /tmp/jumpserver-installer.pot
+    done
 
-    msginit --input=/tmp/jumpserver-installer.pot --locale=locale/en/LC_MESSAGES/jumpserver-installer-tmp.po
-    msgmerge -U locale/en/LC_MESSAGES/jumpserver-installer.po locale/en/LC_MESSAGES/jumpserver-installer-tmp.po
-
-    msginit --input=/tmp/jumpserver-installer.pot --locale=locale/zh_Hant/LC_MESSAGES/jumpserver-installer-tmp.po
-    msgmerge -U locale/zh_Hant/LC_MESSAGES/jumpserver-installer.po locale/zh_Hant/LC_MESSAGES/jumpserver-installer-tmp.po
-
-    rm ./locale/zh_CN/LC_MESSAGES/jumpserver-installer-tmp.po
-    rm ./locale/en/LC_MESSAGES/jumpserver-installer-tmp.po
-    rm ./locale/zh_Hant/LC_MESSAGES/jumpserver-installer-tmp.po
+    for lang in $LANGS; do
+        rm -f locale/${lang}/LC_MESSAGES/jumpserver-installer-tmp.po
+        rm -f locale/${lang}/LC_MESSAGES/jumpserver-installer.po\~
+    done
 }
 
 function compile_message() {
-   msgfmt --output-file=locale/zh_CN/LC_MESSAGES/jumpserver-installer.mo locale/zh_CN/LC_MESSAGES/jumpserver-installer.po
-
-   msgfmt --output-file=locale/en/LC_MESSAGES/jumpserver-installer.mo locale/en/LC_MESSAGES/jumpserver-installer.po
-
-   msgfmt --output-file=locale/zh_Hant/LC_MESSAGES/jumpserver-installer.mo locale/zh_Hant/LC_MESSAGES/jumpserver-installer.po
+    for lang in $LANGS; do
+        msgfmt --output-file=locale/${lang}/LC_MESSAGES/jumpserver-installer.mo locale/${lang}/LC_MESSAGES/jumpserver-installer.po
+    done
 }
 
 action=$1
