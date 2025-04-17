@@ -14,7 +14,7 @@ services:
       - ${MAGNUS_REDIS_PORT:-63790}:63790
       - ${MAGNUS_POSTGRESQL_PORT:-54320}:54320
       - ${MAGNUS_SQLSERVER_PORT:-14330}:14330
-      - ${MAGNUS_ORACLE_PORTS:-30000-30030}:${MAGNUS_ORACLE_PORTS:-30000-30030}
+      - ${MAGNUS_ORACLE_PORT:-15210}:${MAGNUS_ORACLE_PORT:-15210}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/magnus/data/certs
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data

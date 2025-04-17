@@ -116,9 +116,9 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE=false
 
 # Trusted DOMAINS definition,
 # Define the trusted access IP, please modify according to the actual situation, if it is a public IP, please change to the corresponding public IP,
-# DOMAINS="demo.jumpserver.org:443"
+# DOMAINS="demo.example.com:443"
 # DOMAINS="172.17.200.191:80"
-# DOMAINS="demo.jumpserver.org:443,172.17.200.191:80"
+# DOMAINS="demo.example.com:443,172.17.200.191:80"
 DOMAINS=
 
 # Configure the components that do not need to be started, by default all components will be started, if you do not need a certain component, you can set {component name}_ENABLED to 0 to turn it off
@@ -144,7 +144,7 @@ MAGNUS_MARIADB_PORT=33062
 MAGNUS_REDIS_PORT=63790
 MAGNUS_POSTGRESQL_PORT=54320
 MAGNUS_SQLSERVER_PORT=14330
-MAGNUS_ORACLE_PORTS=30000-30030
+MAGNUS_ORACLE_PORT=15210
 
 XRDP_ENABLED=0
 

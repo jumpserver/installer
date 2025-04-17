@@ -76,7 +76,7 @@ function upgrade_config() {
     check_and_set_config "MAGNUS_REDIS_PORT" "63790"
     check_and_set_config "MAGNUS_POSTGRESQL_PORT" "54320"
     check_and_set_config "MAGNUS_SQLSERVER_PORT" "14330"
-    check_and_set_config "MAGNUS_ORACLE_PORTS" "30000-30030"
+    check_and_set_config "MAGNUS_ORACLE_PORT" "15210"
   fi
 }
 
