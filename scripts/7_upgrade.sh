@@ -277,6 +277,21 @@ function main() {
   if [[ -n "${target}" ]]; then
     to_version="${target}"
   fi
+  # Extract suffix from the original VERSION (e.g., -ce, -ee)
+  # The suffix is the part after the first hyphen.
+  # Example: VERSION="v3.10.11-ce" -> ori_suffix_part="-ce"
+  # Example: VERSION="v3.10.11"    -> ori_suffix_part=""
+  ori_suffix_part=$(echo "$VERSION" | grep -o -- '-.*' || true)
+
+  # Check if to_version already has a suffix
+  # Example: to_version="v3.11.0-ce" -> to_has_suffix will be non-empty
+  # Example: to_version="v3.11.0"    -> to_has_suffix will be empty
+  to_has_suffix=$(echo "$to_version" | grep -o -- '-.*' || true)
+
+  # If to_version does not have a suffix, but the original VERSION did, append it.
+  if [[ -z "${to_has_suffix}" && -n "${ori_suffix_part}" ]]; then
+    to_version="${to_version}${ori_suffix_part}"
+  fi
 
   read_from_input confirm "$(gettext 'Are you sure you want to update the current version to') ${to_version} ?" "y/n" "${confirm}"
   if [[ "${confirm}" != "y" || -z "${to_version}" ]]; then
