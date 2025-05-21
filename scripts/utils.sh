@@ -129,7 +129,7 @@ function get_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
   mysql_images=$(get_mysql_images)
   images=(
-    "jumpserver/redis:6.2"
+    "redis:7.0-bullseye"
     "${mysql_images}"
   )
   for image in "${images[@]}"; do
