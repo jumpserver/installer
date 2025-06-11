@@ -25,7 +25,7 @@ function install_soft() {
 }
 
 function prepare_install() {
-  for i in curl wget tar iptables; do
+  for i in curl wget tar iptables gettext; do
     command -v $i &>/dev/null || install_soft $i
   done
 }
