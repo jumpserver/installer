@@ -15,6 +15,7 @@ services:
       - ${MAGNUS_POSTGRESQL_PORT:-54320}:54320
       - ${MAGNUS_SQLSERVER_PORT:-14330}:14330
       - ${MAGNUS_ORACLE_PORT:-15210}:${MAGNUS_ORACLE_PORT:-15210}
+      - ${MAGNUS_MONGODB_PORT:-27018}:${MAGNUS_MONGODB_PORT:-27018}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/magnus/data/certs
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
