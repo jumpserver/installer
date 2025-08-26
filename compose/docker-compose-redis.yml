@@ -1,6 +1,6 @@
 services:
   redis:
-    image: redis:7.0-bullseye
+    image: jumpserver/redis:7.0-bullseye
     container_name: jms_redis
     hostname: jms_redis
     restart: always
