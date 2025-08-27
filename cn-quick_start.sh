@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 
-VERSION=dev
+VERSION=v3.10.19
 DOWNLOAD_URL=https://resource.fit2cloud.com
 
 function install_soft() {
