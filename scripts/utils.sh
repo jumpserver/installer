@@ -190,7 +190,7 @@ function get_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
   db_images=$(get_db_images)
   images=(
-    "redis:7.0-bullseye"
+    "redis:7.4.6-bookworm"
     "${db_images}"
   )
   for image in "${images[@]}"; do
