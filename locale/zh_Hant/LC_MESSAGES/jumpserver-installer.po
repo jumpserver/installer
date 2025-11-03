@@ -410,9 +410,8 @@ msgstr "未偵測到目前應用程式的有效版本, 請檢查"
 
 #: scripts/7_upgrade.sh:26
 msgid ""
-"Your current version does not meet the minimum requirements. Please upgrade "
-"to"
-msgstr "您當前的版本不滿足最低要求, 請先升級至"
+"Your current version does not meet the minimum requirements. Please upgrade"
+msgstr "您當前的版本不滿足最低要求, 請先升級"
 
 #: scripts/7_upgrade.sh:179
 msgid "Back up to"

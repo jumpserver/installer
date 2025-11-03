@@ -22,8 +22,8 @@ function verify_upgrade_version() {
     exit 1
   fi
 
-  if [ "$(printf '%s\n' "$required_version" "$current_version" | sort -V | head -n1)" != "$required_version" ]; then
-    log_error "$(gettext 'Your current version does not meet the minimum requirements. Please upgrade to') ${required_version}"
+  if [ "$(printf '%s\n' "$required_version" "$current_version" | sort -V | head -n1)" = "$current_version" ]; then
+    log_error "$(gettext 'Your current version does not meet the minimum requirements. Please upgrade') ${current_version} -> ${required_version}"
     exit 1
   fi
 }

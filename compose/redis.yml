@@ -1,6 +1,6 @@
 services:
   redis:
-    image: redis:7.0-bullseye
+    image: redis:7.4.6-bookworm
     container_name: jms_redis
     hostname: jms_redis
     restart: always
