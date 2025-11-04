@@ -26,10 +26,10 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=27.4.0
+export DOCKER_VERSION=28.5.1
 export DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
 
-export DOCKER_COMPOSE_VERSION=v2.31.0
+export DOCKER_COMPOSE_VERSION=v2.40.3
 export DOCKER_COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
 
 ARCH=$(uname -m)
