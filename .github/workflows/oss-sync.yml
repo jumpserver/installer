@@ -7,10 +7,13 @@ on:
         description: Docker static binary version (e.g. 28.5.1)
         required: true
         type: string
+        default: 28.5.1
+
       docker_compose_version:
         description: Docker Compose version (e.g. 2.40.3)
         required: true
         type: string
+        default: 2.40.3
 
 env:
   OSS_ENDPOINT: oss-cn-beijing.aliyuncs.com
