@@ -57,7 +57,13 @@ jobs:
             curl -fsSL "${url}" -o "${base_dir}/docker-compose-linux-${arch}"
             chmod +x "${base_dir}/docker-compose-linux-${arch}"
           done
-
+      - name: Generate checksums
+        run: |
+          set -euo pipefail
+          find upload -type f ! -name '*.md5' ! -name '*.sha256' -print0 | while IFS= read -r -d '' file; do
+            md5sum "${file}" | awk '{print $1}' > "${file}.md5"
+            sha256sum "${file}" | awk '{print $1}' > "${file}.sha256"
+          done
       - name: Upload to OSS
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
