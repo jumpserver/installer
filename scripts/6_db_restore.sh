@@ -9,6 +9,9 @@ BACKUP_DIR=$(dirname "${DB_FILE}")
 
 DB_ENGINE=$(get_config DB_ENGINE "mysql")
 DB_HOST=$(get_config DB_HOST)
+DB_PORT=$(get_config DB_PORT)
+DB_USER=$(get_config DB_USER)
+DB_PASSWORD=$(get_config DB_PASSWORD)
 DB_NAME=$(get_config DB_NAME)
 
 function main() {
@@ -37,10 +40,10 @@ function main() {
 
   case "${DB_ENGINE}" in
     mysql)
-      restore_cmd='mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p"$DB_PASSWORD" $DB_NAME < '${DB_FILE}
+      restore_cmd='mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < "${DB_FILE}"'
       ;;
     postgresql)
-      restore_cmd='PGPASSWORD=${DB_PASSWORD} pg_restore --if-exists --clean --no-owner -U $DB_USER -h $DB_HOST -p $DB_PORT -d $DB_NAME '${DB_FILE}
+      restore_cmd='PGPASSWORD="${DB_PASSWORD}" pg_restore --if-exists --clean --no-owner -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${DB_FILE}"'
       ;;
     *)
       log_error "$(gettext 'Invalid DB Engine selection')!"
@@ -48,7 +51,11 @@ function main() {
       ;;
   esac
 
-  if ! docker run --rm --env-file=${CONFIG_FILE} -i --network=jms_net -v "${BACKUP_DIR}:${BACKUP_DIR}" "${db_images}" bash -c "${restore_cmd}"; then
+  if ! docker run --rm \
+    --env DB_HOST="${DB_HOST}" --env DB_PORT="${DB_PORT}" --env DB_USER="${DB_USER}" --env DB_PASSWORD="${DB_PASSWORD}" --env DB_NAME="${DB_NAME}" --env DB_FILE="${DB_FILE}" \
+    -i --network=jms_net \
+    -v "${BACKUP_DIR}:${BACKUP_DIR}" \
+    "${db_images}" bash -c "${restore_cmd}"; then
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
     exit 1
   else
