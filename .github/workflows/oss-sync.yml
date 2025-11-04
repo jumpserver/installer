@@ -29,8 +29,7 @@ jobs:
       - name: Install ossutil
         run: |
           set -euo pipefail
-          curl -fsSL https://gosspublic.alicdn.com/ossutil/ossutil64 -o ossutil64
-          chmod +x ossutil64
+          curl -fsSL https://gosspublic.alicdn.com/ossutil/install.sh | sudo bash
 
       - name: Download Docker archives
         run: |
@@ -66,9 +65,9 @@ jobs:
             echo "Missing OSS credentials. Please set OSS_ACCESS_KEY_ID and OSS_ACCESS_KEY_SECRET secrets."
             exit 1
           fi
-          ./ossutil64 config -e "${OSS_ENDPOINT}" \
-                             -i "${OSS_ACCESS_KEY_ID}" \
-                             -k "${OSS_ACCESS_KEY_SECRET}" \
-                             -L EN \
-                             -c ossutilconfig
-          ./ossutil64 sync upload/ "oss://${OSS_BUCKET}/" --delete=false -f -c ossutilconfig
+          ossutil config -e "${OSS_ENDPOINT}" \
+                         -i "${OSS_ACCESS_KEY_ID}" \
+                         -k "${OSS_ACCESS_KEY_SECRET}" \
+                         -L EN \
+                         -c ossutilconfig
+          ossutil sync upload/ "oss://${OSS_BUCKET}/" --delete=false -f -c ossutilconfig
