@@ -148,6 +148,8 @@ MAGNUS_ORACLE_PORT=15210
 
 XRDP_ENABLED=0
 
+PANDA_HOST=http://panda:9001
+
 ################################## Other Configuration ################################
 # The terminal uses the host HOSTNAME as the identifier, automatically generated during the first installation
 #
