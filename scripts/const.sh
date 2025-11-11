@@ -27,10 +27,19 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 
 export OS=$(uname -s)
 export DOCKER_VERSION=28.5.1
-export DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
+DOCKER_URL="https://download.docker.com/linux/static/stable"
+DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
+
+if [[ "${USE_MIRROR}" == "1" ]];then
+  DOCKER_URL=${DOCKER_MIRROR}
+fi
 
 export DOCKER_COMPOSE_VERSION=v2.40.3
-export DOCKER_COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
+COMPOSE_URL="https://github.com/docker/compose/releases/download"
+COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
+if [[ "${USE_MIRROR}" == "1" ]];then
+  COMPOSE_URL=${COMPOSE_MIRROR}
+fi
 
 ARCH=$(uname -m)
 if [ -n "${BUILD_ARCH}" ]; then
@@ -38,5 +47,7 @@ if [ -n "${BUILD_ARCH}" ]; then
 fi
 
 export ARCH
-export DOCKER_BIN_URL="${DOCKER_MIRROR}/${ARCH}/docker-${DOCKER_VERSION}.tgz"
-export DOCKER_COMPOSE_BIN_URL="${DOCKER_COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"
+export DOCKER_BIN_URL="${DOCKER_URL}/${ARCH}/docker-${DOCKER_VERSION}.tgz"
+export DOCKER_MD5_URL="${DOCKER_MIRROR}/${ARCH}/docker-${DOCKER_VERSION}.tgz.md5"
+export COMPOSE_BIN_URL="${COMPOSE_URL}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"
+export COMPOSE_MD5_URL="${COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}.md5"
