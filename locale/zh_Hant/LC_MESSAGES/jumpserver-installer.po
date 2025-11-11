@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-07 09:59+0800\n"
+"POT-Creation-Date: 2025-04-17 16:40+0800\n"
 "PO-Revision-Date: 2024-04-09 18:25+0800\n"
 "Last-Translator: 小冯 <xiaofeng@localhost>\n"
 "Language-Team: Language locale/zh\n"
@@ -15,346 +15,6 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-
-#: scripts/2_install_docker.sh:16
-msgid "Failed to extract docker.tar.gz"
-msgstr "無法解壓 docker.tar.gz"
-
-#: scripts/2_install_docker.sh:27
-msgid "Docker program does not exist"
-msgstr "Docker 程式不存在"
-
-#: scripts/2_install_docker.sh:65 scripts/2_install_docker.sh:158
-msgid "Permission denied. pass..."
-msgstr "權限被拒絕, 跳過..."
-
-#: scripts/2_install_docker.sh:140
-msgid "Do you want to support IPv6"
-msgstr "是否需要支持 IPv6"
-
-#: scripts/2_install_docker.sh:190
-msgid "Install Docker"
-msgstr "安裝 Docker"
-
-#: scripts/2_install_docker.sh:193
-msgid "Configure Docker"
-msgstr "配置 Docker"
-
-#: scripts/2_install_docker.sh:195
-msgid "Start Docker"
-msgstr "啟動 Docker"
-
-#: scripts/4_install_jumpserver.sh:10
-msgid ""
-"The current Linux system does not support systemd management. Please deploy "
-"docker by yourself before running this script again"
-msgstr ""
-"當前 Linux 系統不支持 systemd 管理, 請先自行部署 docker 後再重新運行此腳本"
-
-#: scripts/4_install_jumpserver.sh:14
-msgid ""
-"The current Linux system does not support systemd management. Please deploy "
-"docker-compose by yourself before running this script again"
-msgstr ""
-"當前 Linux 系統不支持 systemd 管理, 請先自行部署 docker-compose 後再重新運行"
-"此腳本"
-
-#: scripts/4_install_jumpserver.sh:21
-msgid "The Installation is Complete"
-msgstr "安裝完成了"
-
-#: scripts/4_install_jumpserver.sh:32
-msgid "You can use the following command to start, and then visit"
-msgstr "可以使用如下命令啟動, 然後訪問"
-
-#: scripts/4_install_jumpserver.sh:36
-msgid "Other management commands"
-msgstr "其它一些管理命令"
-
-#: scripts/4_install_jumpserver.sh:41
-msgid "For more commands, you can enter ./jmsctl.sh --help to understand"
-msgstr "更多還有一些命令, 你可以 ./jmsctl.sh --help 來了解"
-
-#: scripts/4_install_jumpserver.sh:43
-msgid "Web access"
-msgstr "Web 訪問"
-
-#: scripts/4_install_jumpserver.sh:50
-msgid "Default username"
-msgstr "預設用戶"
-
-#: scripts/4_install_jumpserver.sh:50
-msgid "Default password"
-msgstr "預設密碼"
-
-#: scripts/4_install_jumpserver.sh:53
-msgid "access"
-msgstr "訪問"
-
-#: scripts/4_install_jumpserver.sh:58
-msgid "More information"
-msgstr "更多資訊"
-
-#: scripts/4_install_jumpserver.sh:59
-msgid "Official Website"
-msgstr "官方網站"
-
-#: scripts/4_install_jumpserver.sh:60
-msgid "Documentation"
-msgstr "官方文檔"
-
-#: scripts/4_install_jumpserver.sh:70
-msgid "Install and Configure Docker"
-msgstr "安裝配置 Docker"
-
-#: scripts/4_install_jumpserver.sh:75 scripts/7_upgrade.sh:294
-msgid "Loading Docker Image"
-msgstr "載入 Docker 鏡像"
-
-#: scripts/4_install_jumpserver.sh:79
-msgid "Install and Configure JumpServer"
-msgstr "安裝配置 JumpServer"
-
-#: scripts/config.sh:16
-msgid "Configuration ntp sync"
-msgstr "配置 NTP 時間同步"
-
-#: scripts/config.sh:17
-msgid "Initialize configuration file"
-msgstr "初始化配置文件"
-
-#: scripts/config.sh:18
-msgid "Configuration service port"
-msgstr "配置服務端口"
-
-#: scripts/config.sh:19
-msgid "Configuration web ssl"
-msgstr "配置 Web SSL 加密"
-
-#: scripts/config.sh:20
-msgid "Configuration jumpserver environment"
-msgstr "配置 JumpServer"
-
-#: scripts/config.sh:35
-msgid "Do you want to restart the service"
-msgstr "是否需要重啟服務"
-
-#: scripts/config.sh:43
-msgid "ntpdate is not installed, please install it first"
-msgstr "ntpdate 沒有安裝, 請先安裝"
-
-#: scripts/config.sh:47
-msgid "Please enter NTP SERVER"
-msgstr "請輸入 NTP 服務器地址"
-
-#: scripts/config.sh:63 scripts/config.sh:121
-msgid "Please enter HTTP PORT"
-msgstr "請輸入 HTTP 服務埠"
-
-#: scripts/config.sh:66 scripts/config.sh:122
-msgid "Please enter HTTPS PORT"
-msgstr "請輸入 HTTPS 服務埠"
-
-#: scripts/config.sh:73
-msgid "Please enter SSH PORT"
-msgstr "請輸入 KOKO SSH 服務埠"
-
-#: scripts/config.sh:78
-msgid "Please enter MAGNUS MYSQL PORT"
-msgstr "請輸入 MAGNUS MYSQL 服務埠"
-
-#: scripts/config.sh:81
-msgid "Please enter MAGNUS MARIADB PORT"
-msgstr "請輸入 MAGNUS MARIADB 服務埠"
-
-#: scripts/config.sh:84
-msgid "Please enter MAGNUS REDIS PORT"
-msgstr "請輸入 MAGNUS REDIS 服務埠"
-
-#: scripts/config.sh:87
-msgid "Please enter MAGNUS POSTGRESQL PORT"
-msgstr "請輸入 MAGNUS POSTGRESQL 服務埠"
-
-#: scripts/config.sh:90
-msgid "Please enter MAGNUS SQLSERVER PORT"
-msgstr "請輸入 MAGNUS SQLSERVER 服務埠"
-
-#: scripts/config.sh:95
-msgid "Please enter XRDP PORT"
-msgstr "請輸入 MAGNUS XRDP 服務埠"
-
-#: scripts/config.sh:100
-msgid "Please enter RAZOR PORT"
-msgstr "請輸入 MAGNUS RAZOR 服務埠"
-
-#: scripts/config.sh:105
-msgid "Please enter MAGNUS ORACLE PORTS"
-msgstr "請輸入 MAGNUS ORACLE 服務埠範圍"
-
-#: scripts/config.sh:123
-msgid "Please enter SERVER NAME"
-msgstr "請輸入 Nginx server_name 值"
-
-#: scripts/config.sh:132
-msgid "Please enter SSL CERTIFICATE FILE Absolute path"
-msgstr "請輸入 SSL 證書文件絕對路徑"
-
-#: scripts/config.sh:134
-msgid "SSL CERTIFICATE FILE not exists"
-msgstr "SSL 證書文件不存在"
-
-#: scripts/config.sh:140
-msgid "Please enter SSL CERTIFICATE KEY FILE Absolute path"
-msgstr "請輸入 SSL 證書私鑰文件絕對路徑"
-
-#: scripts/config.sh:142
-msgid "SSL CERTIFICATE KEY FILE not exists"
-msgstr "SSL 證書私鑰文件不存在"
-
-#: scripts/config.sh:160
-msgid "Please enter the environment variable key"
-msgstr "請輸入配置文件中的 key"
-
-#: scripts/config.sh:169
-msgid "Please enter the environment variable value"
-msgstr "請輸入配置文件中的 value"
-
-#: scripts/config.sh:172
-msgid "The operation changes are as follows"
-msgstr "操作變動如下"
-
-#: scripts/config.sh:177
-msgid "Do you want to update the environment variable"
-msgstr "是否更新配置"
-
-#: scripts/config.sh:184
-msgid "The environment variable has not changed"
-msgstr "配置沒有變更"
-
-#: scripts/config.sh:189
-msgid "Do you want to continue to add environment variables"
-msgstr "是否需要繼續添加或修改配置"
-
-#: scripts/config.sh:199 jmsctl.sh:15
-msgid "Configuration file not found"
-msgstr "未找到配置文件"
-
-#: scripts/7_upgrade.sh:19
-msgid "The current version is not detected, please check"
-msgstr "未偵測到目前應用程式的有效版本, 請檢查"
-
-#: scripts/7_upgrade.sh:24
-msgid ""
-"Your current version does not meet the minimum requirements. Please upgrade "
-"to"
-msgstr "您當前的版本不滿足最低要求, 請先升級至"
-
-#: scripts/7_upgrade.sh:43 scripts/0_prepare.sh:56
-msgid "Docker is not running, please install and start"
-msgstr "Docker 沒有運行, 請安裝並啟動"
-
-#: scripts/7_upgrade.sh:177
-msgid "Back up to"
-msgstr "備份至"
-
-#: scripts/7_upgrade.sh:184
-msgid "Failed to backup the database. Continue to upgrade"
-msgstr "備份資料庫失敗, 繼續升級嗎"
-
-#: scripts/7_upgrade.sh:190
-msgid "Skip database backup"
-msgstr "跳過備份資料庫"
-
-#: scripts/7_upgrade.sh:197
-msgid ""
-"Detected that the JumpServer container is running. Do you want to close the "
-"container and continue to upgrade"
-msgstr "檢測到 JumpServer 正在運行, 是否需要關閉並繼續升級"
-
-#: scripts/7_upgrade.sh:210 scripts/utils.sh:606
-#: scripts/1_config_jumpserver.sh:237
-msgid "Failed to change the table structure"
-msgstr "表結構變更失敗"
-
-#: scripts/7_upgrade.sh:212
-msgid "Failed to change the table structure. Continue to upgrade"
-msgstr "表結構變更失敗, 是否繼續"
-
-#: scripts/7_upgrade.sh:225
-msgid "Do you need to clean up the old version image"
-msgstr "是否需要清理舊版本鏡像文件"
-
-#: scripts/7_upgrade.sh:238
-msgid "Do you need upgrade Docker binaries"
-msgstr "是否升級 Docker binaries"
-
-#: scripts/7_upgrade.sh:261
-msgid "Do you need upgrade Docker Compose"
-msgstr "是否升級 Docker Compose"
-
-#: scripts/7_upgrade.sh:279
-msgid "Are you sure you want to update the current version to"
-msgstr "是否將版本更新至"
-
-#: scripts/7_upgrade.sh:297 jmsctl.sh:61
-msgid "Backup database"
-msgstr "備份資料庫"
-
-#: scripts/7_upgrade.sh:300
-msgid "Backup Configuration File"
-msgstr "備份配置文件"
-
-#: scripts/7_upgrade.sh:303
-msgid "Apply database changes"
-msgstr "進行資料庫變更"
-
-#: scripts/7_upgrade.sh:304
-msgid "Changing database schema may take a while, please wait patiently"
-msgstr "資料庫結構變更可能需要一段時間，請耐心等待"
-
-#: scripts/7_upgrade.sh:307
-msgid "Cleanup Image"
-msgstr "清理鏡像"
-
-#: scripts/7_upgrade.sh:310
-msgid "Upgrade Docker"
-msgstr "升級 Docker"
-
-#: scripts/7_upgrade.sh:316
-msgid "Upgrade successfully. You can now restart the program"
-msgstr "升級成功, 可以重新啟動程序了"
-
-#: scripts/utils.sh:228
-msgid "no default"
-msgstr "無預設值"
-
-#: scripts/utils.sh:230
-msgid "default"
-msgstr "預設為"
-
-#: scripts/utils.sh:278
-msgid "complete"
-msgstr "完成"
-
-#: scripts/utils.sh:290
-msgid "fail"
-msgstr "失敗"
-
-#: scripts/utils.sh:427
-msgid "command not found, Please install it first"
-msgstr "未找到命令, 請先安裝"
-
-#: scripts/utils.sh:459
-msgid "Check Configuration File"
-msgstr "檢查配置文件"
-
-#: scripts/utils.sh:460
-msgid "Path to Configuration file"
-msgstr "配置檔案位置"
-
-#: scripts/utils.sh:695
-msgid "Failed to pull image"
-msgstr "拉取鏡像失敗"
 
 #: scripts/5_db_backup.sh:19
 msgid "Backing up"
@@ -373,33 +33,43 @@ msgstr "備份失敗"
 msgid "Backup succeeded! The backup file has been saved to"
 msgstr "備份成功! 備份文件已存放至"
 
-#: scripts/0_prepare.sh:20 scripts/0_prepare.sh:33
-msgid "Starting to download"
-msgstr "開始下載"
+#: scripts/utils.sh:230
+msgid "no default"
+msgstr "無預設值"
 
-#: scripts/0_prepare.sh:22 scripts/0_prepare.sh:35
-msgid "Download fails, check the network is normal"
-msgstr "下載失敗, 請檢查網路是否正常"
+#: scripts/utils.sh:232
+msgid "default"
+msgstr "預設為"
 
-#: scripts/0_prepare.sh:27 scripts/0_prepare.sh:40
-msgid "Using cache"
-msgstr "使用緩存文件"
+#: scripts/utils.sh:280
+msgid "complete"
+msgstr "完成"
 
-#: scripts/0_prepare.sh:82
-msgid "The image has been saved, skipping"
-msgstr "已保存過該鏡像, 跳過"
+#: scripts/utils.sh:292
+msgid "fail"
+msgstr "失敗"
 
-#: scripts/0_prepare.sh:86
-msgid "Save image"
-msgstr "保存鏡像"
+#: scripts/utils.sh:429 scripts/4_install_jumpserver.sh:20
+#: scripts/4_install_jumpserver.sh:33
+msgid "command not found, Please install it first"
+msgstr "未找到命令, 請先安裝"
 
-#: scripts/0_prepare.sh:96
-msgid "Preparing Docker offline package"
-msgstr "準備 Docker 離線包"
+#: scripts/utils.sh:461
+msgid "Check Configuration File"
+msgstr "檢查配置文件"
 
-#: scripts/0_prepare.sh:100
-msgid "Preparing image offline package"
-msgstr "準備鏡像離線包"
+#: scripts/utils.sh:462
+msgid "Path to Configuration file"
+msgstr "配置檔案位置"
+
+#: scripts/utils.sh:604 scripts/1_config_jumpserver.sh:237
+#: scripts/7_upgrade.sh:212
+msgid "Failed to change the table structure"
+msgstr "表結構變更失敗"
+
+#: scripts/utils.sh:686
+msgid "Failed to pull image"
+msgstr "拉取鏡像失敗"
 
 #: scripts/6_db_restore.sh:15 scripts/8_uninstall.sh:70
 msgid "Make sure you have a backup of data, this operation is not reversible"
@@ -431,36 +101,33 @@ msgstr "格式錯誤"
 msgid "The backup file does not exist"
 msgstr "備份文件不存在"
 
-#: scripts/8_uninstall.sh:19 scripts/8_uninstall.sh:33
-#: scripts/8_uninstall.sh:38 scripts/8_uninstall.sh:50
-#: scripts/8_uninstall.sh:59 scripts/8_uninstall.sh:77
-#: scripts/8_uninstall.sh:81
-msgid "Cleaning up"
-msgstr "正在清理"
+#: scripts/2_install_docker.sh:16
+msgid "Failed to extract docker.tar.gz"
+msgstr "無法解壓 docker.tar.gz"
 
-#: scripts/8_uninstall.sh:28
-msgid "Do you need to clean up the Docker binaries"
-msgstr "是否需要清理 Docker 二進制文件"
+#: scripts/2_install_docker.sh:27
+msgid "Docker program does not exist"
+msgstr "Docker 程式不存在"
 
-#: scripts/8_uninstall.sh:48 scripts/8_uninstall.sh:57
-msgid "Do you need to clean up the Docker Compose binaries"
-msgstr "是否需要清理 Docker Compose 二進制文件"
+#: scripts/2_install_docker.sh:64 scripts/2_install_docker.sh:157
+msgid "Permission denied. pass..."
+msgstr "權限被拒絕, 跳過..."
 
-#: scripts/8_uninstall.sh:74
-msgid "Are you clean up JumpServer files"
-msgstr "是否清理 JumpServer 相關文件"
+#: scripts/2_install_docker.sh:139
+msgid "Do you want to support IPv6"
+msgstr "是否需要支持 IPv6"
 
-#: scripts/8_uninstall.sh:88
-msgid "Do you need to clean up the Docker image"
-msgstr "是否清理 Docker 鏡像"
+#: scripts/2_install_docker.sh:189
+msgid "Install Docker"
+msgstr "安裝 Docker"
 
-#: scripts/8_uninstall.sh:95
-msgid "Cleanup complete"
-msgstr "清理完成"
+#: scripts/2_install_docker.sh:192
+msgid "Configure Docker"
+msgstr "配置 Docker"
 
-#: scripts/8_uninstall.sh:99 jmsctl.sh:57
-msgid "Uninstall JumpServer"
-msgstr "卸載 JumpServer"
+#: scripts/2_install_docker.sh:194
+msgid "Start Docker"
+msgstr "啟動 Docker"
 
 #: scripts/1_config_jumpserver.sh:8
 msgid "Configure Private Key"
@@ -594,86 +261,430 @@ msgstr "初始化資料庫"
 msgid "Docker image not found"
 msgstr "未找到 Docker 鏡像文件"
 
-#: scripts/3_load_images.sh:36
+#: scripts/3_load_images.sh:35
+#, fuzzy
+msgid "Error loading image"
+msgstr "載入 Docker 鏡像"
+
+#: scripts/3_load_images.sh:38
 msgid "Docker image loaded, skipping"
 msgstr "鏡像已載入, 跳過"
 
-#: jmsctl.sh:16
+#: scripts/8_uninstall.sh:19 scripts/8_uninstall.sh:33
+#: scripts/8_uninstall.sh:38 scripts/8_uninstall.sh:50
+#: scripts/8_uninstall.sh:59 scripts/8_uninstall.sh:77
+#: scripts/8_uninstall.sh:81
+msgid "Cleaning up"
+msgstr "正在清理"
+
+#: scripts/8_uninstall.sh:28
+msgid "Do you need to clean up the Docker binaries"
+msgstr "是否需要清理 Docker 二進制文件"
+
+#: scripts/8_uninstall.sh:48 scripts/8_uninstall.sh:57
+msgid "Do you need to clean up the Docker Compose binaries"
+msgstr "是否需要清理 Docker Compose 二進制文件"
+
+#: scripts/8_uninstall.sh:74
+msgid "Are you clean up JumpServer files"
+msgstr "是否清理 JumpServer 相關文件"
+
+#: scripts/8_uninstall.sh:88
+msgid "Do you need to clean up the Docker image"
+msgstr "是否清理 Docker 鏡像"
+
+#: scripts/8_uninstall.sh:95
+msgid "Cleanup complete"
+msgstr "清理完成"
+
+#: scripts/8_uninstall.sh:99 jmsctl.sh:59
+msgid "Uninstall JumpServer"
+msgstr "卸載 JumpServer"
+
+#: scripts/0_prepare.sh:21 scripts/0_prepare.sh:34
+msgid "Starting to download"
+msgstr "開始下載"
+
+#: scripts/0_prepare.sh:23 scripts/0_prepare.sh:36
+msgid "Download fails, check the network is normal"
+msgstr "下載失敗, 請檢查網路是否正常"
+
+#: scripts/0_prepare.sh:28 scripts/0_prepare.sh:41
+msgid "Using cache"
+msgstr "使用緩存文件"
+
+#: scripts/0_prepare.sh:57 scripts/7_upgrade.sh:45
+msgid "Docker is not running, please install and start"
+msgstr "Docker 沒有運行, 請安裝並啟動"
+
+#: scripts/0_prepare.sh:83
+msgid "The image has been saved, skipping"
+msgstr "已保存過該鏡像, 跳過"
+
+#: scripts/0_prepare.sh:87
+msgid "Save image"
+msgstr "保存鏡像"
+
+#: scripts/0_prepare.sh:97
+msgid "Preparing Docker offline package"
+msgstr "準備 Docker 離線包"
+
+#: scripts/0_prepare.sh:102
+msgid "Preparing image offline package"
+msgstr "準備鏡像離線包"
+
+#: scripts/4_install_jumpserver.sh:11
+msgid ""
+"The current Linux system does not support systemd management. Please deploy "
+"docker by yourself before running this script again"
+msgstr ""
+"當前 Linux 系統不支持 systemd 管理, 請先自行部署 docker 後再重新運行此腳本"
+
+#: scripts/4_install_jumpserver.sh:15
+msgid ""
+"The current Linux system does not support systemd management. Please deploy "
+"docker-compose by yourself before running this script again"
+msgstr ""
+"當前 Linux 系統不支持 systemd 管理, 請先自行部署 docker-compose 後再重新運行"
+"此腳本"
+
+#: scripts/4_install_jumpserver.sh:39
+msgid "The Installation is Complete"
+msgstr "安裝完成了"
+
+#: scripts/4_install_jumpserver.sh:50
+msgid "You can use the following command to start, and then visit"
+msgstr "可以使用如下命令啟動, 然後訪問"
+
+#: scripts/4_install_jumpserver.sh:54
+msgid "Other management commands"
+msgstr "其它一些管理命令"
+
+#: scripts/4_install_jumpserver.sh:59
+msgid "For more commands, you can enter ./jmsctl.sh --help to understand"
+msgstr "更多還有一些命令, 你可以 ./jmsctl.sh --help 來了解"
+
+#: scripts/4_install_jumpserver.sh:61
+msgid "Web access"
+msgstr "Web 訪問"
+
+#: scripts/4_install_jumpserver.sh:68
+msgid "Default username"
+msgstr "預設用戶"
+
+#: scripts/4_install_jumpserver.sh:68
+msgid "Default password"
+msgstr "預設密碼"
+
+#: scripts/4_install_jumpserver.sh:71
+msgid "access"
+msgstr "訪問"
+
+#: scripts/4_install_jumpserver.sh:76
+msgid "More information"
+msgstr "更多資訊"
+
+#: scripts/4_install_jumpserver.sh:77
+msgid "Official Website"
+msgstr "官方網站"
+
+#: scripts/4_install_jumpserver.sh:78
+msgid "Documentation"
+msgstr "官方文檔"
+
+#: scripts/4_install_jumpserver.sh:88
+msgid "Install and Configure Docker"
+msgstr "安裝配置 Docker"
+
+#: scripts/4_install_jumpserver.sh:93 scripts/7_upgrade.sh:296
+msgid "Loading Docker Image"
+msgstr "載入 Docker 鏡像"
+
+#: scripts/4_install_jumpserver.sh:97
+msgid "Install and Configure JumpServer"
+msgstr "安裝配置 JumpServer"
+
+#: scripts/7_upgrade.sh:21
+msgid "The current version is not detected, please check"
+msgstr "未偵測到目前應用程式的有效版本, 請檢查"
+
+#: scripts/7_upgrade.sh:26
+msgid ""
+"Your current version does not meet the minimum requirements. Please upgrade"
+msgstr "您當前的版本不滿足最低要求, 請先升級"
+
+#: scripts/7_upgrade.sh:179
+msgid "Back up to"
+msgstr "備份至"
+
+#: scripts/7_upgrade.sh:186
+msgid "Failed to backup the database. Continue to upgrade"
+msgstr "備份資料庫失敗, 繼續升級嗎"
+
+#: scripts/7_upgrade.sh:192
+msgid "Skip database backup"
+msgstr "跳過備份資料庫"
+
+#: scripts/7_upgrade.sh:199
+msgid ""
+"Detected that the JumpServer container is running. Do you want to close the "
+"container and continue to upgrade"
+msgstr "檢測到 JumpServer 正在運行, 是否需要關閉並繼續升級"
+
+#: scripts/7_upgrade.sh:214
+msgid "Failed to change the table structure. Continue to upgrade"
+msgstr "表結構變更失敗, 是否繼續"
+
+#: scripts/7_upgrade.sh:227
+msgid "Do you need to clean up the old version image"
+msgstr "是否需要清理舊版本鏡像文件"
+
+#: scripts/7_upgrade.sh:240
+msgid "Do you need upgrade Docker binaries"
+msgstr "是否升級 Docker binaries"
+
+#: scripts/7_upgrade.sh:263
+msgid "Do you need upgrade Docker Compose"
+msgstr "是否升級 Docker Compose"
+
+#: scripts/7_upgrade.sh:281
+msgid "Are you sure you want to update the current version to"
+msgstr "是否將版本更新至"
+
+#: scripts/7_upgrade.sh:299 jmsctl.sh:63
+msgid "Backup database"
+msgstr "備份資料庫"
+
+#: scripts/7_upgrade.sh:302
+msgid "Backup Configuration File"
+msgstr "備份配置文件"
+
+#: scripts/7_upgrade.sh:305
+msgid "Apply database changes"
+msgstr "進行資料庫變更"
+
+#: scripts/7_upgrade.sh:306
+msgid "Changing database schema may take a while, please wait patiently"
+msgstr "資料庫結構變更可能需要一段時間，請耐心等待"
+
+#: scripts/7_upgrade.sh:309
+msgid "Cleanup Image"
+msgstr "清理鏡像"
+
+#: scripts/7_upgrade.sh:312
+msgid "Upgrade Docker"
+msgstr "升級 Docker"
+
+#: scripts/7_upgrade.sh:318
+msgid "Upgrade successfully. You can now restart the program"
+msgstr "升級成功, 可以重新啟動程序了"
+
+#: scripts/config.sh:16
+msgid "Configuration ntp sync"
+msgstr "配置 NTP 時間同步"
+
+#: scripts/config.sh:17
+msgid "Initialize configuration file"
+msgstr "初始化配置文件"
+
+#: scripts/config.sh:18
+msgid "Configuration service port"
+msgstr "配置服務端口"
+
+#: scripts/config.sh:19
+msgid "Configuration web ssl"
+msgstr "配置 Web SSL 加密"
+
+#: scripts/config.sh:20
+msgid "Configuration jumpserver environment"
+msgstr "配置 JumpServer"
+
+#: scripts/config.sh:35
+msgid "Do you want to restart the service"
+msgstr "是否需要重啟服務"
+
+#: scripts/config.sh:43
+msgid "ntpdate is not installed, please install it first"
+msgstr "ntpdate 沒有安裝, 請先安裝"
+
+#: scripts/config.sh:47
+msgid "Please enter NTP SERVER"
+msgstr "請輸入 NTP 服務器地址"
+
+#: scripts/config.sh:65 scripts/config.sh:128
+msgid "Please enter HTTP PORT"
+msgstr "請輸入 HTTP 服務埠"
+
+#: scripts/config.sh:68 scripts/config.sh:129
+msgid "Please enter HTTPS PORT"
+msgstr "請輸入 HTTPS 服務埠"
+
+#: scripts/config.sh:75
+msgid "Please enter SSH PORT"
+msgstr "請輸入 KOKO SSH 服務埠"
+
+#: scripts/config.sh:80
+msgid "Please enter MAGNUS MYSQL PORT"
+msgstr "請輸入 MAGNUS MYSQL 服務埠"
+
+#: scripts/config.sh:83
+msgid "Please enter MAGNUS MARIADB PORT"
+msgstr "請輸入 MAGNUS MARIADB 服務埠"
+
+#: scripts/config.sh:86
+msgid "Please enter MAGNUS REDIS PORT"
+msgstr "請輸入 MAGNUS REDIS 服務埠"
+
+#: scripts/config.sh:89
+msgid "Please enter MAGNUS POSTGRESQL PORT"
+msgstr "請輸入 MAGNUS POSTGRESQL 服務埠"
+
+#: scripts/config.sh:92
+msgid "Please enter MAGNUS SQLSERVER PORT"
+msgstr "請輸入 MAGNUS SQLSERVER 服務埠"
+
+#: scripts/config.sh:97
+msgid "Please enter XRDP PORT"
+msgstr "請輸入 MAGNUS XRDP 服務埠"
+
+#: scripts/config.sh:102
+msgid "Please enter RAZOR PORT"
+msgstr "請輸入 MAGNUS RAZOR 服務埠"
+
+#: scripts/config.sh:107
+#, fuzzy
+msgid "Please enter MAGNUS ORACLE PORT"
+msgstr "請輸入 MAGNUS ORACLE 服務埠範圍"
+
+#: scripts/config.sh:112
+#, fuzzy
+msgid "Please enter NEC VNC PORT"
+msgstr "請輸入 KOKO SSH 服務埠"
+
+#: scripts/config.sh:130
+msgid "Please enter SERVER NAME"
+msgstr "請輸入 Nginx server_name 值"
+
+#: scripts/config.sh:139
+msgid "Please enter SSL CERTIFICATE FILE Absolute path"
+msgstr "請輸入 SSL 證書文件絕對路徑"
+
+#: scripts/config.sh:141
+msgid "SSL CERTIFICATE FILE not exists"
+msgstr "SSL 證書文件不存在"
+
+#: scripts/config.sh:147
+msgid "Please enter SSL CERTIFICATE KEY FILE Absolute path"
+msgstr "請輸入 SSL 證書私鑰文件絕對路徑"
+
+#: scripts/config.sh:149
+msgid "SSL CERTIFICATE KEY FILE not exists"
+msgstr "SSL 證書私鑰文件不存在"
+
+#: scripts/config.sh:167
+msgid "Please enter the environment variable key"
+msgstr "請輸入配置文件中的 key"
+
+#: scripts/config.sh:176
+msgid "Please enter the environment variable value"
+msgstr "請輸入配置文件中的 value"
+
+#: scripts/config.sh:179
+msgid "The operation changes are as follows"
+msgstr "操作變動如下"
+
+#: scripts/config.sh:184
+msgid "Do you want to update the environment variable"
+msgstr "是否更新配置"
+
+#: scripts/config.sh:191
+msgid "The environment variable has not changed"
+msgstr "配置沒有變更"
+
+#: scripts/config.sh:196
+msgid "Do you want to continue to add environment variables"
+msgstr "是否需要繼續添加或修改配置"
+
+#: scripts/config.sh:206 jmsctl.sh:17
+msgid "Configuration file not found"
+msgstr "未找到配置文件"
+
+#: jmsctl.sh:18
 msgid "If you are upgrading from v1.5.x, please copy the config.txt To"
 msgstr "如果您從 v1.5.x 版本升級，請將先前目錄中的 config.txt 複製到"
 
-#: jmsctl.sh:21
+#: jmsctl.sh:23
 msgid "There is a problem with the soft connection, Please update it again"
 msgstr "軟鏈接存在問題, 請重新更新"
 
-#: jmsctl.sh:40
+#: jmsctl.sh:42
 msgid "JumpServer Deployment Management Script"
 msgstr "JumpServer 部署管理腳本"
 
-#: jmsctl.sh:47
+#: jmsctl.sh:49
 msgid "Install JumpServer"
 msgstr "安裝 JumpServer"
 
-#: jmsctl.sh:48
+#: jmsctl.sh:50
 msgid "Upgrade JumpServer"
 msgstr "升級 JumpServer"
 
-#: jmsctl.sh:51
+#: jmsctl.sh:53
 msgid "Configuration  Tools"
 msgstr "配置工具"
 
-#: jmsctl.sh:52
+#: jmsctl.sh:54
 msgid "Start     JumpServer"
 msgstr "啟動   JumpServer"
 
-#: jmsctl.sh:53
+#: jmsctl.sh:55
 msgid "Stop      JumpServer"
 msgstr "停止   JumpServer"
 
-#: jmsctl.sh:54
+#: jmsctl.sh:56
 msgid "Restart   JumpServer"
 msgstr "重啟   JumpServer"
 
-#: jmsctl.sh:55
+#: jmsctl.sh:57
 msgid "Check     JumpServer"
 msgstr "檢查   JumpServer"
 
-#: jmsctl.sh:56
+#: jmsctl.sh:58
 msgid "Offline   JumpServer"
 msgstr "下線   JumpServer"
 
-#: jmsctl.sh:60
+#: jmsctl.sh:62
 msgid "Loading docker image"
 msgstr "載入 Docker 鏡像"
 
-#: jmsctl.sh:62
+#: jmsctl.sh:64
 msgid "Data recovery through database backup file"
 msgstr "通過資料庫備份文件恢復數據"
 
-#: jmsctl.sh:63
+#: jmsctl.sh:65
 msgid "Execute the original docker compose command"
 msgstr "執行原始 docker compose 命令"
 
-#: jmsctl.sh:64
+#: jmsctl.sh:66
 msgid "View log"
 msgstr "查看日誌"
 
-#: jmsctl.sh:119
+#: jmsctl.sh:121
 msgid "The current version is up to date"
 msgstr "當前版本已是最新"
 
-#: jmsctl.sh:124
+#: jmsctl.sh:126
 msgid "The latest version is"
 msgstr "最新版本是"
 
-#: jmsctl.sh:153 jmsctl.sh:159
+#: jmsctl.sh:155 jmsctl.sh:161
 msgid "Unsupported Operating System Error"
 msgstr "錯誤: 不支持的操作系統"
 
-#: jmsctl.sh:154
+#: jmsctl.sh:156
 msgid "macOS installer please see"
 msgstr "macOS 安裝請參考"
 
-#: jmsctl.sh:160
+#: jmsctl.sh:162
 msgid "Windows installer please see"
 msgstr "Windows 安裝請參考"

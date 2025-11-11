@@ -82,6 +82,24 @@ scrape_configs:
           job_name: magnus
           __path__: /data/jumpserver/magnus/data/logs/*.log
 
+  - job_name: nec
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          component: nec
+          job_name: nec
+          __path__: /data/jumpserver/nec/data/logs/*.log
+
+  - job_name: facelive
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          component: facelive
+          job_name: facelive
+          __path__: /data/jumpserver/facelive/data/logs/*.log
+
   - job_name: docker
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
@@ -90,7 +108,8 @@ scrape_configs:
           - name: name
             values: [jms_web, jms_core, jms_koko, jms_lion,
                     jms_chen, jms_magnus, jms_xrdp, jms_razor,
-                     jms_receptor]
+                     jms_receptor, jms_nec, jms_facelive,
+                     ]
     relabel_configs:
       - source_labels: ["__meta_docker_container_name"]
         regex: "/(.*)"

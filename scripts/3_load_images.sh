@@ -31,7 +31,9 @@ function load_image_files() {
     fi
     if [[ ${image_id} != "${saved_id}" ]]; then
       echo
-      docker load <"${IMAGE_DIR}/${filename}"
+      if ! docker load <"${IMAGE_DIR}/${filename}"; then
+        echo_red "$(gettext 'Error loading image'): ${filename}"
+      fi
     else
       echo "$(gettext 'Docker image loaded, skipping')"
     fi

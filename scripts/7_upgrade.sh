@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #
+export SHELLOPTS
+
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/utils.sh"
@@ -20,8 +22,8 @@ function verify_upgrade_version() {
     exit 1
   fi
 
-  if [ "$(printf '%s\n' "$required_version" "$current_version" | sort -V | head -n1)" != "$required_version" ]; then
-    log_error "$(gettext 'Your current version does not meet the minimum requirements. Please upgrade to') ${required_version}"
+  if [ "$(printf '%s\n' "$required_version" "$current_version" | sort -V | head -n1)" = "$current_version" ]; then
+    log_error "$(gettext 'Your current version does not meet the minimum requirements. Please upgrade') ${current_version} -> ${required_version}"
     exit 1
   fi
 }
@@ -74,7 +76,7 @@ function upgrade_config() {
     check_and_set_config "MAGNUS_REDIS_PORT" "63790"
     check_and_set_config "MAGNUS_POSTGRESQL_PORT" "54320"
     check_and_set_config "MAGNUS_SQLSERVER_PORT" "14330"
-    check_and_set_config "MAGNUS_ORACLE_PORTS" "30000-30030"
+    check_and_set_config "MAGNUS_ORACLE_PORT" "15210"
   fi
 }
 
@@ -274,6 +276,21 @@ function main() {
   to_version="${VERSION}"
   if [[ -n "${target}" ]]; then
     to_version="${target}"
+  fi
+  # Extract suffix from the original VERSION (e.g., -ce, -ee)
+  # The suffix is the part after the first hyphen.
+  # Example: VERSION="v3.10.11-ce" -> ori_suffix_part="-ce"
+  # Example: VERSION="v3.10.11"    -> ori_suffix_part=""
+  ori_suffix_part=$(echo "$VERSION" | grep -o -- '-.*' || true)
+
+  # Check if to_version already has a suffix
+  # Example: to_version="v3.11.0-ce" -> to_has_suffix will be non-empty
+  # Example: to_version="v3.11.0"    -> to_has_suffix will be empty
+  to_has_suffix=$(echo "$to_version" | grep -o -- '-.*' || true)
+
+  # If to_version does not have a suffix, but the original VERSION did, append it.
+  if [[ -z "${to_has_suffix}" && -n "${ori_suffix_part}" ]]; then
+    to_version="${to_version}${ori_suffix_part}"
   fi
 
   read_from_input confirm "$(gettext 'Are you sure you want to update the current version to') ${to_version} ?" "y/n" "${confirm}"

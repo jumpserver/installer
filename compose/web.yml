@@ -12,6 +12,7 @@ services:
       USE_LB: ${USE_LB:-1}
       USE_IPV6: ${USE_IPV6:-0}
       USE_XPACK: ${USE_XPACK:-0}
+      GZIP: ${GZIP:-on}
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-4096m}
       CORE_ENABLED: ${CORE_ENABLED:-1}
       KOKO_ENABLED: ${KOKO_ENABLED:-1}
@@ -19,6 +20,7 @@ services:
       CHEN_ENABLED: ${CHEN_ENABLED:-1}
       KAEL_ENABLED: ${KAEL_ENABLED:-0}
       RAZOR_ENABLED: ${RAZOR_ENABLED:-1}
+      FACELIVE_ENABLED: ${FACELIVE_ENABLED:-0}
     ports:
       - ${HTTP_PORT:-80}:${HTTP_PORT:-80}
     volumes:

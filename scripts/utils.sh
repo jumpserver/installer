@@ -48,7 +48,7 @@ function has_config() {
 function get_config() {
   key=$1
   default=${2-''}
-  value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }' | awk -F' ' '{ print $1 }')
+  value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }' | awk -F' ' '{ print $1 }' | tail -1)
   if [[ -z "$value" ]];then
     value="$default"
   fi
@@ -137,7 +137,7 @@ function get_db_info() {
   if [[ "${check_volume_dir}" == "0" ]]; then
     db_engine=$(get_config DB_ENGINE "postgresql")
   fi
-  
+
   mysql_data_exists="0"
   mariadb_data_exists="0"
   postgres_data_exists="0"
@@ -161,7 +161,7 @@ function get_db_info() {
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "mariadb:10.6"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        echo "postgres:16.3-bullseye"
+        echo "postgres:16.10-bookworm"
       fi
       ;;
     "file")
@@ -190,7 +190,7 @@ function get_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
   db_images=$(get_db_images)
   images=(
-    "redis:7.0-bullseye"
+    "redis:7.4.6-bookworm"
     "${db_images}"
   )
   for image in "${images[@]}"; do
@@ -207,6 +207,8 @@ function get_images() {
     echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
     echo "registry.fit2cloud.com/jumpserver/panda:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/nec:${VERSION}"
+    echo "registry.fit2cloud.com/jumpserver/facelive:${VERSION}"
   else
     echo "jumpserver/core:${VERSION}"
     echo "jumpserver/koko:${VERSION}"
@@ -342,8 +344,8 @@ function get_docker_compose_services() {
   [[ "${use_loki}" == "1" ]] && services+=" loki"
 
   if [[ "${use_xpack}" == "1" ]]; then
-    services+=" magnus razor xrdp video panda"
-    for service in magnus razor xrdp video panda; do
+    services+=" magnus razor xrdp video panda nec facelive"
+    for service in magnus razor xrdp video panda nec facelive; do
       enabled=$(get_config "${service^^}_ENABLED")
       [[ "${enabled}" == "0" ]] && services="${services//${service}/}"
     done
@@ -395,7 +397,7 @@ function get_docker_compose_cmd_line() {
   fi
 
   if [[ "${use_xpack}" == '1' ]]; then
-    for service in magnus razor xrdp video panda; do
+    for service in magnus razor xrdp video panda nec facelive; do
       if [[ "${services}" =~ ${service} ]]; then
         cmd+=" -f compose/${service}.yml"
       fi
@@ -472,11 +474,6 @@ function prepare_config() {
   fi
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
-  fi
-  if [[ "$(uname -m)" == "loongarch64" ]]; then
-    if ! grep -q "^SECURITY_LOGIN_CAPTCHA_ENABLED" "${CONFIG_FILE}"; then
-      echo "SECURITY_LOGIN_CAPTCHA_ENABLED=False" >> "${CONFIG_FILE}"
-    fi
   fi
 
   # shellcheck disable=SC2045
@@ -627,20 +624,7 @@ function pull_image() {
   IMAGE_PULL_POLICY=$(get_config_or_env 'IMAGE_PULL_POLICY')
 
   if [[ "${DOCKER_IMAGE_MIRROR}" == "1" ]]; then
-    case "$(uname -m)" in
-      "x86_64")
-        DOCKER_IMAGE_PREFIX="swr.cn-north-1.myhuaweicloud.com"
-        ;;
-      "aarch64")
-        DOCKER_IMAGE_PREFIX="swr.cn-north-4.myhuaweicloud.com"
-        ;;
-      "loongarch64")
-        DOCKER_IMAGE_PREFIX="swr.cn-southwest-2.myhuaweicloud.com"
-        ;;
-      "s390x")
-        DOCKER_IMAGE_PREFIX="swr.sa-brazil-1.myhuaweicloud.com"
-        ;;
-    esac
+    DOCKER_IMAGE_PREFIX="registry.cn-beijing.aliyuncs.com/jumpservice"
   else
     DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
   fi
@@ -667,13 +651,19 @@ function pull_image() {
   echo "[${image}] pulling"
   full_image_path="${image}"
   if [[ -n "${DOCKER_IMAGE_PREFIX}" ]]; then
-    if [[ $(image_has_prefix "${image}") != "1" ]]; then
+    if echo "${DOCKER_IMAGE_PREFIX}" | grep -q "/";then
+      app=$(echo "$image" | awk -F'/' '{ print $NF }')
+      full_image_path="${DOCKER_IMAGE_PREFIX}/${app}"
+    elif [[ $(image_has_prefix "${image}") != "1" ]]; then
       full_image_path="${DOCKER_IMAGE_PREFIX}/jumpserver/${image}"
     else
       full_image_path="${DOCKER_IMAGE_PREFIX}/${image}"
     fi
   fi
 
+  if [[ "${full_image_path}" != "${image}" ]]; then
+    echo "  -> [${full_image_path}]"
+  fi
   docker pull ${pull_args} "${full_image_path}"
   if [[ "${full_image_path}" != "${image}" ]]; then
     docker tag "${full_image_path}" "${image}"
