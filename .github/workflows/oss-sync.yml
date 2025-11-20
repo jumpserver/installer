@@ -1,0 +1,82 @@
+name: Sync Docker Binaries to OSS
+
+on:
+  workflow_dispatch:
+    inputs:
+      docker_version:
+        description: Docker static binary version (e.g. 28.5.1)
+        required: true
+        type: string
+        default: 28.5.1
+
+      docker_compose_version:
+        description: Docker Compose version (e.g. 2.40.3)
+        required: true
+        type: string
+        default: 2.40.3
+
+env:
+  OSS_ENDPOINT: oss-cn-beijing.aliyuncs.com
+  OSS_BUCKET: jms-pkg
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ossutil
+        run: |
+          set -euo pipefail
+          curl -fsSL https://gosspublic.alicdn.com/ossutil/install.sh | sudo bash
+
+      - name: Download Docker archives
+        run: |
+          set -euo pipefail
+          mkdir -p upload/docker/docker-ce/linux/static/stable
+          for arch in x86_64 aarch64; do
+            arch_dir="upload/docker/docker-ce/linux/static/stable/${arch}"
+            mkdir -p "${arch_dir}"
+            url="https://download.docker.com/linux/static/stable/${arch}/docker-${{ inputs.docker_version }}.tgz"
+            echo "Downloading ${url}"
+            curl -fsSL "${url}" -o "${arch_dir}/docker-${{ inputs.docker_version }}.tgz"
+          done
+
+      - name: Download Docker Compose binaries
+        run: |
+          set -euo pipefail
+          base_dir="upload/docker/compose/releases/download/v${{ inputs.docker_compose_version }}"
+          mkdir -p "${base_dir}"
+          for arch in x86_64 aarch64; do
+            url="https://github.com/docker/compose/releases/download/v${{ inputs.docker_compose_version }}/docker-compose-linux-${arch}"
+            echo "Downloading ${url}"
+            curl -fsSL "${url}" -o "${base_dir}/docker-compose-linux-${arch}"
+            chmod +x "${base_dir}/docker-compose-linux-${arch}"
+          done
+      - name: Generate checksums
+        run: |
+          set -euo pipefail
+          find upload -type f ! -name '*.md5' ! -name '*.sha256' -print0 | while IFS= read -r -d '' file; do
+            md5sum "${file}" | awk '{print $1}' > "${file}.md5"
+            sha256sum "${file}" | awk '{print $1}' > "${file}.sha256"
+          done
+      - name: Upload to OSS
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OSS_ACCESS_KEY_ID:-}" ] || [ -z "${OSS_ACCESS_KEY_SECRET:-}" ]; then
+            echo "Missing OSS credentials. Please set OSS_ACCESS_KEY_ID and OSS_ACCESS_KEY_SECRET secrets."
+            exit 1
+          fi
+          ossutil config -e "${OSS_ENDPOINT}" \
+                         -i "${OSS_ACCESS_KEY_ID}" \
+                         -k "${OSS_ACCESS_KEY_SECRET}" \
+                         -L EN \
+                         -c ossutilconfig
+          ossutil sync upload/ "oss://${OSS_BUCKET}/" -c ossutilconfig
