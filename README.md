@@ -1,8 +1,6 @@
-# JumpServer 安装管理包
+# JumpServer Installer
 
-从 v2.6 开始，JumpServer 统一了 **社区版** 和 **企业版** 的安装部署包，统一由 本项目 来维护。
-
-installer 可以安装、部署、更新 管理 JumpServer
+JumpServer Installer 用来安装和管理 JumpServer。
 
 ## 环境依赖
   - Linux x86_64
@@ -15,12 +13,7 @@ installer 可以安装、部署、更新 管理 JumpServer
 $ ./jmsctl.sh install
 ```
 
-## 离线安装
-
-[从社区下载离线安装包](https://community.fit2cloud.com/#/products/jumpserver/downloads)
-
-
-## 管理
+## 管理命令
 
 ```
 # 启动
@@ -70,6 +63,6 @@ $ ./jmsctl.sh tail
 
 ### config.txt 说明
 
-config.txt 文件是环境变量式配置文件，会挂在到各个容器中，这样可以不必为 koko，core，lion 单独设置配置文件
+config.txt 文件是环境变量配置文件，会挂在到各个容器中，这样可以不必为 koko，core，lion 单独设置配置文件。
 
-config-example.txt 有说明，可以参考 [JumpServer 参数说明文档](https://docs.jumpserver.org/zh/master/admin-guide/env/)
+具体可以参考： [JumpServer 参数说明文档](https://docs.jumpserver.org/zh/master/admin-guide/env/)
