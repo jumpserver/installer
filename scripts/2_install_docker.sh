@@ -179,7 +179,7 @@ function check_docker_start() {
 
 function check_docker_compose() {
   if ! docker compose version &>/dev/null; then
-    echo_failed
+    echo_failed "$(gettext 'Docker compose is not installed')"
     exit 1
   fi
   echo_done

@@ -34,7 +34,7 @@ function get_installer() {
   echo "download install script to /opt/jumpserver-installer-${VERSION}"
   cd /opt || exit 1
   if [ ! -d "/opt/jumpserver-installer-${VERSION}" ]; then
-    timeout 60 wget -qO jumpserver-installer-${VERSION}.tar.gz ${DOWNLOAD_URL}/jumpserver/installer/releases/download/${VERSION}/jumpserver-installer-${VERSION}.tar.gz || {
+    timeout 60 wget --show-progress -qO jumpserver-installer-${VERSION}.tar.gz ${DOWNLOAD_URL}/jumpserver/installer/releases/download/${VERSION}/jumpserver-installer-${VERSION}.tar.gz || {
       rm -f /opt/jumpserver-installer-${VERSION}.tar.gz
       echo -e "[\033[31m ERROR \033[0m] Failed to download jumpserver-installer-${VERSION}"
       exit 1
