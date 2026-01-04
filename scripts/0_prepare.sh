@@ -25,7 +25,7 @@ function download_and_verify() {
       md5_url="${url}.md5"
     fi
 
-    wget -q "${md5_url}" -O "${md5_target_path}" || {
+    wget --show-progress -q "${md5_url}" -O "${md5_target_path}" || {
       log_error "$(gettext 'Download fails, check the network is normal')"
       rm -f "${md5_target_path}"
       exit 1
@@ -38,7 +38,7 @@ function download_and_verify() {
   md5_matched=$(check_md5 "${target_path}" "${expected_md5}")
   if [[ ! -f "${target_path}" || "${md5_matched}" != "1" ]]; then
     echo "$(gettext 'Starting to download'): ${url}"
-    wget "${url}" -O "${target_path}" || {
+    wget --show-progress -q "${url}" -O "${target_path}" || {
       log_error "$(gettext 'Download fails, check the network is normal')"
       rm -f "${target_path}" "${md5_target_path}"
       exit 1
