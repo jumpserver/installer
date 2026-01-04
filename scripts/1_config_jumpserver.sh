@@ -241,14 +241,13 @@ function init_db() {
 
 function set_others() {
   echo_yellow "\n7. $(gettext 'Configure Others')"
-  lang=$(get_config LANGUAGE_CODE "zh-cn")
-  read_from_input lang "$(gettext 'Please enter language')" "${lang}"
+  lang=$(get_config LANGUAGE_CODE "zh")
+  read_from_input lang "$(gettext 'Please enter language')" "zh/en/ja/es/ko/ru/vi" "${lang}"
   set_config LANGUAGE_CODE "${lang}"
 
   timezone=$(get_config TIME_ZONE "Asia/Shanghai")
   read_from_input timezone "$(gettext 'Please enter timezone')" "" "${timezone}"
   set_config TIME_ZONE "${timezone}"
-
 }
 
 function main() {

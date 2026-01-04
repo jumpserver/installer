@@ -305,7 +305,12 @@ function echo_warn() {
 }
 
 function echo_failed() {
-  echo_red "$(gettext 'fail')"
+  msg="$(gettext 'fail')"
+  reason=$1
+  if [[ -n "${reason}" ]]; then
+    msg="${msg}: ${reason}"
+  fi
+  echo_red "${msg}"
 }
 
 function log_success() {
