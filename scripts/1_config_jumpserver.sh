@@ -185,7 +185,7 @@ function set_internal_redis() {
 function set_redis() {
   echo_yellow "\n4. $(gettext 'Configure Redis')"
   redis_engine="redis"
-  read_from_input redis_engine "$(gettext 'Please enter Redis Engine')?" "redis/sentinel" "${redis_engine}"
+  read_from_input redis_engine "$(gettext 'Please enter Redis Engine')" "redis/sentinel" "${redis_engine}"
 
   case "${redis_engine}" in
     redis)
@@ -239,6 +239,18 @@ function init_db() {
   fi
 }
 
+function set_others() {
+  echo_yellow "\n7. $(gettext 'Configure Others')"
+  lang=$(get_config LANGUAGE_CODE "zh-cn")
+  read_from_input lang "$(gettext 'Please enter language')" "${lang}"
+  set_config LANGUAGE_CODE "${lang}"
+
+  timezone=$(get_config TIME_ZONE "Asia/Shanghai")
+  read_from_input timezone "$(gettext 'Please enter timezone')" "" "${timezone}"
+  set_config TIME_ZONE "${timezone}"
+
+}
+
 function main() {
   if set_secret_key; then
     echo_done
@@ -253,6 +265,9 @@ function main() {
     echo_done
   fi
   if set_service; then
+    echo_done
+  fi
+  if set_others; then
     echo_done
   fi
   if init_db; then

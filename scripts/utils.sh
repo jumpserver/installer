@@ -80,6 +80,15 @@ function get_config_or_env() {
   echo "${value}"
 }
 
+function sed_in_place() {
+  # macOS requires a backup extension for sed -i, even if empty
+  if [[ "${OS}" == "Darwin" ]]; then
+    sed -i '' "$@"
+  else
+    sed -i "$@"
+  fi
+}
+
 function set_config() {
   key=$1
   value=$2
@@ -95,7 +104,7 @@ function set_config() {
     return
   fi
 
-  sed -i "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
+  sed_in_place "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
 function disable_config() {
@@ -103,7 +112,7 @@ function disable_config() {
 
   has=$(has_config "${key}")
   if [[ ${has} == "1" ]]; then
-    sed -i "s,^[ \t]*${key}=.*$,# ${key}=,g" "${CONFIG_FILE}"
+    sed_in_place "s,^[ \t]*${key}=.*$,# ${key}=,g" "${CONFIG_FILE}"
   fi
 }
 
@@ -223,14 +232,21 @@ function read_from_input() {
   msg=$2
   choices=$3
   default=$4
-  if [[ -n "${choices}" ]]; then
-    msg="${msg} (${choices}) "
-  fi
-  if [[ -z "${default}" ]]; then
-    msg="${msg} ($(gettext 'no default'))"
+
+  if [[ -z "${choices}" && -n "${default}" ]]; then
+    msg="${msg} [default: ${default}] "
+  elif [[ "${choices}" == "y/n" ]]; then
+    if [[ "${default}" == "y" ]]; then
+      msg="${msg} [Y/n]"
+    else
+      msg="${msg} [y/N]"
+    fi
+  elif [[ -n "${choices}" && -n "${default}" ]]; then
+    msg="${msg} [${choices}] (default: ${default})"
   else
-    msg="${msg} ($(gettext 'default') ${default})"
+    msg="${msg} [${choices}]"
   fi
+
   echo -n "${msg}: "
   read -r input
   if [[ -z "${input}" && -n "${default}" ]]; then
@@ -424,6 +440,9 @@ function get_video_worker_cmd_line() {
 }
 
 function prepare_check_required_pkg() {
+  if [[ -n "$UNCHECK_DEPENDENCIES" ]]; then
+    return 0
+  fi
   for i in curl wget tar iptables gettext; do
     command -v $i &>/dev/null || {
         echo_red "$i: $(gettext 'command not found, Please install it first') $i"
@@ -514,7 +533,7 @@ function prepare_config() {
   chmod 644 "${CONFIG_DIR}/mariadb/mariadb.cnf"
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
-    sed -i "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
+    sed_in_place "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
   fi
 }
 
