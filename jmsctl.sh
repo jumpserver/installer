@@ -159,7 +159,7 @@ function check_os() {
     echo "$(gettext 'macOS installer please see'): https://github.com/jumpserver/Dockerfile"
     exit 0
   fi
-   if [[ "${OS}" =~ MINGW.* ]]; then
+  if [[ "${OS}" =~ MINGW.* ]]; then
     echo
     echo "$(gettext 'Unsupported Operating System Error')"
     echo "$(gettext 'Windows installer please see'): https://github.com/jumpserver/Dockerfile"
