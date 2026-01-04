@@ -6,6 +6,9 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 . "${BASE_DIR}/utils.sh"
 
 function pre_install() {
+  if [[ -n "$UNCHECK_DEPENDENCIES" ]]; then
+    return 0
+  fi
   if ! command -v systemctl &>/dev/null; then
     docker version &>/dev/null || {
       log_error "$(gettext 'The current Linux system does not support systemd management. Please deploy docker by yourself before running this script again')"
