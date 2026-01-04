@@ -6,7 +6,7 @@ services:
     restart: always
     command: "server /data --console-address :9001"
     environment:
-      TZ: ${TZ:-Asia/Shanghai}
+      TZ: ${TIME_ZONE:-Asia/Shanghai}
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: $BOOTSTRAP_TOKEN
       MINIO_REGION_NAME: us-west-rack2

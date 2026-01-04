@@ -7,7 +7,7 @@ services:
       core: 0
     restart: always
     environment:
-      TZ: ${TZ:-Asia/Shanghai}
+      TZ: ${TIME_ZONE:-Asia/Shanghai}
       HTTP_PORT: ${HTTP_PORT:-80}
       USE_LB: ${USE_LB:-1}
       USE_IPV6: ${USE_IPV6:-0}

@@ -11,7 +11,7 @@ services:
       - ${VOLUME_DIR}/elasticsearch/data:/usr/share/elasticsearch/data
       - ${VOLUME_DIR}/elasticsearch/logs:/usr/share/elasticsearch/logs
     environment:
-      TZ: ${TZ:-Asia/Shanghai}
+      TZ: ${TIME_ZONE:-Asia/Shanghai}
       cluster.name: docker-cluster
       discovery.type: single-node
       network.host: 0.0.0.0
