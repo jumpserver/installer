@@ -93,6 +93,11 @@ function upgrade_config() {
     USE_LB=1
     set_config USE_LB "${USE_LB}"
   fi
+  verify_external_ssl=$(get_config VERIFY_EXTERNAL_SSL)
+  if [ -z "${verify_external_ssl}" ]; then
+    VERIFY_EXTERNAL_SSL="false"
+    set_config VERIFY_EXTERNAL_SSL "${VERIFY_EXTERNAL_SSL}"
+  fi
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
