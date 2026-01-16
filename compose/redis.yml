@@ -6,7 +6,7 @@ services:
     restart: always
     command: ["redis-server", "/etc/redis.conf", "--requirepass", "$REDIS_PASSWORD"]
     environment:
-      TZ: ${TIME_ZONE:-Asia/Shanghai}
+      TZ: ${TZ:-Asia/Shanghai}
       REDIS_PORT: $REDIS_PORT
       REDIS_PASSWORD: $REDIS_PASSWORD
     volumes:

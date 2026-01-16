@@ -245,9 +245,9 @@ function set_others() {
   read_from_input lang "$(gettext 'Please enter language')" "zh/en/ja/es/ko/ru/vi" "${lang}"
   set_config LANGUAGE_CODE "${lang}"
 
-  timezone=$(get_config TIME_ZONE "Asia/Shanghai")
+  timezone=$(get_config TZ "Asia/Shanghai")
   read_from_input timezone "$(gettext 'Please enter timezone')" "" "${timezone}"
-  set_config TIME_ZONE "${timezone}"
+  set_config TZ "${timezone}"
 }
 
 function main() {

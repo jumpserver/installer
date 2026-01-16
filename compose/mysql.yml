@@ -5,7 +5,7 @@ services:
     restart: always
     command: --character-set-server=utf8
     environment:
-      TZ: ${TIME_ZONE:-Asia/Shanghai}
+      TZ: ${TZ:-Asia/Shanghai}
       DB_PORT: $DB_PORT
       MYSQL_ROOT_PASSWORD: $DB_PASSWORD
       MYSQL_DATABASE: $DB_NAME
