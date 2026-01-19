@@ -265,6 +265,11 @@ function upgrade_compose() {
       if [[ "${confirm}" == "y" ]]; then
         echo
         cd "${BASE_DIR}" || exit 1
+        if check_root; then
+          install_compose
+        else
+          install_compose_home
+        fi
         check_compose_install
         check_docker_compose
       fi
