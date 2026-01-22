@@ -30,14 +30,14 @@ export DOCKER_VERSION=28.5.1
 DOCKER_URL="https://download.docker.com/linux/static/stable"
 DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
 
-if [[ "${USE_MIRROR}" == "1" ]];then
+if [[ "${DOCKER_IMAGE_MIRROR}" == "1" ]];then
   DOCKER_URL=${DOCKER_MIRROR}
 fi
 
 export DOCKER_COMPOSE_VERSION=v2.40.3
 COMPOSE_URL="https://github.com/docker/compose/releases/download"
 COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
-if [[ "${USE_MIRROR}" == "1" ]];then
+if [[ "${DOCKER_IMAGE_MIRROR}" == "1" ]];then
   COMPOSE_URL=${COMPOSE_MIRROR}
 fi
 

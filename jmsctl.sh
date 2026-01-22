@@ -149,7 +149,10 @@ function video-worker() {
   fi
 }
 
-function main() {
+function check_os() {
+  if [[ -n "$UNCHECK_DEPENDENCIES" ]]; then
+    return 0
+  fi
   if [[ "${OS}" == 'Darwin' ]]; then
     echo
     echo "$(gettext 'Unsupported Operating System Error')"
@@ -162,6 +165,11 @@ function main() {
     echo "$(gettext 'Windows installer please see'): https://github.com/jumpserver/Dockerfile"
     exit 0
   fi
+  return 0
+}
+
+function main() {
+  check_os || return 3
 
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""

@@ -9,6 +9,8 @@ services:
     command: start web
     env_file:
       - ${CONFIG_FILE}
+    environment:
+      TIME_ZONE: ${TZ:-Asia/Shanghai}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
