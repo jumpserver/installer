@@ -78,6 +78,13 @@ function service_to_docker_name() {
 EXE=""
 
 function start() {
+  target="/opt/jumpserver/installer"
+  if [[ -f "${target}" && -L "${target}" ]]; then
+    rm -f "${target}"
+  fi
+  if [[ ! -f "${target}" ]]; then
+    ln -s "${PROJECT_DIR}" "${target}" || echo ""
+  fi
   ${EXE} up -d
 }
 

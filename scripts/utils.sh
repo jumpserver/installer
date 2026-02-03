@@ -138,6 +138,38 @@ function check_db_data() {
   fi
 }
 
+function get_enabled_services() {
+  enabled_services=""
+  services=(core celery koko lion chen web)
+  xpack_services=(magnus razor xrdp video-worker panda nec facelive)
+
+  use_xpack=$(get_config_or_env USE_XPACK)
+  if [[ "${use_xpack}" == "1" ]]; then
+    services=("${services[@]}" "${xpack_services[@]}")
+  fi
+
+  for service in "${services[@]}"; do
+    key=$(echo "$service" | tr '[:lower:]' '[:upper:]')
+    key="${key}_ENABLED"
+    key=$(echo "$key" | sed 's/-/_/g')
+    if get_config_enabled "${key}"; then
+      enabled_services+=" ${service}"
+    fi
+  done
+ 
+  echo "${enabled_services}"
+}
+
+function get_config_enabled() {
+  key=$1
+  value=$(get_config "${key}")
+  if [[ "${value}" == "0" || "${value}" == "false" || "${value}" == "False" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 function get_db_info() {
   info_type=$1
   db_engine=$(get_config DB_ENGINE "mysql")
@@ -197,34 +229,25 @@ function get_db_images_file() {
 
 function get_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
-  db_images=$(get_db_images)
-  images=(
-    "redis:7.4.6-bookworm"
-    "${db_images}"
-  )
-  for image in "${images[@]}"; do
-    echo "${image}"
-  done
-  if [[ "$use_xpack" == "1" ]];then
-    echo "registry.fit2cloud.com/jumpserver/core:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/lion:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/chen:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/panda:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/nec:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/facelive:${VERSION}"
-  else
-    echo "jumpserver/core:${VERSION}"
-    echo "jumpserver/koko:${VERSION}"
-    echo "jumpserver/lion:${VERSION}"
-    echo "jumpserver/chen:${VERSION}"
-    echo "jumpserver/web:${VERSION}"
+  images=()
+  if get_config_enabled "DATABASE_ENABLED"; then
+    images+=("$(get_db_images)")
   fi
+  if get_config_enabled "REDIS_ENABLED"; then
+    images+=("redis:7.4.6-bookworm")
+  fi
+  enabled_services=$(get_enabled_services)
+  for service in "${enabled_services[@]}"; do
+    if [[ "${service}" == "video" ]]; then
+      image="jumpserver/video-worker:${VERSION}"
+    else
+      image="jumpserver/${service}:${VERSION}"
+    fi
+    if [[ "${use_xpack}" == "1" ]]; then
+      image="registry.fit2cloud.com/${image}"
+    fi
+    echo $image
+  done
 }
 
 function read_from_input() {
@@ -356,7 +379,7 @@ function get_docker_compose_services() {
   fi
 
   for service in core celery koko lion chen web; do
-    enabled=$(get_config "${service^^}_ENABLED")
+    enabled=$(get_config "$(echo "$service" | tr '[:lower:]' '[:upper:]')_ENABLED")
     [[ "${enabled}" == "0" ]] && services="${services//${service}/}"
   done
 
@@ -367,7 +390,7 @@ function get_docker_compose_services() {
   if [[ "${use_xpack}" == "1" ]]; then
     services+=" magnus razor xrdp video panda nec facelive"
     for service in magnus razor xrdp video panda nec facelive; do
-      enabled=$(get_config "${service^^}_ENABLED")
+      enabled=$(get_config "$(echo "$service" | tr '[:lower:]' '[:upper:]')_ENABLED")
       [[ "${enabled}" == "0" ]] && services="${services//${service}/}"
     done
   fi
@@ -416,6 +439,8 @@ function get_docker_compose_cmd_line() {
   if [[ "${services}" =~ loki ]]; then
     cmd+=" -f compose/loki.yml"
   fi
+
+  xpack_services="magnus razor xrdp video panda nec facelive"
 
   if [[ "${use_xpack}" == '1' ]]; then
     for service in magnus razor xrdp video panda nec facelive; do
