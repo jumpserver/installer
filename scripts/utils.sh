@@ -152,7 +152,7 @@ function get_enabled_services() {
     key=$(echo "$service" | tr '[:lower:]' '[:upper:]')
     key="${key}_ENABLED"
     key=$(echo "$key" | sed 's/-/_/g')
-    if get_config_enabled "${key}"; then
+    if [[ "$(get_config_enabled "${key}")" != "0" ]]; then
       enabled_services+=" ${service}"
     fi
   done
