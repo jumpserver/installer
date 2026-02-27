@@ -5,6 +5,9 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/const.sh"
 
+common_services=(core celery koko lion chen web)
+xpack_services=(magnus razor xrdp video panda nec facelive)
+
 function check_root() {
   [[ "$(id -u)" == 0 ]]
 }
@@ -143,13 +146,12 @@ function check_db_data() {
 }
 
 function get_enabled_services() {
-  enabled_services=""
-  services=(core celery koko lion chen web)
-  xpack_services=(magnus razor xrdp video-worker panda nec facelive)
+  enabled_services=()
 
   use_xpack=$(get_config_or_env USE_XPACK)
+  services=("${common_services[@]}")
   if [[ "${use_xpack}" == "1" ]]; then
-    services=("${services[@]}" "${xpack_services[@]}")
+    services+=("${xpack_services[@]}")
   fi
 
   for service in "${services[@]}"; do
@@ -160,11 +162,11 @@ function get_enabled_services() {
       key="VIDEO_ENABLED"
     fi
     if [[ "$(get_config_or_env "${key}")" != "0" ]]; then
-      enabled_services+=" ${service}"
+      enabled_services+=("${service}")
     fi
   done
  
-  echo "${enabled_services}"
+  echo "${enabled_services[@]}"
 }
 
 function get_config_enabled() {
@@ -218,7 +220,7 @@ function get_db_info() {
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "compose/mariadb.yml"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        echo "compose/postgres.yml"
+        echo "compose/postgresql.yml"
       fi
       ;;
     *)
@@ -365,12 +367,7 @@ function get_docker_compose_services() {
 
   use_xpack=$(get_config_or_env USE_XPACK)
 
-  services="core celery koko lion chen web"
-
-  receptor_enabled=$(get_config RECEPTOR_ENABLED)
-  if [[ "${receptor_enabled}" == "1" ]]; then
-    services+=" receptor"
-  fi
+  services=$(get_enabled_services)
 
   if [[ "${ignore_db}" != "ignore_db" ]]; then
     case "${db_engine}" in
@@ -384,22 +381,9 @@ function get_docker_compose_services() {
     [[ "${redis_host}" == "redis" ]] && services+=" redis"
   fi
 
-  for service in core celery koko lion chen web; do
-    enabled=$(get_config "$(echo "$service" | tr '[:lower:]' '[:upper:]')_ENABLED")
-    [[ "${enabled}" == "0" ]] && services="${services//${service}/}"
-  done
-
   [[ "${use_es}" == "1" ]] && services+=" es"
   [[ "${use_minio}" == "1" ]] && services+=" minio"
   [[ "${use_loki}" == "1" ]] && services+=" loki"
-
-  if [[ "${use_xpack}" == "1" ]]; then
-    services+=" magnus razor xrdp video panda nec facelive"
-    for service in magnus razor xrdp video panda nec facelive; do
-      enabled=$(get_config "$(echo "$service" | tr '[:lower:]' '[:upper:]')_ENABLED")
-      [[ "${enabled}" == "0" ]] && services="${services//${service}/}"
-    done
-  fi
 
   echo "${services}"
 }
@@ -410,6 +394,7 @@ function get_docker_compose_cmd_line() {
   use_xpack=$(get_config_or_env USE_XPACK)
   https_port=$(get_config HTTPS_PORT)
   db_images_file=$(get_db_images_file)
+
   cmd="docker compose"
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
@@ -418,43 +403,9 @@ function get_docker_compose_cmd_line() {
   fi
   services=$(get_docker_compose_services "$ignore_db")
 
-  for service in core celery receptor koko lion chen web redis; do
-    if [[ "${services}" =~ ${service} ]]; then
+  for service in $services; do
       cmd+=" -f compose/${service}.yml"
-    fi
   done
-
-  if [[ "${services}" =~ "mysql" || "${services}" =~ "postgresql" ]]; then
-    cmd+=" -f ${db_images_file}"
-  fi
-
-  use_es=$(get_config USE_ES)
-  if [[ "${use_es}" == "1" ]]; then
-    cmd+=" -f compose/es.yml"
-  fi
-
-  use_minio=$(get_config USE_MINIO)
-  if [[ "${use_minio}" == "1" ]]; then
-    cmd+=" -f compose/minio.yml"
-  fi
-
-  if [[ -n "${https_port}" ]]; then
-    cmd+=" -f compose/lb.yml"
-  fi
-
-  if [[ "${services}" =~ loki ]]; then
-    cmd+=" -f compose/loki.yml"
-  fi
-
-  xpack_services="magnus razor xrdp video panda nec facelive"
-
-  if [[ "${use_xpack}" == '1' ]]; then
-    for service in magnus razor xrdp video panda nec facelive; do
-      if [[ "${services}" =~ ${service} ]]; then
-        cmd+=" -f compose/${service}.yml"
-      fi
-    done
-  fi
 
   echo "${cmd}"
 }

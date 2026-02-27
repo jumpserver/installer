@@ -79,10 +79,10 @@ EXE=""
 
 function start() {
   target="/opt/jumpserver/installer"
-  if [[ -f "${target}" && -L "${target}" ]]; then
+  if [[ -L "${target}" ]]; then
     rm -f "${target}"
   fi
-  if [[ ! -f "${target}" ]]; then
+  if [[ ! -e "${target}" ]]; then
     ln -s "${PROJECT_DIR}" "${target}" || echo ""
   fi
   ${EXE} up -d
