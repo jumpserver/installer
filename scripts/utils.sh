@@ -152,7 +152,10 @@ function get_enabled_services() {
     key=$(echo "$service" | tr '[:lower:]' '[:upper:]')
     key="${key}_ENABLED"
     key=$(echo "$key" | sed 's/-/_/g')
-    if [[ "$(get_config_enabled "${key}")" != "0" ]]; then
+    if [[ "${service}" == "video-worker" ]]; then
+      key="VIDEO_ENABLED"
+    fi
+    if [[ "$(get_config_or_env "${key}")" != "0" ]]; then
       enabled_services+=" ${service}"
     fi
   done
@@ -240,7 +243,7 @@ function get_images() {
   for service in ${enabled_services}; do
     if [[ "${service}" == "video" ]]; then
       image="jumpserver/video-worker:${VERSION}"
-    elif [[ "${service}" == "" ]]; then
+    elif [[ "${service}" == "" || "${service}" == "celery" ]]; then
       continue
     else
       image="jumpserver/${service}:${VERSION}"
