@@ -48,7 +48,11 @@ function has_config() {
 function get_config() {
   key=$1
   default=${2-''}
-  value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }' | awk -F' ' '{ print $1 }' | tail -1)
+
+  if [[ -f "${CONFIG_FILE}" ]]; then
+    value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }' | awk -F' ' '{ print $1 }' | tail -1)
+  fi
+
   if [[ -z "$value" ]];then
     value="$default"
   fi
@@ -232,14 +236,10 @@ function get_db_images_file() {
 
 function get_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
-  images=()
-  if get_config_enabled "DATABASE_ENABLED"; then
-    images+=("$(get_db_images)")
-  fi
-  if get_config_enabled "REDIS_ENABLED"; then
-    images+=("redis:7.4.6-bookworm")
-  fi
+  images=("redis:7.4.6-bookworm")
+  images+=("$(get_db_images)")
   enabled_services=$(get_enabled_services)
+
   for service in ${enabled_services}; do
     if [[ "${service}" == "video" ]]; then
       image="jumpserver/video-worker:${VERSION}"
@@ -251,8 +251,9 @@ function get_images() {
     if [[ "${use_xpack}" == "1" ]]; then
       image="registry.fit2cloud.com/${image}"
     fi
-    echo $image
+    images+=("${image}")
   done
+  echo "${images[@]}"
 }
 
 function read_from_input() {

@@ -9,6 +9,7 @@ function pre_install() {
   if [[ -n "$UNCHECK_DEPENDENCIES" ]]; then
     return 0
   fi
+
   if ! command -v systemctl &>/dev/null; then
     docker version &>/dev/null || {
       log_error "$(gettext 'The current Linux system does not support systemd management. Please deploy docker by yourself before running this script again')"
@@ -19,6 +20,7 @@ function pre_install() {
       exit 1
     }
   fi
+
   if ! command -v iptables &>/dev/null; then 
     log_error "$(gettext 'command not found, Please install it first') iptables"
     exit 1
