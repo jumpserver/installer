@@ -237,9 +237,11 @@ function get_images() {
     images+=("redis:7.4.6-bookworm")
   fi
   enabled_services=$(get_enabled_services)
-  for service in "${enabled_services[@]}"; do
+  for service in ${enabled_services}; do
     if [[ "${service}" == "video" ]]; then
       image="jumpserver/video-worker:${VERSION}"
+    elif [[ "${service}" == "" ]]; then
+      continue
     else
       image="jumpserver/${service}:${VERSION}"
     fi
