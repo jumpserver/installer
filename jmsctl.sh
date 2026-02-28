@@ -121,6 +121,11 @@ function restart() {
   start
 }
 
+function clean() {
+  rm -f scripts/docker/*
+  rm -f scripts/images/*
+}
+
 function check_update() {
   current_version=$(get_current_version)
   latest_version=$(get_latest_version)
