@@ -73,12 +73,10 @@ function get_config_or_env() {
   key=$1
   value=''
   default=${2-''}
-  if [[ -f "${CONFIG_FILE}" ]];then
-    value=$(get_config "$key")
-  fi
 
-  if [[ -z "$value" ]];then
-    value=$(get_env_value "$key")
+  value=$(get_env_value "$key")
+  if [[ -z "$value" && -f "${CONFIG_FILE}" ]];then
+    value=$(get_config "$key")
   fi
 
   if [[ -z "$value" ]];then
