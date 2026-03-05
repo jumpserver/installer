@@ -51,6 +51,7 @@ function get_installer() {
 function config_installer() {
   cd /opt/jumpserver-installer-${VERSION} || exit 1
   sed -i "s/# DOCKER_IMAGE_MIRROR=1/DOCKER_IMAGE_MIRROR=1/g" /opt/jumpserver-installer-${VERSION}/config-example.txt
+  export DOCKER_IMAGE_MIRROR=1
   ./jmsctl.sh install
   ./jmsctl.sh start
 }
