@@ -5,6 +5,9 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/const.sh"
 
+common_services=(core celery koko lion chen web)
+xpack_services=(magnus razor xrdp video panda nec facelive)
+
 function check_root() {
   [[ "$(id -u)" == 0 ]]
 }
@@ -48,7 +51,11 @@ function has_config() {
 function get_config() {
   key=$1
   default=${2-''}
-  value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }' | awk -F' ' '{ print $1 }' | tail -1)
+
+  if [[ -f "${CONFIG_FILE}" ]]; then
+    value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }' | awk -F' ' '{ print $1 }' | tail -1)
+  fi
+
   if [[ -z "$value" ]];then
     value="$default"
   fi
@@ -66,12 +73,10 @@ function get_config_or_env() {
   key=$1
   value=''
   default=${2-''}
-  if [[ -f "${CONFIG_FILE}" ]];then
-    value=$(get_config "$key")
-  fi
 
-  if [[ -z "$value" ]];then
-    value=$(get_env_value "$key")
+  value=$(get_env_value "$key")
+  if [[ -z "$value" && -f "${CONFIG_FILE}" ]];then
+    value=$(get_config "$key")
   fi
 
   if [[ -z "$value" ]];then
@@ -138,6 +143,40 @@ function check_db_data() {
   fi
 }
 
+function get_enabled_services() {
+  enabled_services=()
+
+  use_xpack=$(get_config_or_env USE_XPACK)
+  services=("${common_services[@]}")
+  if [[ "${use_xpack}" == "1" ]]; then
+    services+=("${xpack_services[@]}")
+  fi
+
+  for service in "${services[@]}"; do
+    key=$(echo "$service" | tr '[:lower:]' '[:upper:]')
+    key="${key}_ENABLED"
+    key=$(echo "$key" | sed 's/-/_/g')
+    if [[ "${service}" == "video-worker" ]]; then
+      key="VIDEO_ENABLED"
+    fi
+    if [[ "$(get_config_or_env "${key}")" != "0" ]]; then
+      enabled_services+=("${service}")
+    fi
+  done
+ 
+  echo "${enabled_services[@]}"
+}
+
+function get_config_enabled() {
+  key=$1
+  value=$(get_config "${key}")
+  if [[ "${value}" == "0" || "${value}" == "false" || "${value}" == "False" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 function get_db_info() {
   info_type=$1
   db_engine=$(get_config DB_ENGINE "mysql")
@@ -179,7 +218,7 @@ function get_db_info() {
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "compose/mariadb.yml"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        echo "compose/postgres.yml"
+        echo "compose/postgresql.yml"
       fi
       ;;
     *)
@@ -197,34 +236,24 @@ function get_db_images_file() {
 
 function get_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
-  db_images=$(get_db_images)
-  images=(
-    "redis:7.4.6-bookworm"
-    "${db_images}"
-  )
-  for image in "${images[@]}"; do
-    echo "${image}"
+  images=("redis:7.4.6-bookworm")
+  images+=("$(get_db_images)")
+  enabled_services=$(get_enabled_services)
+
+  for service in ${enabled_services}; do
+    if [[ "${service}" == "video" ]]; then
+      image="jumpserver/video-worker:${VERSION}"
+    elif [[ "${service}" == "" || "${service}" == "celery" ]]; then
+      continue
+    else
+      image="jumpserver/${service}:${VERSION}"
+    fi
+    if [[ "${use_xpack}" == "1" ]]; then
+      image="registry.fit2cloud.com/${image}"
+    fi
+    images+=("${image}")
   done
-  if [[ "$use_xpack" == "1" ]];then
-    echo "registry.fit2cloud.com/jumpserver/core:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/koko:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/lion:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/chen:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/web:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/magnus:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/razor:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/video-worker:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/xrdp:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/panda:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/nec:${VERSION}"
-    echo "registry.fit2cloud.com/jumpserver/facelive:${VERSION}"
-  else
-    echo "jumpserver/core:${VERSION}"
-    echo "jumpserver/koko:${VERSION}"
-    echo "jumpserver/lion:${VERSION}"
-    echo "jumpserver/chen:${VERSION}"
-    echo "jumpserver/web:${VERSION}"
-  fi
+  echo "${images[@]}"
 }
 
 function read_from_input() {
@@ -248,6 +277,12 @@ function read_from_input() {
   fi
 
   echo -n "${msg}: "
+  if [[ "${AUTO_INSTALL}" == "1" ]]; then
+    echo "${default}"
+    export "${var}"="${default}"
+    return
+  fi
+
   read -r input
   if [[ -n "${input}" && "${choices}" == "y/n" ]]; then
     input=$(echo "${input}" | tr '[:upper:]' '[:lower:]')
@@ -339,12 +374,7 @@ function get_docker_compose_services() {
 
   use_xpack=$(get_config_or_env USE_XPACK)
 
-  services="core celery koko lion chen web"
-
-  receptor_enabled=$(get_config RECEPTOR_ENABLED)
-  if [[ "${receptor_enabled}" == "1" ]]; then
-    services+=" receptor"
-  fi
+  services=$(get_enabled_services)
 
   if [[ "${ignore_db}" != "ignore_db" ]]; then
     case "${db_engine}" in
@@ -358,22 +388,9 @@ function get_docker_compose_services() {
     [[ "${redis_host}" == "redis" ]] && services+=" redis"
   fi
 
-  for service in core celery koko lion chen web; do
-    enabled=$(get_config "${service^^}_ENABLED")
-    [[ "${enabled}" == "0" ]] && services="${services//${service}/}"
-  done
-
   [[ "${use_es}" == "1" ]] && services+=" es"
   [[ "${use_minio}" == "1" ]] && services+=" minio"
   [[ "${use_loki}" == "1" ]] && services+=" loki"
-
-  if [[ "${use_xpack}" == "1" ]]; then
-    services+=" magnus razor xrdp video panda nec facelive"
-    for service in magnus razor xrdp video panda nec facelive; do
-      enabled=$(get_config "${service^^}_ENABLED")
-      [[ "${enabled}" == "0" ]] && services="${services//${service}/}"
-    done
-  fi
 
   echo "${services}"
 }
@@ -384,6 +401,7 @@ function get_docker_compose_cmd_line() {
   use_xpack=$(get_config_or_env USE_XPACK)
   https_port=$(get_config HTTPS_PORT)
   db_images_file=$(get_db_images_file)
+
   cmd="docker compose"
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
@@ -392,41 +410,9 @@ function get_docker_compose_cmd_line() {
   fi
   services=$(get_docker_compose_services "$ignore_db")
 
-  for service in core celery receptor koko lion chen web redis; do
-    if [[ "${services}" =~ ${service} ]]; then
+  for service in $services; do
       cmd+=" -f compose/${service}.yml"
-    fi
   done
-
-  if [[ "${services}" =~ "mysql" || "${services}" =~ "postgresql" ]]; then
-    cmd+=" -f ${db_images_file}"
-  fi
-
-  use_es=$(get_config USE_ES)
-  if [[ "${use_es}" == "1" ]]; then
-    cmd+=" -f compose/es.yml"
-  fi
-
-  use_minio=$(get_config USE_MINIO)
-  if [[ "${use_minio}" == "1" ]]; then
-    cmd+=" -f compose/minio.yml"
-  fi
-
-  if [[ -n "${https_port}" ]]; then
-    cmd+=" -f compose/lb.yml"
-  fi
-
-  if [[ "${services}" =~ loki ]]; then
-    cmd+=" -f compose/loki.yml"
-  fi
-
-  if [[ "${use_xpack}" == '1' ]]; then
-    for service in magnus razor xrdp video panda nec facelive; do
-      if [[ "${services}" =~ ${service} ]]; then
-        cmd+=" -f compose/${service}.yml"
-      fi
-    done
-  fi
 
   echo "${cmd}"
 }
@@ -546,16 +532,7 @@ function prepare_config() {
 }
 
 function echo_logo() {
-  cat <<"EOF"
-
-       ██╗██╗   ██╗███╗   ███╗██████╗ ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗
-       ██║██║   ██║████╗ ████║██╔══██╗██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗
-       ██║██║   ██║██╔████╔██║██████╔╝███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝
-  ██   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗
-  ╚█████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║
-   ╚════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
-
-EOF
+  cat "${BASE_DIR}/logo.txt"
 
   echo -e "\t\t\t\t\t\t\t\t   Version: \033[33m $VERSION \033[0m \n"
 }

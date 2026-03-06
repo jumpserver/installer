@@ -63,6 +63,12 @@ function prepare_image_files() {
     echo "$(gettext 'Docker is not running, please install and start') ..."
     exit 1
   fi
+
+  if [[ ! -d "${IMAGE_DIR}" ]]; then
+    mkdir -p "${IMAGE_DIR}"
+  fi
+  rm -f "${IMAGE_DIR}/*" 
+
   pull_images
 
   images=$(get_images)
@@ -78,9 +84,6 @@ function prepare_image_files() {
       saved_id=$(cat "${md5_path}")
     fi
 
-    if [[ ! -d "${IMAGE_DIR}" ]]; then
-      mkdir -p "${IMAGE_DIR}"
-    fi
 
     if [[ -f "${image_path}" ]]; then
       if [[ "${image_id}" != "${saved_id}" ]]; then
