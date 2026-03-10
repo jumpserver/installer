@@ -284,6 +284,9 @@ function read_from_input() {
   fi
 
   read -r input
+  if [[ -n "${input}" && "${choices}" == "y/n" ]]; then
+    input=$(echo "${input}" | tr '[:upper:]' '[:lower:]')
+  fi
   if [[ -z "${input}" && -n "${default}" ]]; then
     export "${var}"="${default}"
   else
