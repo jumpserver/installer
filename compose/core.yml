@@ -3,6 +3,8 @@ services:
     image: ${REGISTRY:-docker.io}/jumpserver/core:${VERSION}
     container_name: jms_core
     hostname: jms_core
+    security_opt:
+      - apparmor=${CORE_APPARMOR_POLICY:-unconfined}
     ulimits:
       core: 0
     restart: always
