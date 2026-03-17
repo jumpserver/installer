@@ -6,7 +6,7 @@ services:
     ulimits:
       core: 0
     restart: always
-    privileged: true
+    privileged: ${KOKO_PRIVILEGED:-true}
     env_file:
       - ${CONFIG_FILE}
     environment:
