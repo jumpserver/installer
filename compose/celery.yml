@@ -5,6 +5,9 @@ services:
     hostname: jms_celery
     ulimits:
       core: 0
+    cpus: 1
+    mem_limit: 1g
+    mem_reservation: 1g
     restart: always
     privileged: true
     command: start task
