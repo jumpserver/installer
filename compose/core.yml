@@ -16,6 +16,7 @@ services:
     volumes:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
+      - ${VOLUME_DIR}/core/local:/opt/jumpserver/data/local
     healthcheck:
       test: "check http://localhost:8080/api/health/"
       interval: 10s
