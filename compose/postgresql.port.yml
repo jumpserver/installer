@@ -1,4 +1,4 @@
 services:
   postgresql:
     ports:
-      - "${POSTGRESQL_PORT}:5432"
+      - "${POSTGRESQL_EXPOSE_PORT}:5432"

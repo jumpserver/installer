@@ -414,8 +414,16 @@ function get_docker_compose_cmd_line() {
       cmd+=" -f compose/${service}.yml"
   done
 
-  postgresql_port=$(get_config POSTGRESQL_PORT)
-  if [[ -n "${postgresql_port}" ]]; then
+  if [[ ${USE_LB} == "1" ]]; then
+    cmd+=" -f compose/web.https.yml"
+  fi
+
+  if [[ ${HTTP_PORT} != "0"]];then
+    cmd+=" -f compose/web.http.yml"
+  fi
+
+  postgresql_expose_port=$(get_config POSTGRESQL_EXPOSE_PORT)
+  if [[ -n "${postgresql_expose_port}" ]]; then
     cmd+=" -f compose/postgresql.port.yml"
   fi
 
