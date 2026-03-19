@@ -418,7 +418,7 @@ function get_docker_compose_cmd_line() {
     cmd+=" -f compose/web.https.yml"
   fi
 
-  if [[ ${HTTP_PORT} != "0"]];then
+  if [[ ${HTTP_PORT} != "0" ]];then
     cmd+=" -f compose/web.http.yml"
   fi
 
