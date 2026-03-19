@@ -1,0 +1,4 @@
+services:
+  redis:
+    ports:
+      - "${REDIS_EXPOSE_PORT}:${REDIS_PORT}"

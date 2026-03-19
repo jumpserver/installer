@@ -79,13 +79,16 @@ EXE=""
 
 function start() {
   target="/opt/jumpserver/installer"
+  ${EXE} up -d
+
   if [[ -L "${target}" ]]; then
-    rm -f "${target}"
+    if [[ $(readlink "${target}") == "${PROJECT_DIR}" ]]; then
+      rm -f "${target}"
+    fi
   fi
   if [[ ! -e "${target}" ]]; then
     ln -s "${PROJECT_DIR}" "${target}" || echo ""
   fi
-  ${EXE} up -d
 }
 
 function stop() {

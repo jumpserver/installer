@@ -414,6 +414,16 @@ function get_docker_compose_cmd_line() {
       cmd+=" -f compose/${service}.yml"
   done
 
+  postgresql_port=$(get_config POSTGRESQL_PORT)
+  if [[ -n "${postgresql_port}" ]]; then
+    cmd+=" -f compose/postgresql.port.yml"
+  fi
+
+  redis_expose_port=$(get_config REDIS_EXPOSE_PORT)
+  if [[ -n "${redis_expose_port}" ]]; then
+    cmd+=" -f compose/redis.port.yml"
+  fi
+
   echo "${cmd}"
 }
 
