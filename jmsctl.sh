@@ -78,16 +78,15 @@ function service_to_docker_name() {
 EXE=""
 
 function start() {
-  target="/opt/jumpserver/installer"
   ${EXE} up -d
 
-  if [[ -L "${target}" ]]; then
-    if [[ $(readlink "${target}") == "${PROJECT_DIR}" ]]; then
-      rm -f "${target}"
-    fi
+  base_dir="${PROJECT_DIR}"
+  to="/opt/jumpserver/installer"
+  if [[ ! -L "$to" || "$(readlink -f "$to")" != "$base_dir" ]]; then
+      rm -f "$to"
   fi
-  if [[ ! -e "${target}" ]]; then
-    ln -s "${PROJECT_DIR}" "${target}" || echo ""
+  if [[ -e "$base_dir" && ! -e "$to" ]]; then
+      ln -s "$base_dir" "$to"
   fi
 }
 

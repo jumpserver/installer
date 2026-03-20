@@ -73,7 +73,9 @@ function prepare_image_files() {
 
   images=$(get_images)
   for image in ${images}; do
-    filename=$(basename "${image}").zst
+    app_name=$(basename ${image})
+    filename=${${app_name}"}.zst
+
     image_path="${IMAGE_DIR}/${filename}"
     md5_filename=$(basename "${image}").md5
     md5_path="${IMAGE_DIR}/${md5_filename}"
@@ -83,7 +85,6 @@ function prepare_image_files() {
     if [[ -f "${md5_path}" ]]; then
       saved_id=$(cat "${md5_path}")
     fi
-
 
     if [[ -f "${image_path}" ]]; then
       if [[ "${image_id}" != "${saved_id}" ]]; then
