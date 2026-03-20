@@ -73,8 +73,8 @@ function prepare_image_files() {
 
   images=$(get_images)
   for image in ${images}; do
-    app_name=$(basename ${image})
-    filename=${${app_name}"}.zst
+    app_name=$(basename "${image}")
+    filename="${app_name}.zst"
 
     image_path="${IMAGE_DIR}/${filename}"
     md5_filename=$(basename "${image}").md5
