@@ -186,6 +186,9 @@ function get_db_info() {
     db_engine=$(get_config DB_ENGINE "postgresql")
   fi
 
+  postgresql_expose_port=$(get_config POSTGRESQL_EXPOSE_PORT)
+  
+
   mysql_data_exists="0"
   mariadb_data_exists="0"
   postgres_data_exists="0"
@@ -218,7 +221,11 @@ function get_db_info() {
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "compose/mariadb.yml"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        echo "compose/postgresql.yml"
+        if [[ -n "${postgresql_expose_port}" ]]; then
+          echo "compose/postgresql.yml -f compose/postgresql.port.yml"
+        else
+          echo "compose/postgresql.yml"
+        fi
       fi
       ;;
     *)
@@ -422,16 +429,6 @@ function get_docker_compose_cmd_line() {
     cmd+=" -f compose/web.http.yml"
   fi
 
-  postgresql_expose_port=$(get_config POSTGRESQL_EXPOSE_PORT)
-  if [[ -n "${postgresql_expose_port}" ]]; then
-    cmd+=" -f compose/postgresql.port.yml"
-  fi
-
-  redis_expose_port=$(get_config REDIS_EXPOSE_PORT)
-  if [[ -n "${redis_expose_port}" ]]; then
-    cmd+=" -f compose/redis.port.yml"
-  fi
-
   echo "${cmd}"
 }
 
@@ -569,25 +566,45 @@ function image_has_prefix() {
   fi
 }
 
-function get_db_migrate_compose_cmd() {
+function get_db_compose_cmd() {
+  target=${1:-"all"}
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
+  ha_mode=$(get_config HA_MODE)
 
-  cmd="docker compose -f compose/init-db.yml"
-  if [[ "${db_host}" == "mysql" ]] || [[ "${db_host}" == "postgresql" ]]; then
-    db_images_file=$(get_db_images_file)
-    cmd+=" -f ${db_images_file}"
+  if [[ -z "${target}" ]]; then
+    target="all"
   fi
-  if [[ "${redis_host}" == "redis" ]]; then
-    cmd+=" -f compose/redis.yml"
+
+  cmd="docker compose "
+  if [[ "${target}" == "all" || "${target}" == "db" ]]; then
+      if [[ "${db_host}" == "mysql" || "${db_host}" == "postgresql" || "${ha_mode}" == "1" ]]; then
+        db_images_file=$(get_db_images_file)
+        cmd+=" -f ${db_images_file}"
+      fi
+  fi
+  if [[ "${target}" == "all" || "${target}" == "redis" ]]; then
+    if [[ "${redis_host}" == "redis" || "${ha_mode}" == "1" ]]; then
+      cmd+=" -f compose/redis.yml"
+      redis_expose_port=$(get_config REDIS_EXPOSE_PORT)
+      if [[ -n "${redis_expose_port}" ]]; then
+        cmd+=" -f compose/redis.port.yml"
+      fi
+    fi
   fi
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
   else
     cmd+=" -f compose/network-v6.yml"
   fi
+  echo "$cmd"
+}
+
+function get_db_migrate_compose_cmd() {
+  cmd=$(get_db_compose_cmd "all")
+  cmd+=" -f compose/init-db.yml"
   echo "$cmd"
 }
 
@@ -601,6 +618,26 @@ function create_db_ops_env() {
 function down_db_ops_env() {
   docker stop jms_core &>/dev/null
   docker rm jms_core &>/dev/null
+}
+
+function db_redis_start() {
+  target=$1
+  cmd=$(get_db_compose_cmd "${target}")
+  ${cmd} up -d || {
+    exit 1
+  }
+}
+
+function db_redis_stop() {
+  target=$1
+  cmd=$(get_db_compose_cmd "${target}")
+  ${cmd} down
+}
+
+function db_redis_restart() {
+  db_redis_stop
+  sleep 3
+  db_redis_start
 }
 
 function perform_db_migrations() {

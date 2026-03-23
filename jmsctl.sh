@@ -267,6 +267,18 @@ function main() {
   init_db)
     perform_db_migrations
     ;;
+  restart_db)
+    db_redis_restart "${target}"
+    ;;
+  stop_db)
+    db_redis_stop "${target}"
+    ;;
+  start_db)
+    db_redis_start "${target}"
+    ;;
+  cmd_db)
+    get_db_compose_cmd "${target}"
+    ;;
   video-worker)
     video-worker
     ;;
