@@ -26,7 +26,7 @@ services:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/nginx/data/logs:/var/log/nginx
     healthcheck:
-      test: "check http://localhost:51980/api/health/"
+      test: "check http://localhost/web/health/"
       interval: 10s
       timeout: 5s
       retries: 3
