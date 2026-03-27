@@ -12,6 +12,7 @@ services:
       USE_LB: ${USE_LB:-1}
       USE_IPV6: ${USE_IPV6:-0}
       USE_XPACK: ${USE_XPACK:-0}
+      WS_LISTEN_PORT: ${WS_LISTEN_PORT:-8070}
       GZIP: ${GZIP:-on}
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-4096m}
       CORE_ENABLED: ${CORE_ENABLED:-1}
