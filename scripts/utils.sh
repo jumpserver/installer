@@ -407,6 +407,8 @@ function get_docker_compose_cmd_line() {
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
   https_port=$(get_config HTTPS_PORT)
+  use_lb=$(get_config USE_LB)
+  http_port=$(get_config HTTP_PORT)
   db_images_file=$(get_db_images_file)
 
   cmd="docker compose"
@@ -421,11 +423,11 @@ function get_docker_compose_cmd_line() {
       cmd+=" -f compose/${service}.yml"
   done
 
-  if [[ ${USE_LB} == "1" ]]; then
+  if [[ "${use_lb}" == "1" ]]; then
     cmd+=" -f compose/web.https.yml"
   fi
 
-  if [[ -n "${HTTP_PORT}" && "${HTTP_PORT}" != "0" ]];then
+  if [[ -n "${http_port}" && "${http_port}" != "0" ]];then
     cmd+=" -f compose/web.http.yml"
   fi
 
