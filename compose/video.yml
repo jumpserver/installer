@@ -1,6 +1,6 @@
 services:
   video:
-    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/video-worker:${VERSION}
+    image: ${REGISTRY:-docker.io/jumpserver}/video-worker:${VERSION}
     container_name: jms_video
     hostname: jms_video
     cpus: 2

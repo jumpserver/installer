@@ -13,7 +13,7 @@ fi
 export TEXTDOMAINDIR=$PROJECT_DIR/locale
 export TEXTDOMAIN=jumpserver-installer
 
-export CONFIG_DIR='/opt/jumpserver/config'
+export CONFIG_DIR="${JS_CONFIG_DIR:-/opt/jumpserver/config}"
 export CONFIG_FILE=$CONFIG_DIR/config.txt
 
 # Compose 项目设置
