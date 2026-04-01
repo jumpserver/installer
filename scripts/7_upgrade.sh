@@ -221,6 +221,9 @@ function db_migrations() {
 
 function clean_images() {
   current_version=$(get_config CURRENT_VERSION)
+  if [[ "${current_version}" == "${VERSION}" ]]; then
+    return
+  fi
   if [[ "${current_version}" != "${to_version}" ]]; then
     old_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "jumpserver/" | grep "${current_version}")
     if [[ -n "${old_images}" ]]; then
