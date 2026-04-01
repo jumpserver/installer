@@ -40,10 +40,22 @@ function main() {
 
   case "${DB_ENGINE}" in
     mysql)
-      restore_cmd='mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < "${DB_FILE}"'
+      restore_cmd='
+        if [[ "${DB_FILE}" == *.gz ]]; then
+          gzip -dc "${DB_FILE}" | mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}"
+        else
+          mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < "${DB_FILE}"
+        fi
+      '
       ;;
     postgresql)
-      restore_cmd='PGPASSWORD="${DB_PASSWORD}" pg_restore --if-exists --clean --no-owner -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${DB_FILE}"'
+      restore_cmd='
+        if [[ "${DB_FILE}" == *.gz ]]; then
+          gzip -dc "${DB_FILE}" | PGPASSWORD="${DB_PASSWORD}" pg_restore --if-exists --clean --no-owner -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" -
+        else
+          PGPASSWORD="${DB_PASSWORD}" pg_restore --if-exists --clean --no-owner -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${DB_FILE}"
+        fi
+      '
       ;;
     *)
       log_error "$(gettext 'Invalid DB Engine selection')!"

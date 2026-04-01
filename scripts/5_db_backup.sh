@@ -59,6 +59,13 @@ function main() {
     rm -f "${DB_FILE}"
     exit 1
   else
+    if command -v gzip &>/dev/null; then
+      if gzip -f "${DB_FILE}"; then
+        DB_FILE="${DB_FILE}.gz"
+      else
+        log_warn "$(gettext 'Backup succeeded, but compression failed')!"
+      fi
+    fi
     log_success "$(gettext 'Backup succeeded! The backup file has been saved to'): ${DB_FILE}"
   fi
 
