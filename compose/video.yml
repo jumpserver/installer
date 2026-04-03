@@ -1,6 +1,6 @@
 services:
   video:
-    image: ${REGISTRY:-docker.io/jumpserver}/video-worker:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/video-worker:${VERSION}
     container_name: jms_video
     hostname: jms_video
     cpus: 2

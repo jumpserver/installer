@@ -71,11 +71,14 @@ function prepare_image_files() {
 
   pull_images
 
+  exit 0
+
   images=$(get_images)
   for image in ${images}; do
     app_name=$(basename "${image}")
     filename="${app_name}.zst"
-
+    echo ${image}
+    
     image_path="${IMAGE_DIR}/${filename}"
     md5_filename=$(basename "${image}").md5
     md5_path="${IMAGE_DIR}/${md5_filename}"

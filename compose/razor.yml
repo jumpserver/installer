@@ -1,6 +1,6 @@
 services:
   razor:
-    image: ${REGISTRY:-docker.io/jumpserver}/razor:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/razor:${VERSION}
     container_name: jms_razor
     hostname: jms_razor
     ulimits:

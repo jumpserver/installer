@@ -1,6 +1,6 @@
 services:
   panda:
-    image: ${REGISTRY:-docker.io/jumpserver}/panda:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/panda:${VERSION}
     container_name: jms_panda
     hostname: jms_panda
     ulimits:

@@ -1,6 +1,6 @@
 services:
   nec:
-    image: ${REGISTRY:-docker.io/jumpserver}/nec:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/nec:${VERSION}
     container_name: jms_nec
     hostname: jms_nec
     ulimits:
