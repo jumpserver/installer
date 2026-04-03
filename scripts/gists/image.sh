@@ -57,6 +57,28 @@ function image_has_prefix() {
   fi
 }
 
+function check_image_exists() {
+  image=$1
+  if docker image inspect -f '{{ .Id }}' "$image" &>/dev/null; then
+    echo "1"
+  else
+    echo "0"
+  fi
+}
+
+function get_pull_images_may_be_with_mirror() {
+  images_to=$(get_pull_images)
+  for image in ${images_to}; do
+    if [[ "$(check_image_exists "${image}")" == "0" ]]; then
+      echo "${image}"
+    fi
+  done
+}
+
+function parge_image_name_with_mirror() {
+
+}
+
 
 function pull_image() {
   image=$1
@@ -74,13 +96,7 @@ function pull_image() {
     fi
   fi
 
-  if docker image inspect -f '{{ .Id }}' "$image" &>/dev/null; then
-    exists=0
-  else
-    exists=1
-  fi
-
-  if [[ "$exists" == "0" && "$IMAGE_PULL_POLICY" != "Always" ]]; then
+  if [[ "$(check_image_exists "${image}")" == "1" && "$IMAGE_PULL_POLICY" != "Always" ]]; then
     echo "[${image}] exist, pass"
     return
   fi
@@ -118,26 +134,6 @@ function pull_image() {
   echo ""
 }
 
-function check_images() {
-  images_to=$(get_images)
-  failed=0
-
-  for image in ${images_to}; do
-    if ! docker image inspect -f '{{ .Id }}' "$image" &>/dev/null; then
-      pull_image "$image"
-    fi
-  done
-  for image in ${images_to}; do
-    if ! docker image inspect -f '{{ .Id }}' "$image" &>/dev/null; then
-      echo_red "$(gettext 'Failed to pull image') ${image}"
-      failed=1
-    fi
-  done
-
-  if [ $failed -eq 1 ]; then
-    exit 1
-  fi
-}
 
 function pull_images() {
   images_to=$(get_pull_images)
@@ -156,7 +152,5 @@ function pull_images() {
   wait ${pids[*]}
 
   trap - SIGINT SIGTERM
-
-  check_images
 }
 
