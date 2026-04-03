@@ -71,8 +71,6 @@ function prepare_image_files() {
 
   pull_images
 
-  exit 0
-
   images=$(get_images)
   for image in ${images}; do
     app_name=$(basename "${image}")

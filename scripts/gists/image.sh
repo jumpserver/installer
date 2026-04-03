@@ -1,4 +1,6 @@
+#!/usr/bin/env bash
 
+namespace=${NAMESPACE:-jumpserver}
 
 function get_db_images() {
   get_db_info "image"
@@ -45,7 +47,6 @@ function get_images() {
   done
   echo "${images[@]}"
 }
-
 
 
 function image_has_prefix() {

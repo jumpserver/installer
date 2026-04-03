@@ -1,7 +1,3 @@
-BASE_DIR="$(cd "../$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-
-
-
 
 common_services=(core celery koko lion chen web)
 xpack_services=(magnus razor xrdp video panda nec facelive)
