@@ -75,12 +75,7 @@ function get_pull_images_may_be_with_mirror() {
   done
 }
 
-function parge_image_name_with_mirror() {
-
-}
-
-
-function pull_image() {
+function get_image_full_path() {
   image=$1
   DOCKER_IMAGE_MIRROR=$(get_config_or_env 'DOCKER_IMAGE_MIRROR')
   IMAGE_PULL_POLICY=$(get_config_or_env 'IMAGE_PULL_POLICY')
@@ -96,20 +91,6 @@ function pull_image() {
     fi
   fi
 
-  if [[ "$(check_image_exists "${image}")" == "1" && "$IMAGE_PULL_POLICY" != "Always" ]]; then
-    echo "[${image}] exist, pass"
-    return
-  fi
-
-  pull_args=""
-  case "${BUILD_ARCH}" in
-    "x86_64") pull_args="--platform linux/amd64" ;;
-    "aarch64") pull_args="--platform linux/arm64" ;;
-    "loongarch64") pull_args="--platform linux/loong64" ;;
-    "s390x") pull_args="--platform linux/s390x" ;;
-  esac
-
-  echo "[${image}] pulling"
   full_image_path="${image}"
   if [[ -n "${DOCKER_IMAGE_PREFIX}" ]]; then
     if echo "${DOCKER_IMAGE_PREFIX}" | grep -q "/";then
@@ -122,11 +103,39 @@ function pull_image() {
     fi
   fi
 
+  echo "${full_image_path}"
+}
+
+function pull_image() {
+  image=$1
+  full_image_path=$(get_image_full_path "${image}")
+
+  pull_args=""
+  case "${BUILD_ARCH}" in
+    "x86_64") pull_args="--platform linux/amd64" ;;
+    "aarch64") pull_args="--platform linux/arm64" ;;
+    "loongarch64") pull_args="--platform linux/loong64" ;;
+    "s390x") pull_args="--platform linux/s390x" ;;
+  esac
+
+  echo "[${image}] pulling"
+
   if [[ "${full_image_path}" != "${image}" ]]; then
     echo "  -> [${full_image_path}]"
   fi
-  docker pull ${pull_args} "${full_image_path}"
+
+  echo "$(check_image_exists "${image}")"
   to_image="${image}"
+  if [[ -n "${NAMESPACE}" ]]; then
+    to_image=${to_image/jumpserver/${NAMESPACE}}
+  fi
+  if [[ "$(check_image_exists "${to_image}")" == "1" && "$IMAGE_PULL_POLICY" != "Always" ]]; then
+    echo "[${image}] exist, pass"
+    return
+  fi
+
+  docker pull ${pull_args} "${full_image_path}"
+  
   if [[ "${full_image_path}" != "${to_image}" ]]; then
     docker tag "${full_image_path}" "${to_image}"
     docker rmi -f "${full_image_path}"
