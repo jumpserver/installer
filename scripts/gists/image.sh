@@ -66,15 +66,6 @@ function check_image_exists() {
   fi
 }
 
-function get_pull_images_may_be_with_mirror() {
-  images_to=$(get_pull_images)
-  for image in ${images_to}; do
-    if [[ "$(check_image_exists "${image}")" == "0" ]]; then
-      echo "${image}"
-    fi
-  done
-}
-
 function get_image_full_path() {
   image=$1
   DOCKER_IMAGE_MIRROR=$(get_config_or_env 'DOCKER_IMAGE_MIRROR')
