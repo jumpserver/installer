@@ -135,7 +135,6 @@ function pull_image() {
   
   if [[ "${full_image_path}" != "${to_image}" ]]; then
     docker tag "${full_image_path}" "${to_image}"
-    docker rmi -f "${full_image_path}"
   fi
   echo ""
 }

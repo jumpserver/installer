@@ -67,7 +67,7 @@ function prepare_image_files() {
   if [[ ! -d "${IMAGE_DIR}" ]]; then
     mkdir -p "${IMAGE_DIR}"
   fi
-  rm -f "${IMAGE_DIR}/*" 
+  rm -f "${IMAGE_DIR}"/*
 
   pull_images
 
@@ -75,13 +75,16 @@ function prepare_image_files() {
   for image in ${images}; do
     app_name=$(basename "${image}")
     filename="${app_name}.zst"
-    echo ${image}
+    echo "${image}"
     
     image_path="${IMAGE_DIR}/${filename}"
     md5_filename=$(basename "${image}").md5
     md5_path="${IMAGE_DIR}/${md5_filename}"
 
-    image_id=$(docker inspect -f "{{.ID}}" "${image}")
+    if ! image_id=$(docker image inspect -f "{{.ID}}" "${image}" 2>/dev/null); then
+      log_error "$(gettext 'Image inspect failed'): ${image}"
+      return 1
+    fi
     saved_id=""
     if [[ -f "${md5_path}" ]]; then
       saved_id=$(cat "${md5_path}")
