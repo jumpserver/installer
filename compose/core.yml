@@ -24,5 +24,3 @@ services:
       start_period: 90s
     networks:
       - net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
