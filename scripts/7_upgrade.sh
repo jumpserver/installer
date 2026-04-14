@@ -195,6 +195,11 @@ function backup_db() {
 }
 
 function db_migrations() {
+  local role="${ROLE:-master}"
+  if [[ "${role,,}" == "standby" ]]; then
+     echo "Role is standby, skip database migrations"
+     return 
+  fi
   if docker ps | grep -E "core|koko|lion"&>/dev/null; then
     confirm="y"
     read_from_input confirm "$(gettext 'Detected that the JumpServer container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
