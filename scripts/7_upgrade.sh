@@ -227,7 +227,7 @@ function db_migrations() {
 function clean_images() {
   current_version=$(get_config CURRENT_VERSION)
 
-  if [[ -z "${to_version}" || -z "${current_version}"]];then
+  if [[ -z "${to_version}" || -z "${current_version}" ]];then
     echo "to_version or current_version is empty, skip clean images"
     return
   fi
