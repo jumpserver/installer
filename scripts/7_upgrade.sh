@@ -232,7 +232,7 @@ function clean_images() {
     return
   fi
 
-  if [[  "${current_version}" == "${to_version}" ]]; then
+  if [[ "${current_version}" == "${to_version}" ]]; then
     echo "current_version is equal to to_version, skip clean images"
     return
   fi
