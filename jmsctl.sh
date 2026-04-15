@@ -81,10 +81,11 @@ function start() {
   ${EXE} up -d
 
   base_dir="${PROJECT_DIR}"
-  to="/opt/jumpserver/installer"
+  to="/opt/current/installer"
   if [[ "$base_dir" == "$to" ]]; then
     return
   fi
+  mkdir -p /opt/current
   echo "$base_dir" > /var/run/installer.lock
   if [[ ! -L "$to" || "$(readlink -f "$to")" != "$base_dir" ]]; then
       rm -f "$to"
