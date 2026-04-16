@@ -114,6 +114,7 @@ function get_docker_compose_services() {
   use_es=$(get_config USE_ES)
   use_minio=$(get_config USE_MINIO)
   use_loki=$(get_config USE_LOKI)
+  ha_mode=$(get_config HA_MODE)
 
   use_xpack=$(get_config_or_env USE_XPACK)
 
@@ -122,13 +123,13 @@ function get_docker_compose_services() {
   if [[ "${ignore_db}" != "ignore_db" ]]; then
     case "${db_engine}" in
       mysql)
-        [[ "${db_host}" == "mysql" ]] && services+=" mysql"
+        [[ "${db_host}" == "mysql" || "${ha_mode}" == "1" ]] && services+=" mysql"
         ;;
       postgresql)
-        [[ "${db_host}" == "postgresql" ]] && services+=" postgresql"
+        [[ "${db_host}" == "postgresql" || "${ha_mode}" == "1" ]] && services+=" postgresql"
         ;;
     esac
-    [[ "${redis_host}" == "redis" ]] && services+=" redis"
+    [[ "${redis_host}" == "redis" || "${ha_mode}" == "1" ]] && services+=" redis"
   fi
 
   [[ "${use_es}" == "1" ]] && services+=" es"
