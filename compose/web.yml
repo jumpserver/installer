@@ -5,7 +5,14 @@ services:
     hostname: jms_web
     ulimits:
       core: 0
+      memlock:
+        soft: -1
+        hard: -1
     restart: always
+    security_opt:
+      - apparmor=unconfined
+    cap_add:
+      - BPF
     environment:
       TZ: ${TZ:-Asia/Shanghai}
       HTTP_PORT: 80
@@ -25,6 +32,7 @@ services:
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/nginx/data/logs:/var/log/nginx
+      - /sys/fs/bpf:/sys/fs/bpf
     healthcheck:
       test: "check http://localhost/web/health/"
       interval: 10s
