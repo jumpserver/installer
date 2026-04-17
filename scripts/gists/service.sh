@@ -147,6 +147,7 @@ function get_docker_compose_cmd_line() {
   use_lb=$(get_config USE_LB)
   http_port=$(get_config HTTP_PORT)
   db_images_file=$(get_db_images_file)
+  cap_addon=$(get_config CAP_ADDON)
 
   cmd="docker compose"
   if [[ "${use_ipv6}" != "1" ]]; then
@@ -166,6 +167,10 @@ function get_docker_compose_cmd_line() {
 
   if [[ -n "${http_port}" && "${http_port}" != "0" ]];then
     cmd+=" -f compose/web.http.yml"
+  fi
+
+  if [[ "${cap_addon}" == "1" ]]; then
+    cmd+=" -f compose/cap_addon.yml"
   fi
 
   echo "${cmd}"
