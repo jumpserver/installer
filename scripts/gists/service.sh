@@ -115,12 +115,11 @@ function get_docker_compose_services() {
   use_minio=$(get_config USE_MINIO)
   use_loki=$(get_config USE_LOKI)
   ha_mode=$(get_config HA_MODE)
-
   use_xpack=$(get_config_or_env USE_XPACK)
-
   services=$(get_enabled_services)
 
   if [[ "${ignore_db}" != "ignore_db" ]]; then
+    info=(get_db_info)
     case "${db_engine}" in
       mysql)
         [[ "${db_host}" == "mysql" || "${ha_mode}" == "1" ]] && services+=" mysql"
@@ -155,11 +154,16 @@ function get_docker_compose_cmd_line() {
   else
     cmd+=" -f compose/network-v6.yml"
   fi
-  services=$(get_docker_compose_services "$ignore_db")
+  services=$(get_docker_compose_services "ignore_db")
 
   for service in $services; do
       cmd+=" -f compose/${service}.yml"
   done
+
+  db_yml=$(get_db_compose_yml)
+  if [[ -n "${db_yml}" ]]; then
+    cmd+=" ${db_yml}"
+  fi
 
   if [[ "${use_lb}" == "1" ]]; then
     cmd+=" -f compose/web.https.yml"
@@ -199,20 +203,18 @@ function get_latest_version() {
     sed 's/\"//g;s/,//g;s/ //g'
 }
 
-
-function get_db_compose_cmd() {
+function get_db_compose_yml() {
   target=${1:-"all"}
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
-  use_ipv6=$(get_config USE_IPV6)
-  use_xpack=$(get_config_or_env USE_XPACK)
   ha_mode=$(get_config HA_MODE)
+  db_images_file=$(get_db_info "file")
 
   if [[ -z "${target}" ]]; then
     target="all"
   fi
 
-  cmd="docker compose "
+  cmd=""
   if [[ "${target}" == "all" || "${target}" == "db" ]]; then
       if [[ "${db_host}" == "mysql" || "${db_host}" == "postgresql" || "${ha_mode}" == "1" ]]; then
         db_images_file=$(get_db_images_file)
@@ -228,6 +230,22 @@ function get_db_compose_cmd() {
       fi
     fi
   fi
+  echo "${cmd}"
+}
+
+
+function get_db_compose_cmd() {
+  target=${1:-"all"}
+  use_ipv6=$(get_config USE_IPV6)
+  use_xpack=$(get_config_or_env USE_XPACK)
+
+  cmd="docker compose "
+  yml=$(get_db_compose_yml)
+
+  if [[ -n "${yml}" ]]; then
+    cmd+=" ${yml}"
+  fi
+ 
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
   else
