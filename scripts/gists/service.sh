@@ -50,6 +50,10 @@ function check_db_data() {
   fi
 }
 
+function get_db_images_file() {
+  get_db_info "file"
+}
+
 function get_db_info() {
   info_type=$1
   db_engine=$(get_config DB_ENGINE "mysql")
@@ -111,6 +115,8 @@ function get_docker_compose_services() {
   db_engine=$(get_config DB_ENGINE "mysql")
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
+  redis_expose_port=$(get_config REDIS_EXPOSE_PORT)
+  pg_expose_port=$(get_config POSTGRESQL_EXPOSE_PORT)
   use_es=$(get_config USE_ES)
   use_minio=$(get_config USE_MINIO)
   use_loki=$(get_config USE_LOKI)
@@ -125,10 +131,10 @@ function get_docker_compose_services() {
         [[ "${db_host}" == "mysql" || "${ha_mode}" == "1" ]] && services+=" mysql"
         ;;
       postgresql)
-        [[ "${db_host}" == "postgresql" || "${ha_mode}" == "1" ]] && services+=" postgresql"
+        [[ "${db_host}" == "postgresql" || "${ha_mode}" == "1" || -n "${pg_expose_port}" ]] && services+=" postgresql"
         ;;
     esac
-    [[ "${redis_host}" == "redis" || "${ha_mode}" == "1" ]] && services+=" redis"
+    [[ "${redis_host}" == "redis" || "${ha_mode}" == "1" || -n "${redis_expose_port}" ]] && services+=" redis"
   fi
 
   [[ "${use_es}" == "1" ]] && services+=" es"
@@ -209,6 +215,7 @@ function get_db_compose_yml() {
   redis_host=$(get_config REDIS_HOST)
   ha_mode=$(get_config HA_MODE)
   db_images_file=$(get_db_info "file")
+  redis_expose_port=$(get_config REDIS_EXPOSE_PORT)
 
   if [[ -z "${target}" ]]; then
     target="all"
@@ -222,9 +229,8 @@ function get_db_compose_yml() {
       fi
   fi
   if [[ "${target}" == "all" || "${target}" == "redis" ]]; then
-    if [[ "${redis_host}" == "redis" || "${ha_mode}" == "1" ]]; then
+    if [[ "${redis_host}" == "redis" || "${ha_mode}" == "1" || -n "${redis_expose_port}" ]]; then
       cmd+=" -f compose/redis.yml"
-      redis_expose_port=$(get_config REDIS_EXPOSE_PORT)
       if [[ -n "${redis_expose_port}" ]]; then
         cmd+=" -f compose/redis.port.yml"
       fi

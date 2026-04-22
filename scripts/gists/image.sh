@@ -6,10 +6,6 @@ function get_db_images() {
   get_db_info "image"
 }
 
-function get_db_images_file() {
-  get_db_info "file"
-}
-
 function get_pull_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
   images=("redis:7.4.6-bookworm")
