@@ -97,12 +97,14 @@ function start() {
 }
 
 function stop() {
-  if [[ -n "${target}" ]]; then
+  if [[ "${target}" == "ignore_db" ]]; then
+    cmd=$(get_docker_compose_cmd_line "ignore_db")
+    ${cmd} down -v
+  elif [[ -n "${target}" ]]; then
     ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
-    return
+  else
+    ${EXE} down -v
   fi
-  cmd=$(get_docker_compose_cmd_line ignore_db)
-  $cmd down -v
 }
 
 function close() {
@@ -224,7 +226,7 @@ function main() {
     restart
     ;;
   stop)
-    stop
+    stop 
     ;;
   pull)
     pull
