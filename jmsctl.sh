@@ -101,7 +101,8 @@ function stop() {
     ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     return
   fi
-  ${EXE} down -v
+  cmd=$(get_docker_compose_cmd_line ignore_db)
+  $cmd down -v
 }
 
 function close() {

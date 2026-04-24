@@ -166,9 +166,11 @@ function get_docker_compose_cmd_line() {
       cmd+=" -f compose/${service}.yml"
   done
 
-  db_yml=$(get_db_compose_yml)
-  if [[ -n "${db_yml}" ]]; then
-    cmd+=" ${db_yml}"
+  if [[ "${ignore_db}" != "ignore_db" ]]; then
+    db_yml=$(get_db_compose_yml)
+    if [[ -n "${db_yml}" ]]; then
+      cmd+=" ${db_yml}"
+    fi
   fi
 
   if [[ "${use_lb}" == "1" ]]; then
