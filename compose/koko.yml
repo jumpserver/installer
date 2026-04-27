@@ -9,10 +9,8 @@ services:
     privileged: ${KOKO_PRIVILEGED:-true}
     env_file:
       - ${CONFIG_FILE}
-    environment:
-      - SSHD_PORT=${SSH_PORT:-2222}
     ports:
-      - ${SSH_PORT:-2222}:${SSH_PORT:-2222}
+      - ${KOKO_SSH_PORT:-2222}:2222
     volumes:
       - ${CONFIG_DIR}/certs:/opt/koko/data/certs
       - ${VOLUME_DIR}/koko/data:/opt/koko/data
