@@ -50,10 +50,26 @@ function main() {
       ;;
     postgresql)
       restore_cmd='
+        restore_pg_file() {
+          local input_file=$1
+          local magic
+
+          magic=$(dd if="${input_file}" bs=1 count=5 2>/dev/null)
+          if [[ "${magic}" == "PGDMP" ]]; then
+            PGPASSWORD="${DB_PASSWORD}" pg_restore --if-exists --clean --no-owner -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${input_file}"
+          else
+            PGPASSWORD="${DB_PASSWORD}" psql -q -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" < "${input_file}" >/dev/null
+          fi
+        }
+
         if [[ "${DB_FILE}" == *.gz ]]; then
-          gzip -dc "${DB_FILE}" | PGPASSWORD="${DB_PASSWORD}" pg_restore --if-exists --clean --no-owner -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" -
+          tmp_restore_file="${DB_FILE%.gz}"
+          gzip -dc "${DB_FILE}" > "${tmp_restore_file}" && restore_pg_file "${tmp_restore_file}"
+          rc=$?
+          rm -f "${tmp_restore_file}"
+          exit ${rc}
         else
-          PGPASSWORD="${DB_PASSWORD}" pg_restore --if-exists --clean --no-owner -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${DB_FILE}"
+          restore_pg_file "${DB_FILE}"
         fi
       '
       ;;
