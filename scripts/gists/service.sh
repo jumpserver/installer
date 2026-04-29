@@ -182,11 +182,7 @@ function get_docker_compose_cmd_line() {
   fi
 
   if [[ "${cap_addon}" == "1" ]]; then
-    if uname -a | grep -qi "PlatOS"; then
-        cmd+=" -f compose/cap_addon_platos.yml"
-    else
-        cmd+=" -f compose/cap_addon.yml"
-    fi
+    cmd+=" -f compose/cap_addon.yml"
   fi
 
   echo "${cmd}"
