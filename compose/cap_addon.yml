@@ -3,7 +3,7 @@ services:
     security_opt:
       - apparmor=unconfined
     cap_add:
-      - BPF
+      - CAP_SYS_ADMIN
   core:
     security_opt:
       - apparmor=${CORE_APPARMOR_POLICY:-unconfined}
