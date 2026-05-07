@@ -14,7 +14,7 @@ services:
       - ${VOLUME_DIR}/razor/data:/opt/razor/data
       - ${CONFIG_DIR}/nginx/cert:/opt/razor/cert
     healthcheck:
-      test: "curl -fsL http://localhost:8084/razor/health/ > /dev/null"
+      test: "check http://localhost:8084/razor/health/"
       interval: 10s
       timeout: 5s
       retries: 3

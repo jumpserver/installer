@@ -14,7 +14,7 @@ services:
       - ${CONFIG_DIR}/certs:/opt/nec/data/certs
       - ${VOLUME_DIR}/nec/data:/opt/nec/data
     healthcheck:
-      test: "curl -fsL http://localhost:8085/nec/health/ > /dev/null"
+      test: "check http://localhost:8085/nec/health/"
       interval: 10s
       timeout: 5s
       retries: 3
