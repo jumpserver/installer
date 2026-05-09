@@ -78,6 +78,8 @@ function service_to_docker_name() {
 EXE=""
 
 function start() {
+  ${EXE} up -d
+
   base_dir="${PROJECT_DIR}"
   to="/opt/current/installer"
   if [[ "$base_dir" == "$to" ]]; then
