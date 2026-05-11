@@ -20,7 +20,7 @@ services:
       - ${CONFIG_DIR}/certs:/opt/magnus/data/certs
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
     healthcheck:
-      test: "check http://localhost:8088/health/"
+      test: "check http://localhost:8088/health"
       interval: 10s
       timeout: 5s
       retries: 3
