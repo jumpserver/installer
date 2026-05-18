@@ -131,7 +131,7 @@ function restart() {
   stop
   echo -e "\n"
 
-  if [[ -n "${target}" ]]; then
+  if [[ -n "${target}" && "${target}" != "ignore_db" ]]; then
     ${EXE} up -d "${target}"
     return
   fi
