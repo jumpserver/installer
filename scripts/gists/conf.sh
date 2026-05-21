@@ -56,8 +56,59 @@ function get_config_or_env() {
   echo "${value}"
 }
 
+CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD REDIS_PASSWORD"
 
+function is_config_excluded() {
+  local key=$1
+  local excluded
 
+  for excluded in ${CONFIG_SAFE_EXCLUDES}; do
+    if [[ "${key}" == "${excluded}" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+function gen_safe_config() {
+  local base_config_file=${CONFIG_FILE}
+  local output_file=${CONFIG_SAFE_FILE}
+  local tmp_file="${output_file}.tmp.$$"
+  local line key value
+
+  mkdir -p "${CONFIG_DIR}"
+  : >"${tmp_file}"
+
+  if [[ -f "${base_config_file}" ]]; then
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+      [[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
+      [[ "${line}" != *"="* ]] && continue
+
+      key="${line%%=*}"
+      key="${key#"${key%%[![:space:]]*}"}"
+      key="${key%"${key##*[![:space:]]}"}"
+      is_config_excluded "${key}" && continue
+
+      value="${line#*=}"
+      value="${value#"${value%%[![:space:]]*}"}"
+      echo "${key}=${value}" >>"${tmp_file}"
+    done <"${base_config_file}"
+  fi
+
+  if [[ -s "${tmp_file}" ]]; then
+    sort -o "${tmp_file}" "${tmp_file}"
+  fi
+
+  if [[ -f "${output_file}" ]] && cmp -s "${tmp_file}" <(sort "${output_file}"); then
+    rm -f "${tmp_file}"
+    echo "${output_file}"
+    return
+  fi
+
+  mv -f "${tmp_file}" "${output_file}"
+  chmod 600 "${output_file}" 2>/dev/null || true
+  echo "${output_file}"
+}
 
 function sed_in_place() {
   # macOS requires a backup extension for sed -i, even if empty
@@ -75,6 +126,7 @@ function set_config() {
   has=$(has_config "${key}")
   if [[ ${has} == "0" ]]; then
     echo "${key}=${value}" >>"${CONFIG_FILE}"
+    gen_safe_config >/dev/null
     return
   fi
 
@@ -84,6 +136,7 @@ function set_config() {
   fi
 
   sed_in_place "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
+  gen_safe_config >/dev/null
 }
 
 function disable_config() {
@@ -92,6 +145,7 @@ function disable_config() {
   has=$(has_config "${key}")
   if [[ ${has} == "1" ]]; then
     sed_in_place "s,^[ \t]*${key}=.*$,# ${key}=,g" "${CONFIG_FILE}"
+    gen_safe_config >/dev/null
   fi
 }
 
@@ -173,4 +227,6 @@ function prepare_config() {
   if [[ "$(uname -m)" == "aarch64" ]]; then
     sed_in_place "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
   fi
+
+  gen_safe_config
 }

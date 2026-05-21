@@ -7,7 +7,7 @@ services:
       core: 0
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/lion/data/certs
       - ${VOLUME_DIR}/lion/data:/opt/lion/data

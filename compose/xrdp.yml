@@ -7,7 +7,7 @@ services:
       core: 0
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     ports:
       - ${XRDP_PORT:-3390}:3390
     volumes:

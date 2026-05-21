@@ -15,6 +15,7 @@ export TEXTDOMAIN=jumpserver-installer
 
 export CONFIG_DIR="${JS_CONFIG_DIR:-/opt/jumpserver/config}"
 export CONFIG_FILE=$CONFIG_DIR/config.txt
+export CONFIG_SAFE_FILE=$CONFIG_DIR/config_safe.txt
 
 # Compose 项目设置
 export COMPOSE_PROJECT_NAME=jms

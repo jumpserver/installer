@@ -7,7 +7,7 @@ services:
       core: 0
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     volumes:
       - ${VOLUME_DIR}/chen/data:/opt/chen/data
       - ${CONFIG_DIR}/certs:/opt/chen/data/certs

@@ -5,7 +5,7 @@ services:
     hostname: jms_facelive
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     volumes:
       - ${VOLUME_DIR}/facelive/data:/opt/facelive/data
     healthcheck:

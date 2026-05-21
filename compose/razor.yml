@@ -7,7 +7,7 @@ services:
       core: 0
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     ports:
       - ${RAZOR_RDP_PORT:-3389}:3389
     volumes:

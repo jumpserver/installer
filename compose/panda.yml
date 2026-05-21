@@ -7,7 +7,7 @@ services:
       core: 0
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     volumes:
       - ${VOLUME_DIR}/panda/data:/opt/panda/data
       - /var/run/docker.sock:/var/run/docker.sock:z

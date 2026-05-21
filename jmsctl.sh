@@ -32,6 +32,7 @@ function check_config_file() {
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
+  gen_safe_config
 }
 
 function pre_check() {
