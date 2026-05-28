@@ -27,6 +27,10 @@ AUDITS_TABLES=(
   terminal_command
 )
 
+SHARED_BACKUP_TABLES=(
+  users_user
+)
+
 MODE="full"
 if [[ $# -gt 0 ]]; then
   case "$1" in
@@ -150,7 +154,8 @@ function backup_audits_mysql() {
       --insert-ignore \
       --default-character-set=utf8mb4 \
       "${DB_NAME}" \
-      "${AUDITS_TABLES[@]}" | gzip > "${backup_file}"
+      "${AUDITS_TABLES[@]}" \
+      "${SHARED_BACKUP_TABLES[@]}" | gzip > "${backup_file}"
 }
 
 function backup_audits_postgresql() {
@@ -160,6 +165,9 @@ function backup_audits_postgresql() {
   local table_args=()
   local table
   for table in "${AUDITS_TABLES[@]}"; do
+    table_args+=("-t" "${table}")
+  done
+  for table in "${SHARED_BACKUP_TABLES[@]}"; do
     table_args+=("-t" "${table}")
   done
 
