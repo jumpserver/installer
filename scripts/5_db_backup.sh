@@ -22,6 +22,9 @@ AUDITS_TABLES=(
   audits_operatelog
   audits_passwordchangelog
   audits_userloginlog
+  terminal
+  terminal_session
+  terminal_command
 )
 
 MODE="full"
