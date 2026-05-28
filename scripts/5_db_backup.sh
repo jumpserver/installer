@@ -22,7 +22,6 @@ AUDITS_TABLES=(
   audits_operatelog
   audits_passwordchangelog
   audits_userloginlog
-  audits_usersession
 )
 
 MODE="full"
@@ -71,11 +70,36 @@ function backup_main_db() {
   case "${DB_ENGINE}" in
     mysql)
       DB_FILE="${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).sql"
-      backup_cmd='mysqldump --skip-add-locks --skip-lock-tables --single-transaction -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" > "${DB_FILE}"'
+      local dump_cmd=(
+        mysqldump
+        --skip-add-locks
+        --skip-lock-tables
+        --single-transaction
+        -h"${DB_HOST}"
+        -P"${DB_PORT}"
+        -u"${DB_USER}"
+      )
+      local table
+      for table in "${AUDITS_TABLES[@]}"; do
+        dump_cmd+=("--ignore-table=${DB_NAME}.${table}")
+      done
+      dump_cmd+=("${DB_NAME}")
       ;;
     postgresql)
       DB_FILE="${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).dump"
-      backup_cmd='PGPASSWORD="${DB_PASSWORD}" pg_dump --format=custom --no-owner -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" -f "${DB_FILE}"'
+      local dump_cmd=(
+        pg_dump
+        --format=custom
+        --no-owner
+        -U "${DB_USER}"
+        -h "${DB_HOST}"
+        -p "${DB_PORT}"
+        -d "${DB_NAME}"
+      )
+      local table
+      for table in "${AUDITS_TABLES[@]}"; do
+        dump_cmd+=("-T" "${table}")
+      done
       ;;
     *)
       log_error "$(gettext 'Invalid DB Engine selection')!"
@@ -84,10 +108,10 @@ function backup_main_db() {
   esac
 
   if ! docker run --rm \
-    --env DB_HOST="${DB_HOST}" --env DB_PORT="${DB_PORT}" --env DB_USER="${DB_USER}" --env DB_PASSWORD="${DB_PASSWORD}" --env DB_NAME="${DB_NAME}" --env DB_FILE="${DB_FILE}" \
+    --env MYSQL_PWD="${DB_PASSWORD}" --env PGPASSWORD="${DB_PASSWORD}" \
     -i --network=jms_net \
-    -v "${BACKUP_DIR}:${BACKUP_DIR}" \
-    "${db_images}" bash -c "${backup_cmd}"; then
+    "${db_images}" \
+    "${dump_cmd[@]}" > "${DB_FILE}"; then
     log_error "$(gettext 'Backup failed')!"
     rm -f "${DB_FILE}"
     exit 1
