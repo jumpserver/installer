@@ -27,6 +27,11 @@ AUDITS_TABLES=(
   terminal_command
 )
 
+FULL_IGNORE_TABLES=(
+  audits_activitylog
+  terminal_command
+)
+
 SHARED_BACKUP_TABLES=(
   users_user
 )
@@ -87,7 +92,7 @@ function backup_main_db() {
         -P"${DB_PORT}"
         -u"${DB_USER}"
       )
-      for table in "${AUDITS_TABLES[@]}"; do
+      for table in "${FULL_IGNORE_TABLES[@]}"; do
         dump_cmd+=("--ignore-table=${DB_NAME}.${table}")
       done
       dump_cmd+=("${DB_NAME}")
@@ -112,7 +117,7 @@ function backup_main_db() {
         -P"${DB_PORT}"
         -u"${DB_USER}"
         "${DB_NAME}"
-        "${AUDITS_TABLES[@]}"
+        "${FULL_IGNORE_TABLES[@]}"
       )
       if ! docker run --rm \
         --env MYSQL_PWD="${DB_PASSWORD}" \
@@ -135,7 +140,7 @@ function backup_main_db() {
         -p "${DB_PORT}"
         -d "${DB_NAME}"
       )
-      for table in "${AUDITS_TABLES[@]}"; do
+      for table in "${FULL_IGNORE_TABLES[@]}"; do
         dump_cmd+=("--exclude-table-data=${table}")
       done
 

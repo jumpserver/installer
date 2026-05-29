@@ -79,7 +79,7 @@ function main() {
         magic=$(dd if="${RESTORE_FILE}" bs=1 count=5 2>/dev/null)
         if [[ "${magic}" == "PGDMP" ]]; then
           reset_pg_public_schema
-          PGPASSWORD="${DB_PASSWORD}" pg_restore --no-owner --exit-on-error -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${RESTORE_FILE}"
+          PGPASSWORD="${DB_PASSWORD}" pg_restore --disable-triggers --no-owner --exit-on-error -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${RESTORE_FILE}"
         else
           PGPASSWORD="${DB_PASSWORD}" psql -q -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" < "${RESTORE_FILE}" >/dev/null
         fi
