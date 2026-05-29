@@ -49,15 +49,18 @@ function main() {
       '
       ;;
     postgresql)
-      pg_magic=""
+      restore_file="${DB_FILE}"
+      tmp_restore_file=""
       if [[ "${DB_FILE}" == *.gz ]]; then
-        pg_magic=$(gzip -dc "${DB_FILE}" 2>/dev/null | dd bs=1 count=5 2>/dev/null)
-      else
-        pg_magic=$(dd if="${DB_FILE}" bs=1 count=5 2>/dev/null)
+        tmp_restore_file=$(mktemp "${BACKUP_DIR}/.pg_restore.XXXXXX")
+        if ! gzip -dc "${DB_FILE}" > "${tmp_restore_file}"; then
+          log_error "$(gettext 'Failed to decompress backup file')!"
+          rm -f "${tmp_restore_file}"
+          exit 1
+        fi
+        restore_file="${tmp_restore_file}"
       fi
-      if [[ "${pg_magic}" == "PGDMP" ]]; then
-        echo "$(gettext 'Resetting database schema before restore')..."
-      fi
+
       restore_cmd='
         reset_pg_public_schema() {
           PGPASSWORD="${DB_PASSWORD}" psql -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" \
@@ -68,27 +71,13 @@ function main() {
             -c "GRANT ALL ON SCHEMA public TO \"${DB_USER}\";"
         }
 
-        restore_pg_file() {
-          local input_file=$1
-          local magic
-
-          magic=$(dd if="${input_file}" bs=1 count=5 2>/dev/null)
-          if [[ "${magic}" == "PGDMP" ]]; then
-            reset_pg_public_schema
-            PGPASSWORD="${DB_PASSWORD}" pg_restore --no-owner --exit-on-error -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${input_file}"
-          else
-            PGPASSWORD="${DB_PASSWORD}" psql -q -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" < "${input_file}" >/dev/null
-          fi
-        }
-
-        if [[ "${DB_FILE}" == *.gz ]]; then
-          tmp_restore_file="${DB_FILE%.gz}"
-          gzip -dc "${DB_FILE}" > "${tmp_restore_file}" && restore_pg_file "${tmp_restore_file}"
-          rc=$?
-          rm -f "${tmp_restore_file}"
-          exit ${rc}
+        magic=$(dd if="${RESTORE_FILE}" bs=1 count=5 2>/dev/null)
+        if [[ "${magic}" == "PGDMP" ]]; then
+          echo "$(gettext 'Resetting database schema before restore')..."
+          reset_pg_public_schema
+          PGPASSWORD="${DB_PASSWORD}" pg_restore --no-owner --exit-on-error -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${RESTORE_FILE}"
         else
-          restore_pg_file "${DB_FILE}"
+          PGPASSWORD="${DB_PASSWORD}" psql -q -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" < "${RESTORE_FILE}" >/dev/null
         fi
       '
       ;;
@@ -98,14 +87,23 @@ function main() {
       ;;
   esac
 
-  if ! docker run --rm \
-    --env DB_HOST="${DB_HOST}" --env DB_PORT="${DB_PORT}" --env DB_USER="${DB_USER}" --env DB_PASSWORD="${DB_PASSWORD}" --env DB_NAME="${DB_NAME}" --env DB_FILE="${DB_FILE}" \
+  docker_env=(
+    --env "DB_HOST=${DB_HOST}" --env "DB_PORT=${DB_PORT}" --env "DB_USER=${DB_USER}"
+    --env "DB_PASSWORD=${DB_PASSWORD}" --env "DB_NAME=${DB_NAME}" --env "DB_FILE=${DB_FILE}"
+  )
+  if [[ "${DB_ENGINE}" == "postgresql" ]]; then
+    docker_env+=(--env "RESTORE_FILE=${restore_file}")
+  fi
+
+  if ! docker run --rm "${docker_env[@]}" \
     -i --network=jms_net \
     -v "${BACKUP_DIR}:${BACKUP_DIR}" \
     "${db_images}" bash -c "${restore_cmd}"; then
+    [[ -n "${tmp_restore_file}" ]] && rm -f "${tmp_restore_file}"
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
     exit 1
   else
+    [[ -n "${tmp_restore_file}" ]] && rm -f "${tmp_restore_file}"
     log_success "$(gettext 'Database recovered successfully')!"
     run_post_restore
   fi
