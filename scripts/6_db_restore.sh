@@ -61,6 +61,11 @@ function main() {
         restore_file="${tmp_restore_file}"
       fi
 
+      pg_magic=$(dd if="${restore_file}" bs=1 count=5 2>/dev/null)
+      if [[ "${pg_magic}" == "PGDMP" ]]; then
+        echo "$(gettext 'Resetting database schema before restore')..."
+      fi
+
       restore_cmd='
         reset_pg_public_schema() {
           PGPASSWORD="${DB_PASSWORD}" psql -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" \
@@ -73,7 +78,6 @@ function main() {
 
         magic=$(dd if="${RESTORE_FILE}" bs=1 count=5 2>/dev/null)
         if [[ "${magic}" == "PGDMP" ]]; then
-          echo "$(gettext 'Resetting database schema before restore')..."
           reset_pg_public_schema
           PGPASSWORD="${DB_PASSWORD}" pg_restore --no-owner --exit-on-error -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${RESTORE_FILE}"
         else
