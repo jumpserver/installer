@@ -74,6 +74,7 @@ function cleanup_db_env() {
 }
 
 function backup_main_db() {
+  local table
   case "${DB_ENGINE}" in
     mysql)
       DB_FILE="${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).sql"
@@ -86,11 +87,42 @@ function backup_main_db() {
         -P"${DB_PORT}"
         -u"${DB_USER}"
       )
-      local table
       for table in "${AUDITS_TABLES[@]}"; do
         dump_cmd+=("--ignore-table=${DB_NAME}.${table}")
       done
       dump_cmd+=("${DB_NAME}")
+
+      if ! docker run --rm \
+        --env MYSQL_PWD="${DB_PASSWORD}" \
+        -i --network=jms_net \
+        "${db_images}" \
+        "${dump_cmd[@]}" > "${DB_FILE}"; then
+        log_error "$(gettext 'Backup failed')!"
+        rm -f "${DB_FILE}"
+        exit 1
+      fi
+
+      local schema_cmd=(
+        mysqldump
+        --skip-add-locks
+        --skip-lock-tables
+        --single-transaction
+        --no-data
+        -h"${DB_HOST}"
+        -P"${DB_PORT}"
+        -u"${DB_USER}"
+        "${DB_NAME}"
+        "${AUDITS_TABLES[@]}"
+      )
+      if ! docker run --rm \
+        --env MYSQL_PWD="${DB_PASSWORD}" \
+        -i --network=jms_net \
+        "${db_images}" \
+        "${schema_cmd[@]}" >> "${DB_FILE}"; then
+        log_error "$(gettext 'Backup failed')!"
+        rm -f "${DB_FILE}"
+        exit 1
+      fi
       ;;
     postgresql)
       DB_FILE="${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).dump"
@@ -103,26 +135,25 @@ function backup_main_db() {
         -p "${DB_PORT}"
         -d "${DB_NAME}"
       )
-      local table
       for table in "${AUDITS_TABLES[@]}"; do
-        dump_cmd+=("-T" "${table}")
+        dump_cmd+=("--exclude-table-data=${table}")
       done
+
+      if ! docker run --rm \
+        --env PGPASSWORD="${DB_PASSWORD}" \
+        -i --network=jms_net \
+        "${db_images}" \
+        "${dump_cmd[@]}" > "${DB_FILE}"; then
+        log_error "$(gettext 'Backup failed')!"
+        rm -f "${DB_FILE}"
+        exit 1
+      fi
       ;;
     *)
       log_error "$(gettext 'Invalid DB Engine selection')!"
       exit 1
       ;;
   esac
-
-  if ! docker run --rm \
-    --env MYSQL_PWD="${DB_PASSWORD}" --env PGPASSWORD="${DB_PASSWORD}" \
-    -i --network=jms_net \
-    "${db_images}" \
-    "${dump_cmd[@]}" > "${DB_FILE}"; then
-    log_error "$(gettext 'Backup failed')!"
-    rm -f "${DB_FILE}"
-    exit 1
-  fi
 
   if command -v gzip &>/dev/null; then
     if gzip -f "${DB_FILE}"; then
