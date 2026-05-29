@@ -62,7 +62,7 @@ function usage() {
   echo "  load_image        $(gettext 'Loading docker image')"
   echo "  backup_db         $(gettext 'Backup database')"
   echo "  backup_audit      $(gettext 'Backup audits tables')"
-  echo "  restore_db [file] [audit_file] $(gettext 'Data recovery through database backup file')"
+  echo "  restore_db [file]        $(gettext 'Data recovery through database backup file')"
   echo "  raw               $(gettext 'Execute the original docker compose command')"
   echo "  tail [service]    $(gettext 'View log')"
   echo
@@ -260,7 +260,7 @@ function main() {
     bash "${SCRIPT_DIR}/5_db_backup.sh" "audit"
     ;;
   restore_db)
-    bash "${SCRIPT_DIR}/6_db_restore.sh" "$target" "${args[2]-}"
+    bash "${SCRIPT_DIR}/6_db_restore.sh" "$target"
     ;;
   load_image)
     bash "${SCRIPT_DIR}/3_load_images.sh"

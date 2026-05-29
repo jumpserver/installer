@@ -5,7 +5,6 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 . "${BASE_DIR}/utils.sh"
 
 DB_FILE="$1"
-AUDIT_FILE="${2:-}"
 BACKUP_DIR=$(dirname "${DB_FILE}")
 
 DB_ENGINE=$(get_config DB_ENGINE "mysql")
@@ -117,81 +116,28 @@ function main() {
   fi
 }
 
-function restore_audit_backup() {
-  local audit_file=$1
-
-  if [[ ! -f "${audit_file}" ]]; then
-    log_error "$(gettext 'The backup file does not exist'): ${audit_file}"
-    return 1
-  fi
-
-  echo "$(gettext 'Restoring audit tables from'): ${audit_file}"
-  local audit_dir
-  audit_dir=$(dirname "${audit_file}")
-
-  local audit_restore_cmd
-  case "${DB_ENGINE}" in
-    mysql)
-      audit_restore_cmd='
-        if [[ "${AUDIT_FILE}" == *.gz ]]; then
-          gzip -dc "${AUDIT_FILE}" | mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}"
-        else
-          mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < "${AUDIT_FILE}"
-        fi
-      '
-      ;;
-    postgresql)
-      audit_restore_cmd='
-        if [[ "${AUDIT_FILE}" == *.gz ]]; then
-          gzip -dc "${AUDIT_FILE}" | psql -q -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" >/dev/null
-        else
-          psql -q -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" < "${AUDIT_FILE}" >/dev/null
-        fi
-      '
-      ;;
-    *)
-      log_error "$(gettext 'Invalid DB Engine selection')!"
-      return 1
-      ;;
-  esac
-
-  if ! docker run --rm \
-    --env DB_HOST="${DB_HOST}" --env DB_PORT="${DB_PORT}" --env DB_USER="${DB_USER}" --env DB_PASSWORD="${DB_PASSWORD}" --env DB_NAME="${DB_NAME}" --env AUDIT_FILE="${audit_file}" \
-    -i --network=jms_net \
-    -v "${audit_dir}:${audit_dir}" \
-    "${db_images}" bash -c "${audit_restore_cmd}"; then
-    log_error "$(gettext 'Audit tables recovery failed')!"
-    return 1
-  fi
-
-  log_success "$(gettext 'Audit tables recovered successfully')!"
-  return 0
-}
-
 function run_post_restore() {
   echo "$(gettext 'Updating database schema')..."
   if ! perform_db_migrations; then
     log_warn "$(gettext 'Failed to change the table structure')!"
-  fi
-
-  if [[ -n "${AUDIT_FILE}" ]]; then
-    restore_audit_backup "${AUDIT_FILE}" || exit 1
   fi
 }
 
 function stop_jms_core() {
   if docker ps | grep -w "jms_core" &>/dev/null; then
     docker stop jms_core &>/dev/null || true
+    docker stop jms_celery &>/dev/null || true
   fi
 }
 
 function start_jms_core() {
   docker start jms_core &>/dev/null || true
+  docker start jms_celery &>/dev/null || true
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
   if [[ -z "$1" ]]; then
-    log_error "$(gettext 'Format error')！Usage './jmsctl.sh restore_db DB_Backup_file [audit_backup_file]'"
+    log_error "$(gettext 'Format error')！Usage './jmsctl.sh restore_db DB_Backup_file'"
     exit 1
   fi
   if [[ ! -f $1 ]]; then
