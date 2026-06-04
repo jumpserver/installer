@@ -308,6 +308,7 @@ function perform_db_migrations() {
   case "${db_host}" in
     mysql|postgresql)
       while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_${db_host})" != "healthy" ]]; do
+        echo "Waiting for database to be healthy..."
         sleep 5s
       done
       ;;
@@ -315,6 +316,7 @@ function perform_db_migrations() {
 
   if [[ "${redis_host}" == "redis" ]]; then
     while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
+      echo "Waiting for redis to be healthy..."
       sleep 5s
     done
   fi
