@@ -240,6 +240,9 @@ function set_others() {
   timezone=$(get_config TZ "Asia/Shanghai")
   read_from_input timezone "$(gettext 'Please enter timezone')" "" "${timezone}"
   set_config TZ "${timezone}"
+
+  host_ip=$(get_host_ip)
+  set_config HOST_IP "${host_ip}"
 }
 
 function main() {
