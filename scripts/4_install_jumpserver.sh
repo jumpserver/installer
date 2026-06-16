@@ -110,6 +110,8 @@ function main() {
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
   fi
+
+  ensure_core_data_symlink || log_warn "Failed to prepare host core data symlink, continue installation"
  
   installation_log "install"
   post_install
