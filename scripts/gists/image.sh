@@ -116,11 +116,9 @@ function pull_image() {
   if [[ -n "${NAMESPACE}" ]]; then
     to_image=${to_image/jumpserver/${NAMESPACE}}
   fi
-  # if [[ "$(check_image_exists "${full_image_path}")" != "1" || "$IMAGE_PULL_POLICY" == "Always" ]]; then
-  #   docker pull ${pull_args} "${full_image_path}"
-  # fi
-  # always pull the image to ensure it's up to date
-  docker pull ${pull_args} "${full_image_path}"
+  if [[ "$(check_image_exists "${full_image_path}")" != "1" || "$IMAGE_PULL_POLICY" == "Always" ]]; then
+    docker pull ${pull_args} "${full_image_path}"
+  fi
   
   if [[ "${full_image_path}" != "${to_image}" ]]; then
     docker tag "${full_image_path}" "${to_image}"
