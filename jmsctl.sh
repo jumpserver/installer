@@ -253,6 +253,12 @@ function main() {
   uninstall)
     bash "${SCRIPT_DIR}/8_uninstall.sh"
     ;;
+  migrate_db)
+    if ! perform_db_migrations; then
+      log_error "$(gettext 'Failed to change the table structure')!"
+      exit 1
+    fi
+    ;;
   backup_db)
     bash "${SCRIPT_DIR}/5_db_backup.sh"
     ;;
