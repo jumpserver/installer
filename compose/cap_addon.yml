@@ -7,3 +7,13 @@ services:
   core:
     security_opt:
       - apparmor=${CORE_APPARMOR_POLICY:-unconfined}
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+    device_cgroup_rules:
+      - 'c 189:* rmw'
+
+  celery:
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+    device_cgroup_rules:
+      - 'c 189:* rmw'

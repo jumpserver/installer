@@ -63,7 +63,7 @@ function usage() {
   echo "  load_image        $(gettext 'Loading docker image')"
   echo "  backup_db         $(gettext 'Backup database')"
   echo "  backup_audit      $(gettext 'Backup audits tables')"
-  echo "  restore_db [file] $(gettext 'Data recovery through database backup file')"
+  echo "  restore_db [file]        $(gettext 'Data recovery through database backup file')"
   echo "  raw               $(gettext 'Execute the original docker compose command')"
   echo "  tail [service]    $(gettext 'View log')"
   echo
@@ -253,6 +253,12 @@ function main() {
     ;;
   uninstall)
     bash "${SCRIPT_DIR}/8_uninstall.sh"
+    ;;
+  migrate_db)
+    if ! perform_db_migrations; then
+      log_error "$(gettext 'Failed to change the table structure')!"
+      exit 1
+    fi
     ;;
   backup_db)
     bash "${SCRIPT_DIR}/5_db_backup.sh"
