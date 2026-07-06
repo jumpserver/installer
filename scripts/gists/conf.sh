@@ -230,3 +230,23 @@ function prepare_config() {
 
   gen_safe_config
 }
+
+function ensure_core_data_symlink() {
+  local target_dir link_path="/opt/jumpserver/data"
+  target_dir="$(get_config VOLUME_DIR)/core/data"
+
+  mkdir -p "${target_dir}" "/opt/jumpserver" || return 1
+
+  if [[ -L "${link_path}" ]] && [[ "$(readlink -f "${link_path}")" == "$(readlink -f "${target_dir}")" ]]; then
+    echo_check "${link_path} -> ${target_dir}"
+    return 0
+  fi
+
+  if [[ -e "${link_path}" ]]; then
+    log_warn "${link_path} exists, skip creating symlink"
+    return 1
+  fi
+
+  ln -s "${target_dir}" "${link_path}" || return 1
+  echo_check "${link_path} -> ${target_dir}"
+}
