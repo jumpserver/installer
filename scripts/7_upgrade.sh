@@ -159,10 +159,21 @@ function migrate_config() {
   prepare_config
 }
 
+function migrate_lb_config_to_v4_10() {
+  local lb_conf="${CONFIG_DIR}/nginx/lb_http_server.conf"
+  if [[ ! -f "${lb_conf}" ]]; then
+    return
+  fi
+  if grep -q 'server web:8080;' "${lb_conf}"; then
+    sed_in_place 's/server web:8080;/server localhost:80;/g' "${lb_conf}"
+  fi
+}
+
 function update_config_if_need() {
   migrate_config_v1_5_to_v2_0
   migrate_config_v2_0_to_v3_0
   migrate_coco_to_koko
+  migrate_lb_config_to_v4_10
   migrate_config
   upgrade_config
   clean_file
