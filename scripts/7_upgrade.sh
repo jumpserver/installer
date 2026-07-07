@@ -191,6 +191,7 @@ function update_config_if_need() {
   migrate_coco_to_koko
   migrate_config
   upgrade_config
+  set_openbao || exit 1
   clean_file
 }
 

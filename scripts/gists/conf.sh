@@ -38,7 +38,19 @@ function get_config_or_env() {
   echo "${value}"
 }
 
-CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD"
+CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD REDIS_PASSWORD VAULT_OPENBAO_TOKEN"
+
+function is_config_excluded() {
+  local key=$1
+  local excluded
+
+  for excluded in ${CONFIG_SAFE_EXCLUDES}; do
+    if [[ "${key}" == "${excluded}" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
 
 function gen_safe_config() {
   local base_config_file=${CONFIG_FILE}
@@ -186,6 +198,9 @@ function prepare_config() {
   find "${CONFIG_DIR}" -type d -exec chmod 700 {} \;
   find "${CONFIG_DIR}" -type f -exec chmod 600 {} \;
   chmod 644 "${CONFIG_DIR}/redis/redis.conf"
+  if [[ -f "${CONFIG_DIR}/openbao/server.hcl" ]]; then
+    chmod 644 "${CONFIG_DIR}/openbao/server.hcl"
+  fi
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
     sed_in_place "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"

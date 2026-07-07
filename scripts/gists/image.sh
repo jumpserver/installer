@@ -25,6 +25,9 @@ function get_pull_images() {
   if [[ "${use_xpack}" == "1" ]]; then
     images+=("jumpserver/ansible-executor:latest")
   fi
+  if should_include_openbao_image; then
+    images+=("$(get_openbao_image)")
+  fi
   echo "${images[@]}"
 }
 
@@ -46,6 +49,9 @@ function get_images() {
   done
   if [[ "${use_xpack}" == "1" ]]; then
     images+=("${namespace}/ansible-executor:latest")
+  fi
+  if should_include_openbao_image; then
+    images+=("$(get_openbao_image)")
   fi
   echo "${images[@]}"
 }
@@ -86,7 +92,9 @@ function get_image_full_path() {
 
   full_image_path="${image}"
   if [[ -n "${DOCKER_IMAGE_PREFIX}" ]]; then
-    if echo "${DOCKER_IMAGE_PREFIX}" | grep -q "/";then
+    if [[ "${image}" == */* && $(image_has_prefix "${image}") != "1" ]]; then
+      full_image_path="${image}"
+    elif echo "${DOCKER_IMAGE_PREFIX}" | grep -q "/";then
       app=$(echo "$image" | awk -F'/' '{ print $NF }')
       full_image_path="${DOCKER_IMAGE_PREFIX}/${app}"
     elif [[ $(image_has_prefix "${image}") != "1" ]]; then
@@ -151,4 +159,3 @@ function pull_images() {
 
   trap - SIGINT SIGTERM
 }
-
