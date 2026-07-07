@@ -1,0 +1,60 @@
+services:
+  core:
+    depends_on:
+      openbao-init:
+        condition: service_completed_successfully
+
+  celery:
+    depends_on:
+      openbao-init:
+        condition: service_completed_successfully
+
+  openbao:
+    image: ${OPENBAO_IMAGE:-openbao/openbao:2.6.0}
+    container_name: jms_openbao
+    hostname: openbao
+    # Start the image entrypoint as root so it can fix bind-mount ownership;
+    # the official entrypoint then launches bao via su-exec as openbao.
+    user: "0"
+    restart: always
+    command: server -config=/openbao/config/server.hcl
+    environment:
+      BAO_ADDR: http://127.0.0.1:8200
+      VAULT_API_ADDR: ${OPENBAO_RAFT_API_ADDR:-http://openbao:8200}
+      VAULT_CLUSTER_ADDR: ${OPENBAO_RAFT_CLUSTER_ADDR:-http://openbao:8201}
+      VAULT_RAFT_NODE_ID: ${OPENBAO_RAFT_NODE_ID:-openbao}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ${CONFIG_DIR}/openbao/server.hcl:/openbao/config/server.hcl:ro
+      - ${VOLUME_DIR}/openbao/data:/openbao/file
+    ports:
+      - "${OPENBAO_UI_BIND:-127.0.0.1}:${OPENBAO_UI_PORT:-8200}:8200"
+      - "${OPENBAO_CLUSTER_BIND:-127.0.0.1}:${OPENBAO_CLUSTER_PORT:-8201}:8201"
+    healthcheck:
+      test: "bao status -address=http://127.0.0.1:8200"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - net
+
+  openbao-init:
+    image: ${OPENBAO_IMAGE:-openbao/openbao:2.6.0}
+    container_name: jms_openbao_init
+    hostname: openbao-init
+    # The one-shot initializer writes root-owned 0600 unseal material.
+    user: "0"
+    restart: "no"
+    command: sh /openbao/bootstrap/bootstrap.sh
+    env_file:
+      - ${CONFIG_FILE}
+    environment:
+      BAO_ADDR: http://openbao:8200
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ${CONFIG_DIR}/openbao:/openbao/bootstrap
+    depends_on:
+      - openbao
+    networks:
+      - net

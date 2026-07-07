@@ -140,6 +140,9 @@ function get_docker_compose_services() {
   [[ "${use_es}" == "1" ]] && services+=" es"
   [[ "${use_minio}" == "1" ]] && services+=" minio"
   [[ "${use_loki}" == "1" ]] && services+=" loki"
+  if is_internal_openbao_enabled; then
+    services+=" openbao"
+  fi
 
   echo "${services}"
 }
