@@ -22,6 +22,9 @@ function get_pull_images() {
     fi
     images+=("${image}")
   done
+  if [[ "${use_xpack}" == "1" ]]; then
+    images+=("jumpserver/ansible-executor:latest")
+  fi
   echo "${images[@]}"
 }
 
@@ -41,6 +44,9 @@ function get_images() {
     fi
     images+=("${image}")
   done
+  if [[ "${use_xpack}" == "1" ]]; then
+    images+=("${namespace}/ansible-executor:latest")
+  fi
   echo "${images[@]}"
 }
 
