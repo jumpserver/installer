@@ -232,7 +232,7 @@ function prepare_config() {
 }
 
 function ensure_core_data_symlink() {
-  local target_dir link_path="/opt/jumpserver/data"
+  local target_dir link_path="/opt/jumpserver/data" backup_base="/opt/jumpserver/data_bak" backup_path
   target_dir="$(get_config VOLUME_DIR)/core/data"
 
   mkdir -p "${target_dir}" "/opt/jumpserver" || return 1
@@ -243,8 +243,12 @@ function ensure_core_data_symlink() {
   fi
 
   if [[ -e "${link_path}" ]]; then
-    log_warn "${link_path} exists, skip creating symlink"
-    return 1
+    backup_path="${backup_base}"
+    if [[ -e "${backup_path}" ]]; then
+      backup_path="${backup_base}_$(date +%Y%m%d%H%M%S)"
+    fi
+    log_warn "${link_path} exists, backup to ${backup_path}"
+    mv "${link_path}" "${backup_path}" || return 1
   fi
 
   ln -s "${target_dir}" "${link_path}" || return 1
