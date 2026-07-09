@@ -167,6 +167,10 @@ function migrate_lb_config_to_v4_10() {
   if grep -q 'server web:8080;' "${lb_conf}"; then
     sed_in_place 's/server web:8080;/server localhost:80;/g' "${lb_conf}"
   fi
+  if grep -qE 'listen (\[::\]:)?80;' "${lb_conf}"; then
+    sed_in_place 's/listen 80;/listen 8080;/g' "${lb_conf}"
+    sed_in_place 's/listen \[::\]:80;/listen [::]:8080;/g' "${lb_conf}"
+  fi
 }
 
 function update_config_if_need() {
