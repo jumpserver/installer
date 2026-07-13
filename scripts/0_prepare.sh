@@ -106,6 +106,10 @@ function prepare_image_files() {
 }
 
 function main() {
+  config_path='/opt/jumpserver/config/config.txt' 
+  if [[ -f "${config_path}" ]];then
+      mv "${config_path}" "${config_path}.bak"
+  fi
   prepare_check_required_pkg
 
   gettext 'Preparing Docker offline package'
