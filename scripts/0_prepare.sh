@@ -6,11 +6,9 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 IMAGE_DIR="${BASE_DIR}/images"
 
-function download_and_verify() {
+function download() {
   local url=$1
   local target_path=$2
-  local md5_url=$3
-  local md5_target_path="${target_path}.md5"
 
   parent_dir=$(dirname "${target_path}")
   if [[ ! -d "${parent_dir}" ]]; then
@@ -18,29 +16,11 @@ function download_and_verify() {
   fi
 
   prepare_check_required_pkg
-  if [[ ! -f "${md5_target_path}" ]]; then
-    echo "$(gettext 'Starting to download'): ${url}.md5"
-
-    if [[ -z "${md5_url}" ]]; then
-      md5_url="${url}.md5"
-    fi
-
-    wget --show-progress -q "${md5_url}" -O "${md5_target_path}" || {
-      log_error "$(gettext 'Download fails, check the network is normal')"
-      rm -f "${md5_target_path}"
-      exit 1
-    }
-  else
-    echo "$(gettext 'Using cache'): ${md5_target_path}"
-  fi
-
-  expected_md5=$(cut -d ' ' -f1 "${md5_target_path}")
-  md5_matched=$(check_md5 "${target_path}" "${expected_md5}")
-  if [[ ! -f "${target_path}" || "${md5_matched}" != "1" ]]; then
+  if [[ ! -f "${target_path}" ]]; then
     echo "$(gettext 'Starting to download'): ${url}"
     wget --show-progress -q "${url}" -O "${target_path}" || {
       log_error "$(gettext 'Download fails, check the network is normal')"
-      rm -f "${target_path}" "${md5_target_path}"
+      rm -f "${target_path}"
       exit 1
     }
   else
@@ -49,11 +29,11 @@ function download_and_verify() {
 }
 
 function prepare_docker_bin() {
-  download_and_verify "${DOCKER_BIN_URL}" "${BASE_DIR}/docker/docker.tar.gz" "${DOCKER_MD5_URL}"
+  download "${DOCKER_BIN_URL}" "${BASE_DIR}/docker/docker.tar.gz"
 }
 
 function prepare_compose_bin() {
-  download_and_verify "${COMPOSE_BIN_URL}" "${BASE_DIR}/docker/docker-compose" "${COMPOSE_MD5_URL}"
+  download "${COMPOSE_BIN_URL}" "${BASE_DIR}/docker/docker-compose"
   chown -R root:root "${BASE_DIR}/docker/docker-compose"
   chmod +x "${BASE_DIR}/docker/docker-compose"
 }
