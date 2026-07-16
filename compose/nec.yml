@@ -1,20 +1,20 @@
 services:
   nec:
-    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/nec:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/nec:${VERSION}
     container_name: jms_nec
     hostname: jms_nec
     ulimits:
       core: 0
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     ports:
       - ${NEC_VNC_PORT:-15900}:15900
     volumes:
       - ${CONFIG_DIR}/certs:/opt/nec/data/certs
       - ${VOLUME_DIR}/nec/data:/opt/nec/data
     healthcheck:
-      test: "curl -fsL http://localhost:8085/nec/health/ > /dev/null"
+      test: "check http://localhost:8085/nec/health/"
       interval: 10s
       timeout: 5s
       retries: 3

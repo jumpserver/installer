@@ -195,6 +195,11 @@ function backup_db() {
 }
 
 function db_migrations() {
+  local role="${ROLE:-master}"
+  if [[ "${role,,}" == "standby" ]]; then
+     echo "Role is standby, skip database migrations"
+     return 
+  fi
   if docker ps | grep -E "core|koko|lion"&>/dev/null; then
     confirm="y"
     read_from_input confirm "$(gettext 'Detected that the JumpServer container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
@@ -221,14 +226,24 @@ function db_migrations() {
 
 function clean_images() {
   current_version=$(get_config CURRENT_VERSION)
-  if [[ "${current_version}" != "${to_version}" ]]; then
-    old_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "jumpserver/" | grep "${current_version}")
-    if [[ -n "${old_images}" ]]; then
-      confirm="y"
-      read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
-      if [[ "${confirm}" == "y" ]]; then
-        echo "${old_images}" | xargs docker rmi -f
-      fi
+
+  if [[ -z "${to_version}" || -z "${current_version}" ]];then
+    echo "to_version or current_version is empty, skip clean images"
+    return
+  fi
+
+  if [[ "${current_version}" == "${to_version}" ]]; then
+    echo "current_version is equal to to_version, skip clean images"
+    return
+  fi
+
+  namespace=${NAMESPACE:-jumpserver}
+  old_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${namespace}/" | grep "${current_version}" || true)
+  if [[ -n "${old_images}" ]]; then
+    confirm="y"
+    read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
+    if [[ "${confirm}" == "y" ]]; then
+      echo "${old_images}" | xargs docker rmi -f || true
     fi
   fi
 }
@@ -328,6 +343,7 @@ function main() {
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
   upgrade_docker
   upgrade_compose
+  ensure_core_data_symlink || log_warn "Failed to prepare host core data symlink, continue upgrade"
 
   installation_log "upgrade"
 

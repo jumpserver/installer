@@ -1,6 +1,6 @@
 services:
   video:
-    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/video-worker:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/video-worker:${VERSION}
     container_name: jms_video
     hostname: jms_video
     cpus: 2
@@ -8,11 +8,11 @@ services:
       core: 0
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     volumes:
       - ${VOLUME_DIR}/video/data:/opt/video-worker/data
     healthcheck:
-      test: "curl -fsL http://localhost:9000/video-worker/health/ > /dev/null"
+      test: "check http://localhost:9000/video-worker/health/"
       interval: 10s
       timeout: 5s
       retries: 3

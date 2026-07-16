@@ -6,11 +6,9 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 IMAGE_DIR="${BASE_DIR}/images"
 
-function download_and_verify() {
+function download() {
   local url=$1
   local target_path=$2
-  local md5_url=$3
-  local md5_target_path="${target_path}.md5"
 
   parent_dir=$(dirname "${target_path}")
   if [[ ! -d "${parent_dir}" ]]; then
@@ -18,29 +16,11 @@ function download_and_verify() {
   fi
 
   prepare_check_required_pkg
-  if [[ ! -f "${md5_target_path}" ]]; then
-    echo "$(gettext 'Starting to download'): ${url}.md5"
-
-    if [[ -z "${md5_url}" ]]; then
-      md5_url="${url}.md5"
-    fi
-
-    wget --show-progress -q "${md5_url}" -O "${md5_target_path}" || {
-      log_error "$(gettext 'Download fails, check the network is normal')"
-      rm -f "${md5_target_path}"
-      exit 1
-    }
-  else
-    echo "$(gettext 'Using cache'): ${md5_target_path}"
-  fi
-
-  expected_md5=$(cut -d ' ' -f1 "${md5_target_path}")
-  md5_matched=$(check_md5 "${target_path}" "${expected_md5}")
-  if [[ ! -f "${target_path}" || "${md5_matched}" != "1" ]]; then
+  if [[ ! -f "${target_path}" ]]; then
     echo "$(gettext 'Starting to download'): ${url}"
     wget --show-progress -q "${url}" -O "${target_path}" || {
       log_error "$(gettext 'Download fails, check the network is normal')"
-      rm -f "${target_path}" "${md5_target_path}"
+      rm -f "${target_path}"
       exit 1
     }
   else
@@ -49,11 +29,11 @@ function download_and_verify() {
 }
 
 function prepare_docker_bin() {
-  download_and_verify "${DOCKER_BIN_URL}" "${BASE_DIR}/docker/docker.tar.gz" "${DOCKER_MD5_URL}"
+  download "${DOCKER_BIN_URL}" "${BASE_DIR}/docker/docker.tar.gz"
 }
 
 function prepare_compose_bin() {
-  download_and_verify "${COMPOSE_BIN_URL}" "${BASE_DIR}/docker/docker-compose" "${COMPOSE_MD5_URL}"
+  download "${COMPOSE_BIN_URL}" "${BASE_DIR}/docker/docker-compose"
   chown -R root:root "${BASE_DIR}/docker/docker-compose"
   chmod +x "${BASE_DIR}/docker/docker-compose"
 }
@@ -63,23 +43,31 @@ function prepare_image_files() {
     echo "$(gettext 'Docker is not running, please install and start') ..."
     exit 1
   fi
+
+  if [[ ! -d "${IMAGE_DIR}" ]]; then
+    mkdir -p "${IMAGE_DIR}"
+  fi
+  rm -f "${IMAGE_DIR}"/*
+
   pull_images
 
   images=$(get_images)
   for image in ${images}; do
-    filename=$(basename "${image}").zst
+    app_name=$(basename "${image}")
+    filename="${app_name}.zst"
+    echo "${image}"
+    
     image_path="${IMAGE_DIR}/${filename}"
     md5_filename=$(basename "${image}").md5
     md5_path="${IMAGE_DIR}/${md5_filename}"
 
-    image_id=$(docker inspect -f "{{.ID}}" "${image}")
+    if ! image_id=$(docker image inspect -f "{{.ID}}" "${image}" 2>/dev/null); then
+      log_error "$(gettext 'Image inspect failed'): ${image}"
+      return 1
+    fi
     saved_id=""
     if [[ -f "${md5_path}" ]]; then
       saved_id=$(cat "${md5_path}")
-    fi
-
-    if [[ ! -d "${IMAGE_DIR}" ]]; then
-      mkdir -p "${IMAGE_DIR}"
     fi
 
     if [[ -f "${image_path}" ]]; then
@@ -98,6 +86,10 @@ function prepare_image_files() {
 }
 
 function main() {
+  config_path='/opt/jumpserver/config/config.txt' 
+  if [[ -f "${config_path}" ]];then
+      mv "${config_path}" "${config_path}.bak"
+  fi
   prepare_check_required_pkg
 
   gettext 'Preparing Docker offline package'

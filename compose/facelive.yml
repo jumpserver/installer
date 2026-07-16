@@ -1,11 +1,11 @@
 services:
   facelive:
-    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/facelive:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/facelive:${VERSION}
     container_name: jms_facelive
     hostname: jms_facelive
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     volumes:
       - ${VOLUME_DIR}/facelive/data:/opt/facelive/data
     healthcheck:

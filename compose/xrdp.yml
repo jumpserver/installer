@@ -1,15 +1,15 @@
 services:
   xrdp:
-    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/xrdp:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/xrdp:${VERSION}
     container_name: jms_xrdp
     hostname: jms_xrdp
     ulimits:
       core: 0
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     ports:
-      - ${XRDP_PORT:-3390}:${XRDP_PORT:-3390}
+      - ${XRDP_PORT:-3390}:3390
     volumes:
       - ${VOLUME_DIR}/xrdp/data:/opt/xrdp/data
       - ${CONFIG_DIR}/nginx/cert:/opt/xrdp/cert

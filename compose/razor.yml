@@ -1,20 +1,20 @@
 services:
   razor:
-    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/razor:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/razor:${VERSION}
     container_name: jms_razor
     hostname: jms_razor
     ulimits:
       core: 0
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     ports:
-      - ${RDP_PORT:-3389}:${RDP_PORT:-3389}
+      - ${RAZOR_RDP_PORT:-3389}:3389
     volumes:
       - ${VOLUME_DIR}/razor/data:/opt/razor/data
       - ${CONFIG_DIR}/nginx/cert:/opt/razor/cert
     healthcheck:
-      test: "curl -fsL http://localhost:8084/razor/health/ > /dev/null"
+      test: "check http://localhost:8084/razor/health/"
       interval: 10s
       timeout: 5s
       retries: 3

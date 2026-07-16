@@ -26,7 +26,7 @@ function set_secret_key() {
 
 function set_volume_dir() {
   echo_yellow "\n2. $(gettext 'Configure Persistent Directory')"
-  volume_dir=$(get_config VOLUME_DIR "/opt/jumpserver")
+  volume_dir=$(get_config VOLUME_DIR "/data/jumpserver")
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need custom persistent store, will use the default directory') ${volume_dir}?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
@@ -231,16 +231,8 @@ function set_service() {
   fi
 }
 
-function init_db() {
-  echo_yellow "\n6. $(gettext 'Init JumpServer Database')"
-  if ! perform_db_migrations; then
-    log_error "$(gettext 'Failed to change the table structure')!"
-    exit 1
-  fi
-}
-
 function set_others() {
-  echo_yellow "\n7. $(gettext 'Configure Others')"
+  echo_yellow "\n6. $(gettext 'Configure Others')"
   lang=$(get_config LANGUAGE_CODE "zh")
   read_from_input lang "$(gettext 'Please enter language')" "zh/en/ja/es/ko/ru/vi" "${lang}"
   set_config LANGUAGE_CODE "${lang}"
@@ -248,6 +240,9 @@ function set_others() {
   timezone=$(get_config TZ "Asia/Shanghai")
   read_from_input timezone "$(gettext 'Please enter timezone')" "" "${timezone}"
   set_config TZ "${timezone}"
+
+  host_ip=$(get_host_ip)
+  set_config HOST_IP "${host_ip}"
 }
 
 function main() {
@@ -267,9 +262,6 @@ function main() {
     echo_done
   fi
   if set_others; then
-    echo_done
-  fi
-  if init_db; then
     echo_done
   fi
 }

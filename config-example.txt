@@ -146,7 +146,7 @@ MAGNUS_POSTGRESQL_PORT=54320
 MAGNUS_SQLSERVER_PORT=14330
 MAGNUS_ORACLE_PORT=15210
 
-XRDP_ENABLED=0
+#XRDP_ENABLED=1
 
 ################################## Other Configuration ################################
 # The terminal uses the host HOSTNAME as the identifier, automatically generated during the first installation

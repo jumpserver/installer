@@ -1,18 +1,16 @@
 services:
   koko:
-    image: ${REGISTRY:-docker.io}/jumpserver/koko:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/koko:${VERSION}
     container_name: jms_koko
     hostname: jms_koko
     ulimits:
       core: 0
     restart: always
-    privileged: true
+    privileged: ${KOKO_PRIVILEGED:-true}
     env_file:
-      - ${CONFIG_FILE}
-    environment:
-      - SSHD_PORT=${SSH_PORT:-2222}
+      - ${CONFIG_SAFE_FILE}
     ports:
-      - ${SSH_PORT:-2222}:${SSH_PORT:-2222}
+      - ${KOKO_SSH_PORT:-2222}:2222
     volumes:
       - ${CONFIG_DIR}/certs:/opt/koko/data/certs
       - ${VOLUME_DIR}/koko/data:/opt/koko/data

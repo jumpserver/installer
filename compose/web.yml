@@ -1,14 +1,17 @@
 services:
   web:
-    image: ${REGISTRY:-docker.io}/jumpserver/web:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/web:${VERSION}
     container_name: jms_web
     hostname: jms_web
     ulimits:
       core: 0
+      memlock:
+        soft: -1
+        hard: -1
     restart: always
     environment:
       TZ: ${TZ:-Asia/Shanghai}
-      HTTP_PORT: ${HTTP_PORT:-80}
+      HTTP_PORT: 80
       USE_LB: ${USE_LB:-1}
       USE_IPV6: ${USE_IPV6:-0}
       USE_XPACK: ${USE_XPACK:-0}
@@ -21,13 +24,13 @@ services:
       KAEL_ENABLED: ${KAEL_ENABLED:-0}
       RAZOR_ENABLED: ${RAZOR_ENABLED:-1}
       FACELIVE_ENABLED: ${FACELIVE_ENABLED:-0}
-    ports:
-      - ${HTTP_PORT:-80}:${HTTP_PORT:-80}
+      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
       - ${VOLUME_DIR}/nginx/data/logs:/var/log/nginx
+      - /sys/fs/bpf:/sys/fs/bpf
     healthcheck:
-      test: "check http://localhost:51980/api/health/"
+      test: "check http://localhost/web/health/"
       interval: 10s
       timeout: 5s
       retries: 3

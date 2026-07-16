@@ -32,6 +32,7 @@ function check_config_file() {
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
+  gen_safe_config
 }
 
 function pre_check() {
@@ -61,7 +62,8 @@ function usage() {
   echo "More Commands: "
   echo "  load_image        $(gettext 'Loading docker image')"
   echo "  backup_db         $(gettext 'Backup database')"
-  echo "  restore_db [file] $(gettext 'Data recovery through database backup file')"
+  echo "  backup_audit      $(gettext 'Backup audits tables')"
+  echo "  restore_db [file]        $(gettext 'Data recovery through database backup file')"
   echo "  raw               $(gettext 'Execute the original docker compose command')"
   echo "  tail [service]    $(gettext 'View log')"
   echo
@@ -79,14 +81,32 @@ EXE=""
 
 function start() {
   ${EXE} up -d
+
+  base_dir="${PROJECT_DIR}"
+  to="/opt/current/installer"
+  if [[ "$base_dir" == "$to" ]]; then
+    return
+  fi
+  mkdir -p /opt/current
+  echo "$base_dir" > /var/run/installer.lock
+  if [[ ! -L "$to" || "$(readlink -f "$to")" != "$base_dir" ]]; then
+      rm -f "$to"
+      ln -s "$base_dir" "$to"
+  fi
+  if [[ -e "$base_dir" && ! -e "$to" ]]; then
+      ln -s "$base_dir" "$to"
+  fi
 }
 
 function stop() {
-  if [[ -n "${target}" ]]; then
+  if [[ "${target}" == "ignore_db" ]]; then
+    cmd=$(get_docker_compose_cmd_line "ignore_db")
+    ${cmd} down -v
+  elif [[ -n "${target}" ]]; then
     ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
-    return
+  else
+    ${EXE} down -v
   fi
-  ${EXE} down -v
 }
 
 function close() {
@@ -111,7 +131,17 @@ function pull() {
 function restart() {
   stop
   echo -e "\n"
+
+  if [[ -n "${target}" && "${target}" != "ignore_db" ]]; then
+    ${EXE} up -d "${target}"
+    return
+  fi
   start
+}
+
+function clean() {
+  rm -f scripts/docker/*
+  rm -f scripts/images/*
 }
 
 function check_update() {
@@ -203,7 +233,7 @@ function main() {
     restart
     ;;
   stop)
-    stop
+    stop 
     ;;
   pull)
     pull
@@ -224,8 +254,17 @@ function main() {
   uninstall)
     bash "${SCRIPT_DIR}/8_uninstall.sh"
     ;;
+  migrate_db)
+    if ! perform_db_migrations; then
+      log_error "$(gettext 'Failed to change the table structure')!"
+      exit 1
+    fi
+    ;;
   backup_db)
     bash "${SCRIPT_DIR}/5_db_backup.sh"
+    ;;
+  backup_audit)
+    bash "${SCRIPT_DIR}/5_db_backup.sh" "audit"
     ;;
   restore_db)
     bash "${SCRIPT_DIR}/6_db_restore.sh" "$target"
@@ -252,6 +291,18 @@ function main() {
     ;;
   init_db)
     perform_db_migrations
+    ;;
+  restart_db)
+    db_redis_restart "${target}"
+    ;;
+  stop_db)
+    db_redis_stop "${target}"
+    ;;
+  start_db)
+    db_redis_start "${target}"
+    ;;
+  cmd_db)
+    get_db_compose_cmd "${target}"
     ;;
   video-worker)
     video-worker

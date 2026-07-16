@@ -1,6 +1,6 @@
 services:
   core:
-    image: ${REGISTRY:-docker.io}/jumpserver/core:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/core:${VERSION}
     container_name: jms_core
     hostname: jms_core
     ulimits:
@@ -14,6 +14,7 @@ services:
     volumes:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
+      - /var/run/docker.sock:/var/run/docker.sock:z
     healthcheck:
       test: "check http://localhost:8080/api/health/"
       interval: 10s
@@ -22,3 +23,5 @@ services:
       start_period: 90s
     networks:
       - net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

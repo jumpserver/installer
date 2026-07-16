@@ -1,26 +1,26 @@
 services:
   magnus:
-    image: ${REGISTRY:-registry.fit2cloud.com}/jumpserver/magnus:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/magnus:${VERSION}
     container_name: jms_magnus
     hostname: jms_magnus
     ulimits:
       core: 0
     restart: always
     env_file:
-      - ${CONFIG_FILE}
+      - ${CONFIG_SAFE_FILE}
     ports:
-      - ${MAGNUS_MYSQL_PORT:-33061}:${MAGNUS_MYSQL_PORT:-33061}
-      - ${MAGNUS_MARIADB_PORT:-33062}:${MAGNUS_MARIADB_PORT:-33062}
-      - ${MAGNUS_REDIS_PORT:-63790}:${MAGNUS_REDIS_PORT:-63790}
-      - ${MAGNUS_POSTGRESQL_PORT:-54320}:${MAGNUS_POSTGRESQL_PORT:-54320}
-      - ${MAGNUS_SQLSERVER_PORT:-14330}:${MAGNUS_SQLSERVER_PORT:-14330}
-      - ${MAGNUS_ORACLE_PORT:-15210}:${MAGNUS_ORACLE_PORT:-15210}
-      - ${MAGNUS_MONGODB_PORT:-27018}:${MAGNUS_MONGODB_PORT:-27018}
+      - ${MAGNUS_MYSQL_PORT:-33061}:33061
+      - ${MAGNUS_MARIADB_PORT:-33062}:33062
+      - ${MAGNUS_REDIS_PORT:-63790}:63790
+      - ${MAGNUS_POSTGRESQL_PORT:-54320}:54320
+      - ${MAGNUS_SQLSERVER_PORT:-14330}:14330
+      - ${MAGNUS_ORACLE_PORT:-15210}:15210
+      - ${MAGNUS_MONGODB_PORT:-27018}:27018
     volumes:
       - ${CONFIG_DIR}/certs:/opt/magnus/data/certs
       - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
     healthcheck:
-      test: "curl localhost:8088/health || exit 1"
+      test: "check http://localhost:8088/health"
       interval: 10s
       timeout: 5s
       retries: 3
