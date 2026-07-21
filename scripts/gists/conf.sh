@@ -94,6 +94,15 @@ function set_config() {
   sed_in_place "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
 }
 
+function remove_config() {
+  key=$1
+
+  has=$(has_config "${key}")
+  if [[ ${has} == "1" ]]; then
+    sed_in_place "/^[ \t]*${key}=.*$/d" "${CONFIG_FILE}"
+  fi
+}
+
 function disable_config() {
   key=$1
 
