@@ -136,8 +136,8 @@ JUMPSERVER_ENABLE_FONT_SMOOTHING=true
 ################################# XPack Configuration #################################
 # XPack package, invalid setting in open source version
 #
-SSH_PORT=2222
-RDP_PORT=3389
+KOKO_SSH_PORT=2222
+RAZOR_RDP_PORT=3389
 XRDP_PORT=3390
 MAGNUS_MYSQL_PORT=33061
 MAGNUS_MARIADB_PORT=33062

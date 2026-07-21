@@ -71,9 +71,9 @@ function set_port() {
     fi
     if [[ "${use_xpack}" == "1" ]]; then
         if [[ "${koko_enable}" != "0" ]]; then
-            ssh_port=$(get_config SSH_PORT)
+            ssh_port=$(get_config KOKO_SSH_PORT)
             read_from_input ssh_port "$(gettext 'Please enter SSH PORT')" "" "${ssh_port}"
-            set_config SSH_PORT "${ssh_port}"
+            set_config KOKO_SSH_PORT "${ssh_port}"
         fi
         if [[ "${magnus_enable}" != "0" ]]; then
             magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
@@ -98,9 +98,9 @@ function set_port() {
             set_config XRDP_PORT "${xrdp_port}"
         fi
         if [[ "${razor_enable}" != "0" ]]; then
-            rdp_port=$(get_config RDP_PORT)
+            rdp_port=$(get_config RAZOR_RDP_PORT)
             read_from_input rdp_port "$(gettext 'Please enter RAZOR PORT')" "" "${rdp_port}"
-            set_config RDP_PORT "${rdp_port}"
+            set_config RAZOR_RDP_PORT "${rdp_port}"
         fi
         if [[ "${magnus_enable}" != "0" ]]; then
             magnus_oracle_port=$(get_config MAGNUS_ORACLE_PORT)

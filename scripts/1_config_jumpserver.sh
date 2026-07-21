@@ -213,8 +213,8 @@ function set_redis() {
 function set_service() {
   echo_yellow "\n5. $(gettext 'Configure External Access')"
   http_port=$(get_config HTTP_PORT)
-  ssh_port=$(get_config SSH_PORT)
-  rdp_port=$(get_config RDP_PORT)
+  ssh_port=$(get_config KOKO_SSH_PORT)
+  rdp_port=$(get_config RAZOR_RDP_PORT)
   use_xpack=$(get_config_or_env USE_XPACK)
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need to customize the JumpServer external port')?" "y/n" "${confirm}"
@@ -224,9 +224,9 @@ function set_service() {
 
     if [[ "${use_xpack}" == "1" ]]; then
       read_from_input ssh_port "$(gettext 'JumpServer ssh port')" "" "${ssh_port}"
-      set_config SSH_PORT "${ssh_port}"
+      set_config KOKO_SSH_PORT "${ssh_port}"
       read_from_input rdp_port "$(gettext 'JumpServer rdp port')" "" "${rdp_port}"
-      set_config RDP_PORT "${rdp_port}"
+      set_config RAZOR_RDP_PORT "${rdp_port}"
     fi
   fi
 }
