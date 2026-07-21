@@ -37,6 +37,29 @@ function check_and_set_config() {
   fi
 }
 
+function migrate_compat_config() {
+  local new_key=$1
+  local old_key=$2
+  local default_value=$3
+  local new_value old_value
+
+  new_value=$(get_config "${new_key}")
+  if [[ -n "${new_value}" ]]; then
+    return
+  fi
+
+  old_value=$(get_config "${old_key}")
+  if [[ -n "${old_value}" ]]; then
+    set_config "${new_key}" "${old_value}"
+    return
+  fi
+
+  if [[ -n "${default_value}" ]]; then
+    set_config "${new_key}" "${default_value}"
+  fi
+
+}
+
 function upgrade_config() {
   if check_root; then
     check_docker_start
@@ -70,7 +93,6 @@ function upgrade_config() {
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    check_and_set_config "RDP_PORT" "3389"
     check_and_set_config "XRDP_PORT" "3390"
     check_and_set_config "MAGNUS_MYSQL_PORT" "33061"
     check_and_set_config "MAGNUS_MARIADB_PORT" "33062"
@@ -156,7 +178,9 @@ function migrate_data_folder() {
 }
 
 function migrate_config() {
-  prepare_config
+  # prepare_config
+  migrate_compat_config "KOKO_SSH_PORT" "SSH_PORT" "2222"
+  migrate_compat_config "RAZOR_RDP_PORT" "RDP_PORT" "3389"
 }
 
 function update_config_if_need() {
