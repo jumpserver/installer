@@ -49,7 +49,7 @@ function post_install() {
   http_port=$(get_config HTTP_PORT)
   https_port=$(get_config HTTPS_PORT)
   server_name=$(get_config SERVER_NAME)
-  ssh_port=$(get_config SSH_PORT)
+  ssh_port=$(get_config KOKO_SSH_PORT)
   use_xpack=$(get_config_or_env USE_XPACK)
 
   echo_yellow "1. $(gettext 'You can use the following command to start, and then visit')"
