@@ -45,12 +45,14 @@ function migrate_compat_config() {
 
   new_value=$(get_config "${new_key}")
   if [[ -n "${new_value}" ]]; then
+    remove_config "${old_key}"
     return
   fi
 
   old_value=$(get_config "${old_key}")
   if [[ -n "${old_value}" ]]; then
     set_config "${new_key}" "${old_value}"
+    remove_config "${old_key}"
     return
   fi
 
