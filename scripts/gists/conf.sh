@@ -1,15 +1,4 @@
 
-
-function is_confirm() {
-  read -r confirmed
-  if [[ "${confirmed}" == "y" || "${confirmed}" == "Y" || ${confirmed} == "" ]]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-
 function has_config() {
   key=$1
   if grep "^[ \t]*${key}=" "${CONFIG_FILE}" &>/dev/null; then
@@ -33,19 +22,12 @@ function get_config() {
   echo "${value}"
 }
 
-function get_env_value() {
-  key=$1
-  default=${2-''}
-  value="${!key}"
-  echo "${value}"
-}
-
 function get_config_or_env() {
   key=$1
   value=''
   default=${2-''}
 
-  value=$(get_env_value "$key")
+  value="${!key}"
   if [[ -z "$value" && -f "${CONFIG_FILE}" ]];then
     value=$(get_config "$key")
   fi
@@ -56,50 +38,25 @@ function get_config_or_env() {
   echo "${value}"
 }
 
-CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD REDIS_PASSWORD"
-
-function is_config_excluded() {
-  local key=$1
-  local excluded
-
-  for excluded in ${CONFIG_SAFE_EXCLUDES}; do
-    if [[ "${key}" == "${excluded}" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
+CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD"
 
 function gen_safe_config() {
   local base_config_file=${CONFIG_FILE}
   local output_file=${CONFIG_SAFE_FILE}
   local tmp_file="${output_file}.tmp.$$"
-  local line key value
+  local excluded
 
   mkdir -p "${CONFIG_DIR}"
-  : >"${tmp_file}"
-
   if [[ -f "${base_config_file}" ]]; then
-    while IFS= read -r line || [[ -n "${line}" ]]; do
-      [[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
-      [[ "${line}" != *"="* ]] && continue
-
-      key="${line%%=*}"
-      key="${key#"${key%%[![:space:]]*}"}"
-      key="${key%"${key##*[![:space:]]}"}"
-      is_config_excluded "${key}" && continue
-
-      value="${line#*=}"
-      value="${value#"${value%%[![:space:]]*}"}"
-      echo "${key}=${value}" >>"${tmp_file}"
-    done <"${base_config_file}"
+    cp "${base_config_file}" "${tmp_file}"
+    for excluded in ${CONFIG_SAFE_EXCLUDES}; do
+      sed_in_place "/^[[:space:]]*${excluded}=/d" "${tmp_file}"
+    done
+  else
+    : >"${tmp_file}"
   fi
 
-  if [[ -s "${tmp_file}" ]]; then
-    sort -o "${tmp_file}" "${tmp_file}"
-  fi
-
-  if [[ -f "${output_file}" ]] && cmp -s "${tmp_file}" <(sort "${output_file}"); then
+  if [[ -f "${output_file}" ]] && cmp -s "${tmp_file}" "${output_file}"; then
     rm -f "${tmp_file}"
     echo "${output_file}"
     return
@@ -126,7 +83,6 @@ function set_config() {
   has=$(has_config "${key}")
   if [[ ${has} == "0" ]]; then
     echo "${key}=${value}" >>"${CONFIG_FILE}"
-    gen_safe_config >/dev/null
     return
   fi
 
@@ -136,7 +92,6 @@ function set_config() {
   fi
 
   sed_in_place "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
-  gen_safe_config >/dev/null
 }
 
 function disable_config() {
@@ -145,7 +100,6 @@ function disable_config() {
   has=$(has_config "${key}")
   if [[ ${has} == "1" ]]; then
     sed_in_place "s,^[ \t]*${key}=.*$,# ${key}=,g" "${CONFIG_FILE}"
-    gen_safe_config >/dev/null
   fi
 }
 
@@ -228,7 +182,7 @@ function prepare_config() {
     sed_in_place "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
   fi
 
-  gen_safe_config
+  gen_safe_config >/dev/null
 }
 
 function ensure_core_data_symlink() {
