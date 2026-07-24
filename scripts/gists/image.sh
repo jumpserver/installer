@@ -28,6 +28,9 @@ function get_pull_images() {
   if should_include_openbao_image; then
     images+=("$(get_openbao_image)")
   fi
+  if should_include_kotl_image; then
+    images+=("jumpserver/kotl:${VERSION}")
+  fi
   echo "${images[@]}"
 }
 
@@ -52,6 +55,9 @@ function get_images() {
   fi
   if should_include_openbao_image; then
     images+=("$(get_openbao_image)")
+  fi
+  if should_include_kotl_image; then
+    images+=("$(get_kotl_image)")
   fi
   echo "${images[@]}"
 }

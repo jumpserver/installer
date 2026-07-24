@@ -85,38 +85,35 @@ function start() {
   EXE=$(get_docker_compose_cmd_line)
   ${EXE} up -d
 
-  base_dir="${PROJECT_DIR}"
-  to="/opt/current/installer"
-  if [[ "$base_dir" == "$to" ]]; then
-    return
-  fi
-  mkdir -p /opt/current
-  echo "$base_dir" > /var/run/installer.lock
-  if [[ ! -L "$to" || "$(readlink -f "$to")" != "$base_dir" ]]; then
-      rm -f "$to"
-      ln -s "$base_dir" "$to"
-  fi
-  if [[ -e "$base_dir" && ! -e "$to" ]]; then
-      ln -s "$base_dir" "$to"
-  fi
+  ensure_current_installer_link || return 1
+  start_kotl
 }
 
 function stop() {
-  if [[ "${target}" == "ignore_db" ]]; then
+  if [[ "${target}" == "kotl" ]]; then
+    stop_kotl
+  elif [[ "${target}" == "ignore_db" ]]; then
+    stop_kotl || return 1
     cmd=$(get_docker_compose_cmd_line "ignore_db")
     ${cmd} down -v
   elif [[ -n "${target}" ]]; then
     ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
   else
+    stop_kotl || return 1
     ${EXE} down -v
   fi
 }
 
 function close() {
   if [[ -n "${target}" ]]; then
+    if [[ "${target}" == "kotl" ]]; then
+      stop_kotl
+      return
+    fi
     ${EXE} stop "${target}"
     return
   fi
+  stop_kotl || return 1
   services=$(get_docker_compose_services ignore_db)
   for i in ${services}; do
     ${EXE} stop "${i}"
@@ -132,6 +129,10 @@ function pull() {
 }
 
 function restart() {
+  if [[ "${target}" == "kotl" ]]; then
+    restart_kotl
+    return
+  fi
   stop
   echo -e "\n"
 
@@ -246,10 +247,14 @@ function main() {
     ;;
   status)
     ${EXE} ps
+    status_kotl
     ;;
   down)
     if [[ -z "${target}" ]]; then
+      stop_kotl || exit 1
       ${EXE} down -v
+    elif [[ "${target}" == "kotl" ]]; then
+      stop_kotl
     else
       ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     fi
@@ -282,7 +287,9 @@ function main() {
     echo "${EXE}"
     ;;
   tail)
-    if [[ -z "${target}" ]]; then
+    if [[ "${target}" == "kotl" ]]; then
+      tail_kotl
+    elif [[ -z "${target}" ]]; then
       ${EXE} logs --tail 100 -f
     else
       docker_name=$(service_to_docker_name "${target}")
