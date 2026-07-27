@@ -71,6 +71,18 @@ function image_has_prefix() {
   fi
 }
 
+function image_uses_mirror_prefix() {
+  image=$1
+
+  if [[ "${image}" != */* || $(image_has_prefix "${image}") == "1" ]]; then
+    echo "1"
+  elif [[ "${image}" == "openbao/openbao" || "${image}" == openbao/openbao:* || "${image}" == openbao/openbao@* ]]; then
+    echo "1"
+  else
+    echo "0"
+  fi
+}
+
 function check_image_exists() {
   image=$1
   if docker image inspect -f '{{ .Id }}' "$image" &>/dev/null; then
@@ -98,7 +110,7 @@ function get_image_full_path() {
 
   full_image_path="${image}"
   if [[ -n "${DOCKER_IMAGE_PREFIX}" ]]; then
-    if [[ "${image}" == */* && $(image_has_prefix "${image}") != "1" ]]; then
+    if [[ $(image_uses_mirror_prefix "${image}") != "1" ]]; then
       full_image_path="${image}"
     elif echo "${DOCKER_IMAGE_PREFIX}" | grep -q "/";then
       app=$(echo "$image" | awk -F'/' '{ print $NF }')
