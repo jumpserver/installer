@@ -176,7 +176,7 @@ function get_docker_compose_cmd_line() {
     fi
   fi
 
-  if [[ "${use_lb}" == "1" || -n "${https_port}" ]]; then
+  if [[ -n "${https_port}" ]]; then
     cmd+=" -f compose/web.https.yml"
   fi
 
