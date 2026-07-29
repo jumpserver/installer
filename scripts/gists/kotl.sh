@@ -32,6 +32,7 @@ function check_kotl_volume_dir() {
 function configure_kotl() {
   is_kotl_enabled || return 0
   check_kotl_volume_dir || return 1
+  set_config KOTL_ENABLED 1
   set_config JDMC_ENABLED 1
   set_config JDMC_SOCK_PATH "${KOTL_CORE_SOCKET_PATH}"
   gen_safe_config >/dev/null
