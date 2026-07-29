@@ -283,6 +283,10 @@ function main() {
   pull_images)
     pull_images
     ;;
+  pull_mysql)
+    docker pull registry.cn-beijing.aliyuncs.com/jumpservice/mysql:8.0
+    docker tag registry.cn-beijing.aliyuncs.com/jumpservice/mysql:8.0 mysql:8.0
+    ;;
   cmd)
     echo "${EXE}"
     ;;
