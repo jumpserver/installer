@@ -162,3 +162,36 @@ USE_LB=1
 #
 TZ=Asia/Shanghai
 CURRENT_VERSION=
+
+################################# Vault Configuration #################################
+# OpenBao runs as an independent Docker service in this installer. JumpServer connects to OpenBao Server directly.
+# OpenBao 作为独立 Docker 服务部署，JumpServer 直接访问 OpenBao Server。
+#
+# Disabled by default. Set to true to enable Vault storage. When the backend is
+# openbao and OPENBAO_EXTERNAL=false, the installer starts the built-in service.
+# 默认关闭；设为 true 后启用 Vault。当后端为 openbao 且 OPENBAO_EXTERNAL=false 时，安装器启动内置服务。
+VAULT_ENABLED=false
+VAULT_BACKEND=openbao
+VAULT_OPENBAO_ADDR=http://openbao:8200
+VAULT_OPENBAO_MOUNT_POINT=pam
+VAULT_OPENBAO_TOKEN=
+VAULT_OPENBAO_TIMEOUT=10
+
+# Set to true when VAULT_OPENBAO_ADDR points to an external OpenBao cluster or HA endpoint.
+# 设置为 true 时，installer 不会启动内置 OpenBao，Core 仍使用上面的 Vault 配置连接外部服务。
+OPENBAO_EXTERNAL=false
+
+OPENBAO_RAFT_NODE_ID=openbao
+OPENBAO_RAFT_API_ADDR=http://openbao:8200
+OPENBAO_RAFT_CLUSTER_ADDR=http://openbao:8201
+OPENBAO_RAFT_BOOTSTRAP=true
+# Additional Raft nodes must set OPENBAO_RAFT_BOOTSTRAP=false and receive a
+# protected copy of openbao/init.json from the bootstrap node before startup.
+# OPENBAO_RAFT_RETRY_JOIN=http://openbao-1:8200,http://openbao-2:8200
+
+OPENBAO_UNSEAL_KEY_SHARES=5
+OPENBAO_UNSEAL_KEY_THRESHOLD=3
+OPENBAO_UI_BIND=127.0.0.1
+OPENBAO_UI_PORT=8200
+OPENBAO_CLUSTER_BIND=127.0.0.1
+OPENBAO_CLUSTER_PORT=8201

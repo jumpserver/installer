@@ -258,6 +258,7 @@ function main() {
   if set_redis; then
     echo_done
   fi
+  set_openbao || return 1
   if set_service; then
     echo_done
   fi
