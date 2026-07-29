@@ -180,7 +180,7 @@ function migrate_data_folder() {
 }
 
 function migrate_config() {
-  # prepare_config
+  prepare_jmsctl
   migrate_compat_config "KOKO_SSH_PORT" "SSH_PORT" "2222"
   migrate_compat_config "RAZOR_RDP_PORT" "RDP_PORT" "3389"
 }
@@ -316,6 +316,8 @@ function upgrade_compose() {
 }
 
 function main() {
+  cd "${PROJECT_DIR}" || exit 1
+
   confirm="y"
   to_version="${VERSION}"
   if [[ -n "${target}" ]]; then
