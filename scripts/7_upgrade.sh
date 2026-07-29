@@ -83,8 +83,8 @@ function upgrade_config() {
   if docker image inspect -f '{{.Id}}' jumpserver/mariadb:10.6 &>/dev/null; then
     docker tag jumpserver/mariadb:10.6 mariadb:10.6
   fi
-  if docker image inspect -f '{{.Id}}' jumpserver/mysql:5.7 &>/dev/null; then
-    docker tag jumpserver/mysql:5.7 mysql:5.7-debian
+  if docker image inspect -f '{{.Id}}' jumpserver/mysql:8.0 &>/dev/null; then
+    docker tag jumpserver/mysql:8.0 mysql:8.0
   fi
   check_and_set_config "CURRENT_VERSION" "${VERSION}"
   check_and_set_config "CLIENT_MAX_BODY_SIZE" "4096m"
