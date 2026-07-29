@@ -28,6 +28,9 @@ function get_pull_images() {
   if should_include_openbao_image; then
     images+=("$(get_openbao_image)")
   fi
+  if should_include_kotl_image; then
+    images+=("jumpserver/kotl:${VERSION}")
+  fi
   echo "${images[@]}"
 }
 
@@ -53,12 +56,27 @@ function get_images() {
   if should_include_openbao_image; then
     images+=("$(get_openbao_image)")
   fi
+  if should_include_kotl_image; then
+    images+=("$(get_kotl_image)")
+  fi
   echo "${images[@]}"
 }
 
 
 function image_has_prefix() {
   if [[ $1 =~ jumpserver.* ]]; then
+    echo "1"
+  else
+    echo "0"
+  fi
+}
+
+function image_uses_mirror_prefix() {
+  image=$1
+
+  if [[ "${image}" != */* || $(image_has_prefix "${image}") == "1" ]]; then
+    echo "1"
+  elif [[ "${image}" == "openbao/openbao" || "${image}" == openbao/openbao:* || "${image}" == openbao/openbao@* ]]; then
     echo "1"
   else
     echo "0"
@@ -92,7 +110,7 @@ function get_image_full_path() {
 
   full_image_path="${image}"
   if [[ -n "${DOCKER_IMAGE_PREFIX}" ]]; then
-    if [[ "${image}" == */* && $(image_has_prefix "${image}") != "1" ]]; then
+    if [[ $(image_uses_mirror_prefix "${image}") != "1" ]]; then
       full_image_path="${image}"
     elif echo "${DOCKER_IMAGE_PREFIX}" | grep -q "/";then
       app=$(echo "$image" | awk -F'/' '{ print $NF }')

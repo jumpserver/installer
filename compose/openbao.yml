@@ -10,7 +10,7 @@ services:
         condition: service_completed_successfully
 
   openbao:
-    image: ${OPENBAO_IMAGE:-openbao/openbao:2.6.0}
+    image: openbao:2.6.0
     container_name: jms_openbao
     hostname: openbao
     # Start the image entrypoint as root so it can fix bind-mount ownership;
@@ -40,7 +40,7 @@ services:
       - net
 
   openbao-init:
-    image: ${OPENBAO_IMAGE:-openbao/openbao:2.6.0}
+    image: openbao:2.6.0
     container_name: jms_openbao_init
     hostname: openbao-init
     # The one-shot initializer writes root-owned 0600 unseal material.

@@ -99,6 +99,10 @@ function main() {
   if ! bash "${BASE_DIR}/1_config_jumpserver.sh"; then
     exit 1
   fi
+  if ! configure_kotl; then
+    log_error "Failed to configure KOTL"
+    exit 1
+  fi
 
   echo_green "\n>>> $(gettext 'Loading Docker Image')"
   if ! bash "${BASE_DIR}/3_load_images.sh"; then
@@ -112,6 +116,14 @@ function main() {
   fi
 
   ensure_core_data_symlink || log_warn "Failed to prepare host core data symlink, continue installation"
+  ensure_current_installer_link || {
+    log_error "Failed to update /opt/current/installer"
+    exit 1
+  }
+  install_kotl || {
+    log_error "Failed to install KOTL"
+    exit 1
+  }
  
   installation_log "install"
   post_install

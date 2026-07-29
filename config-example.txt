@@ -129,6 +129,11 @@ DOMAINS=
 # CHEN_ENABLED=0
 # WEB_ENABLED=0
 
+# KOTL is the host management console. It is distributed as an artifact image,
+# then installed as a systemd service on the host instead of running in Compose.
+# When enabled, the installer configures JDMC_ENABLED and JDMC_SOCK_PATH for Core.
+KOTL_ENABLED=0
+
 # Lion enables font smoothing to optimize the experience
 #
 JUMPSERVER_ENABLE_FONT_SMOOTHING=true

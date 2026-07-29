@@ -192,6 +192,7 @@ function update_config_if_need() {
   migrate_config
   upgrade_config
   set_openbao || exit 1
+  configure_kotl || exit 1
   clean_file
 }
 
@@ -371,6 +372,14 @@ function main() {
   upgrade_docker
   upgrade_compose
   ensure_core_data_symlink || log_warn "Failed to prepare host core data symlink, continue upgrade"
+  ensure_current_installer_link || {
+    log_error "Failed to update /opt/current/installer"
+    exit 1
+  }
+  upgrade_kotl || {
+    log_error "Failed to upgrade KOTL"
+    exit 1
+  }
 
   installation_log "upgrade"
 

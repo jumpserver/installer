@@ -36,6 +36,24 @@ $ ./jmsctl.sh tail
 
 ```
 
+## KOTL
+
+KOTL 作为宿主机 systemd 服务安装，不加入 Docker Compose。启用时请在
+`static.env` 或 `/opt/jumpserver/config/config.txt` 中设置：
+
+```bash
+KOTL_ENABLED=1
+```
+
+安装器会拉取 `${NAMESPACE:-jumpserver}/kotl:${VERSION}` artifact 镜像，从
+`/dist` 提取并执行 KOTL 自带的 `scripts/install.sh` 或 `scripts/upgrade.sh`。
+离线包也会自动包含该镜像。服务跟随 `jmsctl.sh start/stop/restart/status`
+管理，日志可通过 `./jmsctl.sh tail kotl` 查看。启用时还会自动为 Core 配置
+`JDMC_ENABLED=1` 和 `/opt/jumpserver/data/unshare/kotl.sock`。
+
+当前 KOTL 的宿主机路径固定使用 `/data/jumpserver`，因此启用时
+`VOLUME_DIR` 也必须保持为 `/data/jumpserver`。
+
 ## 配置文件说明
 
 配置文件将会放在 /opt/jumpserver/config 中
