@@ -84,7 +84,7 @@ function get_db_info() {
   case "${info_type}" in
     "image")
       if [[ "${mysql_data_exists}" == "1" ]]; then
-        echo "mysql:5.7-debian"
+        echo "mysql:8.0"
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "mariadb:10.6"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
