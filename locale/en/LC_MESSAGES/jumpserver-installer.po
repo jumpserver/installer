@@ -520,6 +520,10 @@ msgid "Please enter SSH PORT"
 msgstr ""
 
 #: scripts/config.sh:80
+msgid "Please enter MAGNUS PORT"
+msgstr ""
+
+#: scripts/config.sh:80
 msgid "Please enter MAGNUS MYSQL PORT"
 msgstr ""
 

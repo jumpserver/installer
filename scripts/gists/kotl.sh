@@ -3,11 +3,17 @@
 KOTL_SERVICE_NAME=${KOTL_SERVICE_NAME:-kotl.service}
 KOTL_CORE_SOCKET_PATH=${KOTL_CORE_SOCKET_PATH:-/opt/jumpserver/data/unshare/kotl.sock}
 
+function is_enterprise_edition() {
+  [[ "$(get_config_or_env USE_XPACK 0)" == "1" ]]
+}
+
 function is_kotl_enabled() {
-  [[ "$(get_config_or_env KOTL_ENABLED 1)" == "1" ]]
+  is_enterprise_edition && [[ "$(get_config_or_env KOTL_ENABLED 1)" == "1" ]]
 }
 
 function should_include_kotl_image() {
+  is_enterprise_edition || return 1
+
   case "${INCLUDE_KOTL_IMAGE:-}" in
     1|true|True|TRUE) return 0 ;;
   esac

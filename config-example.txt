@@ -129,10 +129,10 @@ DOMAINS=
 # CHEN_ENABLED=0
 # WEB_ENABLED=0
 
-# KOTL is the host management console. It is distributed as an artifact image,
-# then installed as a systemd service on the host instead of running in Compose.
-# When enabled, the installer configures JDMC_ENABLED and JDMC_SOCK_PATH for Core.
-KOTL_ENABLED=1
+# KOTL is an Enterprise Edition host management console. It is distributed as
+# an artifact image, then installed as a systemd service on the host instead of
+# running in Compose. It requires USE_XPACK=1 and can be disabled with:
+# KOTL_ENABLED=0
 
 # Lion enables font smoothing to optimize the experience
 #
@@ -144,12 +144,7 @@ JUMPSERVER_ENABLE_FONT_SMOOTHING=true
 KOKO_SSH_PORT=2222
 RAZOR_RDP_PORT=3389
 XRDP_PORT=3390
-MAGNUS_MYSQL_PORT=33061
-MAGNUS_MARIADB_PORT=33062
-MAGNUS_REDIS_PORT=63790
-MAGNUS_POSTGRESQL_PORT=54320
-MAGNUS_SQLSERVER_PORT=14330
-MAGNUS_ORACLE_PORT=15210
+MAGNUS_PORT=5525
 
 #XRDP_ENABLED=1
 

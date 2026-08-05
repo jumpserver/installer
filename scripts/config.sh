@@ -76,21 +76,9 @@ function set_port() {
             set_config KOKO_SSH_PORT "${ssh_port}"
         fi
         if [[ "${magnus_enable}" != "0" ]]; then
-            magnus_mysql_port=$(get_config MAGNUS_MYSQL_PORT)
-            read_from_input magnus_mysql_port "$(gettext 'Please enter MAGNUS MYSQL PORT')" "" "${magnus_mysql_port}"
-            set_config MAGNUS_MYSQL_PORT "${magnus_mysql_port}"
-            magnus_mariadb_port=$(get_config MAGNUS_MARIADB_PORT)
-            read_from_input magnus_mariadb_port "$(gettext 'Please enter MAGNUS MARIADB PORT')" "" "${magnus_mariadb_port}"
-            set_config MAGNUS_MARIADB_PORT "${magnus_mariadb_port}"
-            magnus_redis_port=$(get_config MAGNUS_REDIS_PORT)
-            read_from_input magnus_redis_port "$(gettext 'Please enter MAGNUS REDIS PORT')" "" "${magnus_redis_port}"
-            set_config MAGNUS_REDIS_PORT "${magnus_redis_port}"
-            magnus_postgresql_port=$(get_config MAGNUS_POSTGRESQL_PORT)
-            read_from_input magnus_postgresql_port "$(gettext 'Please enter MAGNUS POSTGRESQL PORT')" "" "${magnus_postgresql_port}"
-            set_config MAGNUS_POSTGRESQL_PORT "${magnus_postgresql_port}"
-            magnus_sqlserver_port=$(get_config MAGNUS_SQLSERVER_PORT)
-            read_from_input magnus_sqlserver_port "$(gettext 'Please enter MAGNUS SQLSERVER PORT')" "" "${magnus_sqlserver_port}"
-            set_config MAGNUS_SQLSERVER_PORT "${magnus_sqlserver_port}"
+            magnus_port=$(get_config MAGNUS_PORT)
+            read_from_input magnus_port "$(gettext 'Please enter MAGNUS PORT')" "" "${magnus_port}"
+            set_config MAGNUS_PORT "${magnus_port}"
         fi
         if [[ "${xrdp_enable}" != "0" ]]; then
             xrdp_port=$(get_config XRDP_PORT)
@@ -101,11 +89,6 @@ function set_port() {
             rdp_port=$(get_config RAZOR_RDP_PORT)
             read_from_input rdp_port "$(gettext 'Please enter RAZOR PORT')" "" "${rdp_port}"
             set_config RAZOR_RDP_PORT "${rdp_port}"
-        fi
-        if [[ "${magnus_enable}" != "0" ]]; then
-            magnus_oracle_port=$(get_config MAGNUS_ORACLE_PORT)
-            read_from_input magnus_oracle_port "$(gettext 'Please enter MAGNUS ORACLE PORT')" "" "${magnus_oracle_port}"
-            set_config MAGNUS_ORACLE_PORT "${magnus_oracle_port}"
         fi
         if [[ "${nec_enable}" != "0" ]]; then
             nec_vnc_port=$(get_config NEC_VNC_PORT)
