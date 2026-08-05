@@ -96,12 +96,7 @@ function upgrade_config() {
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
     check_and_set_config "XRDP_PORT" "3390"
-    check_and_set_config "MAGNUS_MYSQL_PORT" "33061"
-    check_and_set_config "MAGNUS_MARIADB_PORT" "33062"
-    check_and_set_config "MAGNUS_REDIS_PORT" "63790"
-    check_and_set_config "MAGNUS_POSTGRESQL_PORT" "54320"
-    check_and_set_config "MAGNUS_SQLSERVER_PORT" "14330"
-    check_and_set_config "MAGNUS_ORACLE_PORT" "15210"
+    check_and_set_config "MAGNUS_PORT" "5525"
   fi
 }
 

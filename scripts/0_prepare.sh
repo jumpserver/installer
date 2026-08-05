@@ -49,12 +49,17 @@ function prepare_image_files() {
   fi
   rm -f "${IMAGE_DIR}"/*
 
-  # The offline bundle must carry optional service images even when they are
-  # disabled by default, so they can be enabled later without registry access.
+  # The offline bundle must carry optional OpenBao even when it is disabled by
+  # default, so it can be enabled later without registry access.
   local INCLUDE_OPENBAO_IMAGE=1
-  local INCLUDE_KOTL_IMAGE=1
   export INCLUDE_OPENBAO_IMAGE
-  export INCLUDE_KOTL_IMAGE
+
+  # KOTL is an Enterprise Edition component. Include it in the offline bundle
+  # only when building an XPack deployment.
+  if is_enterprise_edition; then
+    local INCLUDE_KOTL_IMAGE=1
+    export INCLUDE_KOTL_IMAGE
+  fi
   pull_images
 
   images=$(get_images)

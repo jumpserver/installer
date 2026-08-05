@@ -524,6 +524,10 @@ msgid "Please enter SSH PORT"
 msgstr "請輸入 KOKO SSH 服務埠"
 
 #: scripts/config.sh:80
+msgid "Please enter MAGNUS PORT"
+msgstr "請輸入 MAGNUS 服務埠"
+
+#: scripts/config.sh:80
 msgid "Please enter MAGNUS MYSQL PORT"
 msgstr "請輸入 MAGNUS MYSQL 服務埠"
 

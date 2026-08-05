@@ -36,13 +36,14 @@ $ ./jmsctl.sh tail
 
 ```
 
-## KOTL
+## KOTL（企业版）
 
-KOTL 作为宿主机 systemd 服务安装，不加入 Docker Compose。启用时请在
-`static.env` 或 `/opt/jumpserver/config/config.txt` 中设置：
+KOTL 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设置
+`USE_XPACK=1`。它作为宿主机 systemd 服务安装，不加入 Docker Compose；企业版中
+默认启用，如需关闭可设置：
 
 ```bash
-KOTL_ENABLED=1
+KOTL_ENABLED=0
 ```
 
 安装器会拉取 `${NAMESPACE:-jumpserver}/kotl:${VERSION}` artifact 镜像，从
