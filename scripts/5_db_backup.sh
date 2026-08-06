@@ -78,12 +78,14 @@ function cleanup_db_env() {
 
 function backup_main_db_mysql() {
   local table
+  local backup_type=""
   local excluded_tables=()
   if [[ "${MODE}" == "no_audit" ]]; then
+    backup_type="-no_audit"
     excluded_tables=("${AUDITS_TABLES[@]}")
   fi
 
-  DB_FILE="${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).sql"
+  DB_FILE="${BACKUP_DIR}/${DB_NAME}${backup_type}-${CURRENT_VERSION}-$(date +%F_%T).sql"
   local dump_cmd=(
     mysqldump
     --skip-add-locks
@@ -135,12 +137,14 @@ function backup_main_db_mysql() {
 
 function backup_main_db_postgresql() {
   local table
+  local backup_type=""
   local excluded_tables=()
   if [[ "${MODE}" == "no_audit" ]]; then
+    backup_type="-no_audit"
     excluded_tables=("${AUDITS_TABLES[@]}")
   fi
 
-  DB_FILE="${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).dump"
+  DB_FILE="${BACKUP_DIR}/${DB_NAME}${backup_type}-${CURRENT_VERSION}-$(date +%F_%T).dump"
   local dump_cmd=(
     pg_dump
     --format=custom
@@ -245,9 +249,10 @@ function backup_audits_postgresql() {
 }
 
 function backup_audits() {
+  AUDIT_FILE="${BACKUP_DIR}/${DB_NAME}-audit-${CURRENT_VERSION}-$(date +%F_%H%M%S).sql.gz"
+
   case "${DB_ENGINE}" in
     mysql)
-      AUDIT_FILE="${BACKUP_DIR}/audits_${CURRENT_VERSION}_$(date +%F_%H%M%S).sql.gz"
       if ! backup_audits_mysql "${AUDIT_FILE}"; then
         rm -f "${AUDIT_FILE}"
         log_error "$(gettext 'Backup failed')!"
@@ -255,7 +260,6 @@ function backup_audits() {
       fi
       ;;
     postgresql)
-      AUDIT_FILE="${BACKUP_DIR}/audits_${CURRENT_VERSION}_$(date +%F_%H%M%S).sql.gz"
       if ! backup_audits_postgresql "${AUDIT_FILE}"; then
         rm -f "${AUDIT_FILE}"
         rm -f "${AUDIT_FILE%.gz}"
