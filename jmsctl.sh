@@ -72,6 +72,7 @@ function usage() {
   echo "More Commands: "
   echo "  load_image        $(gettext 'Loading docker image')"
   echo "  backup_db         $(gettext 'Backup database')"
+  echo "  backup_no_audit   $(gettext 'Backup database without audit data')"
   echo "  backup_audit      $(gettext 'Backup audits tables')"
   echo "  restore_db [file]        $(gettext 'Data recovery through database backup file')"
   echo "  raw               $(gettext 'Execute the original docker compose command')"
@@ -296,6 +297,9 @@ function main() {
     ;;
   backup_db)
     bash "${SCRIPT_DIR}/5_db_backup.sh"
+    ;;
+  backup_no_audit)
+    bash "${SCRIPT_DIR}/5_db_backup.sh" "no_audit"
     ;;
   backup_audit)
     bash "${SCRIPT_DIR}/5_db_backup.sh" "audit"
