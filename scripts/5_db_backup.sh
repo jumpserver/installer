@@ -89,7 +89,6 @@ function backup_main_db_mysql() {
   local dump_cmd=(
     mysqldump
     --skip-add-locks
-    --skip-lock-tables
     --single-transaction
     -h"${DB_HOST}"
     -P"${DB_PORT}"
@@ -113,9 +112,7 @@ function backup_main_db_mysql() {
   if [[ ${#excluded_tables[@]} -gt 0 ]]; then
     local schema_cmd=(
       mysqldump
-      --skip-add-locks
       --skip-lock-tables
-      --single-transaction
       --no-data
       -h"${DB_HOST}"
       -P"${DB_PORT}"
@@ -196,25 +193,31 @@ function backup_main_db() {
 
 function backup_audits_mysql() {
   local backup_file=$1
+  local dump_cmd=(
+    mysqldump
+    -h"${DB_HOST}"
+    -P"${DB_PORT}"
+    -u"${DB_USER}"
+    --single-transaction
+    --no-create-info
+    --skip-triggers
+    --insert-ignore
+  )
+
+  if [[ "${db_images}" != *mariadb* ]]; then
+    dump_cmd+=(--set-gtid-purged=OFF)
+  fi
+  dump_cmd+=(
+    "${DB_NAME}"
+    "${AUDITS_TABLES[@]}"
+    "${SHARED_BACKUP_TABLES[@]}"
+  )
 
   docker run --rm \
     -e MYSQL_PWD="${DB_PASSWORD}" \
     -i --network=jms_net \
     "${db_images}" \
-    mysqldump \
-      -h"${DB_HOST}" \
-      -P"${DB_PORT}" \
-      -u"${DB_USER}" \
-      --single-transaction \
-      --quick \
-      --set-gtid-purged=OFF \
-      --no-create-info \
-      --skip-triggers \
-      --insert-ignore \
-      --default-character-set=utf8mb4 \
-      "${DB_NAME}" \
-      "${AUDITS_TABLES[@]}" \
-      "${SHARED_BACKUP_TABLES[@]}" | gzip > "${backup_file}"
+    "${dump_cmd[@]}" | gzip > "${backup_file}"
 }
 
 function backup_audits_postgresql() {
@@ -241,8 +244,6 @@ function backup_audits_postgresql() {
       -d "${DB_NAME}" \
       --data-only \
       --inserts \
-      --no-owner \
-      --no-privileges \
       "${table_args[@]}" | sed '/^INSERT INTO / s/;[[:space:]]*$/ ON CONFLICT DO NOTHING;/' > "${sql_file}" || return 1
 
   gzip -f "${sql_file}" || return 1
