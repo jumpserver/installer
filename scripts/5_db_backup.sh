@@ -22,13 +22,13 @@ AUDITS_TABLES=(
   audits_operatelog
   audits_passwordchangelog
   audits_userloginlog
-  terminal
   terminal_session
   terminal_command
 )
 
 SHARED_BACKUP_TABLES=(
   users_user
+  terminal
 )
 
 MODE="full"
