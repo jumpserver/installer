@@ -83,6 +83,9 @@ function set_external_db() {
   read_from_input db_password "$(gettext 'Please enter DB password')" "" "${db_password}"
 
   set_db_config "${db_engine}" "${db_host}" "${db_port}" "${db_user}" "${db_password}" "${db_name}"
+  if [[ "${db_engine}" == "postgresql" ]]; then
+    remove_config POSTGRESQL_EXPOSE_PORT
+  fi
 }
 
 function set_internal_db() {
@@ -100,6 +103,9 @@ function set_internal_db() {
   fi
 
   set_db_config "${db_engine}" "${db_host}" "${db_port}" "${db_user}" "${db_password}" "${db_name}"
+  if [[ "${db_engine}" == "postgresql" ]]; then
+    set_config POSTGRESQL_EXPOSE_PORT "127.0.0.1:5432"
+  fi
 }
 
 function set_db() {
