@@ -92,6 +92,9 @@ function upgrade_config() {
   check_and_set_config "JUMPSERVER_ENABLE_FONT_SMOOTHING" "true"
   check_and_set_config "USE_LB" "1"
   check_and_set_config "VERIFY_EXTERNAL_SSL" "false"
+  if [[ "$(get_config DB_HOST)" == "postgresql" ]]; then
+    check_and_set_config "POSTGRESQL_EXPOSE_PORT" "127.0.0.1:5432"
+  fi
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
