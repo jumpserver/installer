@@ -184,21 +184,25 @@ function prepare_config() {
   done
 
   nginx_cert_dir="${CONFIG_DIR}/nginx/cert"
-  if [[ ! -d ${nginx_cert_dir} ]]; then
-    mkdir -p "${nginx_cert_dir}"
-    \cp -rf "${PROJECT_DIR}/config_init/nginx/cert" "${CONFIG_DIR}/nginx"
-  fi
-
-  # shellcheck disable=SC2045
-  for f in $(ls "${PROJECT_DIR}/config_init/nginx/cert"); do
-    if [[ -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" ]]; then
-      if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
-        \cp -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" "${nginx_cert_dir}"
-      else
-        echo_check "${nginx_cert_dir}/${f} "
-      fi
+  nginx_cert_file="${nginx_cert_dir}/server.crt"
+  nginx_key_file="${nginx_cert_dir}/server.key"
+  mkdir -p "${nginx_cert_dir}"
+  if [[ ! -f "${nginx_cert_file}" && ! -f "${nginx_key_file}" ]]; then
+    if ! command -v openssl >/dev/null 2>&1; then
+      log_error "$(gettext 'OpenSSL is required to generate the initial Nginx certificate')"
+      exit 1
     fi
-  done
+    openssl req -x509 -nodes -newkey rsa:2048 -sha256 -days 3650 \
+      -keyout "${nginx_key_file}" \
+      -out "${nginx_cert_file}" \
+      -subj "/CN=localhost"
+  elif [[ ! -f "${nginx_cert_file}" || ! -f "${nginx_key_file}" ]]; then
+    log_error "$(gettext 'Nginx certificate and private key must both exist')"
+    exit 1
+  else
+    echo_check "${nginx_cert_file}"
+    echo_check "${nginx_key_file}"
+  fi
   chmod 700 "${CONFIG_DIR}/../"
   find "${CONFIG_DIR}" -type d -exec chmod 700 {} \;
   find "${CONFIG_DIR}" -type f -exec chmod 600 {} \;
