@@ -3,6 +3,10 @@ services:
     image: ${NAMESPACE:-jumpserver}/core:${VERSION}
     container_name: jms_core
     hostname: jms_core
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
     ulimits:
       core: 0
     restart: always
