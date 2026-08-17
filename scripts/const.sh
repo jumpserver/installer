@@ -27,7 +27,7 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=29.6.1
+export DOCKER_VERSION=29.7.2
 export DOCKER_COMPOSE_VERSION=v2.40.3
 
 ARCH=$(uname -m)
