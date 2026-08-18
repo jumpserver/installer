@@ -88,7 +88,7 @@ function get_db_info() {
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "mariadb:10.6"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        echo "postgres:16.10-bookworm"
+        echo "postgres:16.15-bookworm"
       fi
       ;;
     "file")
