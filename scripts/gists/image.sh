@@ -8,7 +8,7 @@ function get_db_images() {
 
 function get_pull_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
-  images=("redis:7.4.6-bookworm")
+  images=("redis:7.4.10-bookworm")
   images+=("$(get_db_images)")
   enabled_services=$(get_enabled_services)
 
@@ -36,7 +36,7 @@ function get_pull_images() {
 
 function get_images() {
   use_xpack=$(get_config_or_env USE_XPACK)
-  images=("redis:7.4.6-bookworm")
+  images=("redis:7.4.10-bookworm")
   images+=("$(get_db_images)")
   enabled_services=$(get_enabled_services)
 
