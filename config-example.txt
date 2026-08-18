@@ -114,6 +114,12 @@ PERIOD_TASK_ENABLED=true
 # SESSION_COOKIE_AGE=86400
 SESSION_EXPIRE_AT_BROWSER_CLOSE=false
 
+# Automatically redirect to the login page upon session expiration, defaulting to False.
+AUTO_RELOGIN_AT_SESSION_EXPIRE=True
+
+# The asset tree node displays asset statistics, defaulting to True.
+TREE_NODE_AMOUNT_ENABLED=False
+
 # Trusted DOMAINS definition,
 # Define the trusted access IP, please modify according to the actual situation, if it is a public IP, please change to the corresponding public IP,
 # DOMAINS="demo.example.com:443"
