@@ -74,9 +74,17 @@ function image_has_prefix() {
 function image_uses_mirror_prefix() {
   image=$1
 
+  # Infrastructure images are pulled directly from Docker Hub. Only
+  # JumpServer application images and the remaining third-party images use
+  # the configured internal mirror.
+  case "${image}" in
+    redis|redis:*|redis@*|postgres|postgres:*|postgres@*|openbao|openbao:*|openbao@*|openbao/openbao|openbao/openbao:*|openbao/openbao@*)
+      echo "0"
+      return
+      ;;
+  esac
+
   if [[ "${image}" != */* || $(image_has_prefix "${image}") == "1" ]]; then
-    echo "1"
-  elif [[ "${image}" == "openbao/openbao" || "${image}" == openbao/openbao:* || "${image}" == openbao/openbao@* ]]; then
     echo "1"
   else
     echo "0"

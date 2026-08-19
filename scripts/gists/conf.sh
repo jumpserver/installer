@@ -27,7 +27,13 @@ function get_config_or_env() {
   value=''
   default=${2-''}
 
-  value="${!key}"
+  # Bash supports ${!key}, but zsh reports "bad substitution" when this
+  # helper is called from an interactive shell. The installer only passes
+  # configuration variable names here, so use a validated, portable indirect
+  # expansion instead.
+  if [[ "${key}" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+    eval "value=\${${key}:-}"
+  fi
   if [[ -z "$value" && -f "${CONFIG_FILE}" ]];then
     value=$(get_config "$key")
   fi
