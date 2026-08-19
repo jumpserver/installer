@@ -198,7 +198,7 @@ function prepare_config() {
       log_error "$(gettext 'OpenSSL is required to generate the initial Nginx certificate')"
       exit 1
     fi
-    openssl req -x509 -nodes -newkey rsa:2048 -sha256 -days 3650 \
+    openssl req -quiet -x509 -nodes -newkey rsa:2048 -sha256 -days 3650 \
       -keyout "${nginx_key_file}" \
       -out "${nginx_cert_file}" \
       -subj "/CN=localhost"
