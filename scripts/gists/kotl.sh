@@ -144,6 +144,7 @@ function start_kotl() {
 function stop_kotl() {
   is_kotl_enabled || return 0
   check_kotl_runtime || return 1
+  check_kotl_installed || return 0
   systemctl stop "${KOTL_SERVICE_NAME}"
 }
 
