@@ -198,10 +198,13 @@ function prepare_config() {
       log_error "$(gettext 'OpenSSL is required to generate the initial Nginx certificate')"
       exit 1
     fi
-    openssl req -quiet -x509 -nodes -newkey rsa:2048 -sha256 -days 3650 \
+    if ! openssl_output=$(openssl req -x509 -nodes -newkey rsa:2048 -sha256 -days 3650 \
       -keyout "${nginx_key_file}" \
       -out "${nginx_cert_file}" \
-      -subj "/CN=localhost"
+      -subj "/CN=localhost" 2>&1); then
+      log_error "${openssl_output}"
+      exit 1
+    fi
   elif [[ ! -f "${nginx_cert_file}" || ! -f "${nginx_key_file}" ]]; then
     log_error "$(gettext 'Nginx certificate and private key must both exist')"
     exit 1
