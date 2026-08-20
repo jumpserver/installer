@@ -24,6 +24,7 @@ services:
       KAEL_ENABLED: ${KAEL_ENABLED:-0}
       RAZOR_ENABLED: ${RAZOR_ENABLED:-1}
       FACELIVE_ENABLED: ${FACELIVE_ENABLED:-0}
+      KOTL_ENABLED: ${KOTL_ENABLED:-0}
       BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
@@ -37,3 +38,5 @@ services:
       start_period: 90s
     networks:
       - net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

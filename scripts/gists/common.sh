@@ -179,3 +179,28 @@ function get_host_ip() {
       echo "${default_ip}"
   fi
 }
+
+function ensure_current_installer_link() {
+  local source_dir="${PROJECT_DIR}"
+  local current_dir="/opt/current"
+  local target="${current_dir}/installer"
+
+  if [[ "${source_dir}" == "${target}" ]]; then
+    return 0
+  fi
+
+  mkdir -p "${current_dir}" || return 1
+  echo "${source_dir}" > /var/run/installer.lock || return 1
+
+  if [[ -L "${target}" ]]; then
+    if [[ "$(readlink -f "${target}")" == "${source_dir}" ]]; then
+      return 0
+    fi
+    rm -f "${target}" || return 1
+  elif [[ -e "${target}" ]]; then
+    log_error "${target} exists and is not a symbolic link"
+    return 1
+  fi
+
+  ln -s "${source_dir}" "${target}"
+}

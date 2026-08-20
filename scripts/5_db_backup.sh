@@ -22,18 +22,13 @@ AUDITS_TABLES=(
   audits_operatelog
   audits_passwordchangelog
   audits_userloginlog
-  terminal
   terminal_session
-  terminal_command
-)
-
-FULL_IGNORE_TABLES=(
-  audits_activitylog
   terminal_command
 )
 
 SHARED_BACKUP_TABLES=(
   users_user
+  terminal
 )
 
 MODE="full"
@@ -42,8 +37,11 @@ if [[ $# -gt 0 ]]; then
     audit)
       MODE="audit"
       ;;
+    no_audit)
+      MODE="no_audit"
+      ;;
     *)
-      log_error "Usage: $0 [audit]"
+      log_error "Usage: $0 [audit|no_audit]"
       exit 1
       ;;
   esac
@@ -78,85 +76,107 @@ function cleanup_db_env() {
   fi
 }
 
-function backup_main_db() {
+function backup_main_db_mysql() {
   local table
+  local backup_type=""
+  local excluded_tables=()
+  if [[ "${MODE}" == "no_audit" ]]; then
+    backup_type="-no_audit"
+    excluded_tables=("${AUDITS_TABLES[@]}")
+  fi
+
+  DB_FILE="${BACKUP_DIR}/${DB_NAME}${backup_type}-${CURRENT_VERSION}-$(date +%F_%T).sql"
+  local dump_cmd=(
+    mysqldump
+    --skip-add-locks
+    --single-transaction
+    -h"${DB_HOST}"
+    -P"${DB_PORT}"
+    -u"${DB_USER}"
+  )
+  for table in "${excluded_tables[@]}"; do
+    dump_cmd+=("--ignore-table=${DB_NAME}.${table}")
+  done
+  dump_cmd+=("${DB_NAME}")
+
+  if ! docker run --rm \
+    --env MYSQL_PWD="${DB_PASSWORD}" \
+    -i --network=jms_net \
+    "${db_images}" \
+    "${dump_cmd[@]}" > "${DB_FILE}"; then
+    log_error "$(gettext 'Backup failed')!"
+    rm -f "${DB_FILE}"
+    return 1
+  fi
+
+  if [[ ${#excluded_tables[@]} -gt 0 ]]; then
+    local schema_cmd=(
+      mysqldump
+      --skip-lock-tables
+      --no-data
+      -h"${DB_HOST}"
+      -P"${DB_PORT}"
+      -u"${DB_USER}"
+      "${DB_NAME}"
+      "${excluded_tables[@]}"
+    )
+    if ! docker run --rm \
+      --env MYSQL_PWD="${DB_PASSWORD}" \
+      -i --network=jms_net \
+      "${db_images}" \
+      "${schema_cmd[@]}" >> "${DB_FILE}"; then
+      log_error "$(gettext 'Backup failed')!"
+      rm -f "${DB_FILE}"
+      return 1
+    fi
+  fi
+}
+
+function backup_main_db_postgresql() {
+  local table
+  local backup_type=""
+  local excluded_tables=()
+  if [[ "${MODE}" == "no_audit" ]]; then
+    backup_type="-no_audit"
+    excluded_tables=("${AUDITS_TABLES[@]}")
+  fi
+
+  DB_FILE="${BACKUP_DIR}/${DB_NAME}${backup_type}-${CURRENT_VERSION}-$(date +%F_%T).dump"
+  local dump_cmd=(
+    pg_dump
+    --format=custom
+    --no-owner
+    -U "${DB_USER}"
+    -h "${DB_HOST}"
+    -p "${DB_PORT}"
+    -d "${DB_NAME}"
+  )
+  for table in "${excluded_tables[@]}"; do
+    dump_cmd+=("--exclude-table-data=${table}")
+  done
+
+  if ! docker run --rm \
+    --env PGPASSWORD="${DB_PASSWORD}" \
+    -i --network=jms_net \
+    "${db_images}" \
+    "${dump_cmd[@]}" > "${DB_FILE}"; then
+    log_error "$(gettext 'Backup failed')!"
+    rm -f "${DB_FILE}"
+    return 1
+  fi
+}
+
+function backup_main_db() {
   case "${DB_ENGINE}" in
     mysql)
-      DB_FILE="${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).sql"
-      local dump_cmd=(
-        mysqldump
-        --skip-add-locks
-        --skip-lock-tables
-        --single-transaction
-        -h"${DB_HOST}"
-        -P"${DB_PORT}"
-        -u"${DB_USER}"
-      )
-      for table in "${FULL_IGNORE_TABLES[@]}"; do
-        dump_cmd+=("--ignore-table=${DB_NAME}.${table}")
-      done
-      dump_cmd+=("${DB_NAME}")
-
-      if ! docker run --rm \
-        --env MYSQL_PWD="${DB_PASSWORD}" \
-        -i --network=jms_net \
-        "${db_images}" \
-        "${dump_cmd[@]}" > "${DB_FILE}"; then
-        log_error "$(gettext 'Backup failed')!"
-        rm -f "${DB_FILE}"
-        exit 1
-      fi
-
-      local schema_cmd=(
-        mysqldump
-        --skip-add-locks
-        --skip-lock-tables
-        --single-transaction
-        --no-data
-        -h"${DB_HOST}"
-        -P"${DB_PORT}"
-        -u"${DB_USER}"
-        "${DB_NAME}"
-        "${FULL_IGNORE_TABLES[@]}"
-      )
-      if ! docker run --rm \
-        --env MYSQL_PWD="${DB_PASSWORD}" \
-        -i --network=jms_net \
-        "${db_images}" \
-        "${schema_cmd[@]}" >> "${DB_FILE}"; then
-        log_error "$(gettext 'Backup failed')!"
-        rm -f "${DB_FILE}"
-        exit 1
-      fi
+      backup_main_db_mysql || return 1
       ;;
     postgresql)
-      DB_FILE="${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).dump"
-      local dump_cmd=(
-        pg_dump
-        --format=custom
-        --no-owner
-        -U "${DB_USER}"
-        -h "${DB_HOST}"
-        -p "${DB_PORT}"
-        -d "${DB_NAME}"
-      )
-      for table in "${FULL_IGNORE_TABLES[@]}"; do
-        dump_cmd+=("--exclude-table-data=${table}")
-      done
-
-      if ! docker run --rm \
-        --env PGPASSWORD="${DB_PASSWORD}" \
-        -i --network=jms_net \
-        "${db_images}" \
-        "${dump_cmd[@]}" > "${DB_FILE}"; then
-        log_error "$(gettext 'Backup failed')!"
-        rm -f "${DB_FILE}"
-        exit 1
-      fi
+      backup_main_db_postgresql || return 1
       ;;
     *)
       log_error "$(gettext 'Invalid DB Engine selection')!"
-      exit 1
+      return 1
       ;;
   esac
 
@@ -173,25 +193,31 @@ function backup_main_db() {
 
 function backup_audits_mysql() {
   local backup_file=$1
+  local dump_cmd=(
+    mysqldump
+    -h"${DB_HOST}"
+    -P"${DB_PORT}"
+    -u"${DB_USER}"
+    --single-transaction
+    --no-create-info
+    --skip-triggers
+    --insert-ignore
+  )
+
+  if [[ "${db_images}" != *mariadb* ]]; then
+    dump_cmd+=(--set-gtid-purged=OFF)
+  fi
+  dump_cmd+=(
+    "${DB_NAME}"
+    "${AUDITS_TABLES[@]}"
+    "${SHARED_BACKUP_TABLES[@]}"
+  )
 
   docker run --rm \
     -e MYSQL_PWD="${DB_PASSWORD}" \
     -i --network=jms_net \
     "${db_images}" \
-    mysqldump \
-      -h"${DB_HOST}" \
-      -P"${DB_PORT}" \
-      -u"${DB_USER}" \
-      --single-transaction \
-      --quick \
-      --set-gtid-purged=OFF \
-      --no-create-info \
-      --skip-triggers \
-      --insert-ignore \
-      --default-character-set=utf8mb4 \
-      "${DB_NAME}" \
-      "${AUDITS_TABLES[@]}" \
-      "${SHARED_BACKUP_TABLES[@]}" | gzip > "${backup_file}"
+    "${dump_cmd[@]}" | gzip > "${backup_file}"
 }
 
 function backup_audits_postgresql() {
@@ -218,17 +244,17 @@ function backup_audits_postgresql() {
       -d "${DB_NAME}" \
       --data-only \
       --inserts \
-      --no-owner \
-      --no-privileges \
-      "${table_args[@]}" | sed '/^INSERT INTO / s/;[[:space:]]*$/ ON CONFLICT DO NOTHING;/' > "${sql_file}" || return 1
+      --on-conflict-do-nothing \
+      "${table_args[@]}" > "${sql_file}" || return 1
 
   gzip -f "${sql_file}" || return 1
 }
 
 function backup_audits() {
+  AUDIT_FILE="${BACKUP_DIR}/${DB_NAME}-audit-${CURRENT_VERSION}-$(date +%F_%H%M%S).sql.gz"
+
   case "${DB_ENGINE}" in
     mysql)
-      AUDIT_FILE="${BACKUP_DIR}/audits_${CURRENT_VERSION}_$(date +%F_%H%M%S).sql.gz"
       if ! backup_audits_mysql "${AUDIT_FILE}"; then
         rm -f "${AUDIT_FILE}"
         log_error "$(gettext 'Backup failed')!"
@@ -236,7 +262,6 @@ function backup_audits() {
       fi
       ;;
     postgresql)
-      AUDIT_FILE="${BACKUP_DIR}/audits_${CURRENT_VERSION}_$(date +%F_%H%M%S).sql.gz"
       if ! backup_audits_postgresql "${AUDIT_FILE}"; then
         rm -f "${AUDIT_FILE}"
         rm -f "${AUDIT_FILE%.gz}"
@@ -267,7 +292,7 @@ function main() {
   prepare_db_env
 
   case "${MODE}" in
-    full)
+    full|no_audit)
       if ! backup_main_db; then
         cleanup_db_env
         exit 1

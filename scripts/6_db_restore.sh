@@ -14,12 +14,99 @@ DB_USER=$(get_config DB_USER)
 DB_PASSWORD=$(get_config DB_PASSWORD)
 DB_NAME=$(get_config DB_NAME)
 
+function restore_mysql() {
+  local restore_cmd='
+        if [[ "${DB_FILE}" == *.gz ]]; then
+          gzip -dc "${DB_FILE}" | mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}"
+        else
+          mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < "${DB_FILE}"
+        fi
+      '
+  local docker_env=(
+    --env "DB_HOST=${DB_HOST}" --env "DB_PORT=${DB_PORT}" --env "DB_USER=${DB_USER}"
+    --env "DB_PASSWORD=${DB_PASSWORD}" --env "DB_NAME=${DB_NAME}" --env "DB_FILE=${DB_FILE}"
+  )
+
+  docker run --rm "${docker_env[@]}" \
+    -i --network=jms_net \
+    -v "${BACKUP_DIR}:${BACKUP_DIR}" \
+    "${db_images}" bash -c "${restore_cmd}"
+}
+
+function restore_postgresql() {
+  local restore_file="${DB_FILE}"
+  local tmp_restore_file=""
+  if [[ "${DB_FILE}" == *.gz ]]; then
+    tmp_restore_file=$(mktemp "${BACKUP_DIR}/.pg_restore.XXXXXX")
+    if ! gzip -dc "${DB_FILE}" > "${tmp_restore_file}"; then
+      log_error "$(gettext 'Failed to decompress backup file')!"
+      rm -f "${tmp_restore_file}"
+      return 1
+    fi
+    restore_file="${tmp_restore_file}"
+  fi
+
+  local pg_magic
+  pg_magic=$(dd if="${restore_file}" bs=1 count=5 2>/dev/null)
+  if [[ "${pg_magic}" == "PGDMP" ]]; then
+    echo "$(gettext 'Resetting database schema before restore')..."
+  fi
+
+  local restore_cmd='
+        reset_pg_public_schema() {
+          PGPASSWORD="${DB_PASSWORD}" psql -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" \
+            -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();" \
+            -c "DROP SCHEMA IF EXISTS public CASCADE;" \
+            -c "CREATE SCHEMA public;" \
+            -c "GRANT ALL ON SCHEMA public TO public;" \
+            -c "GRANT ALL ON SCHEMA public TO \"${DB_USER}\";"
+        }
+
+        magic=$(dd if="${RESTORE_FILE}" bs=1 count=5 2>/dev/null)
+        if [[ "${magic}" == "PGDMP" ]]; then
+          reset_pg_public_schema
+          PGPASSWORD="${DB_PASSWORD}" pg_restore --disable-triggers --no-owner --exit-on-error -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${RESTORE_FILE}"
+        else
+          PGPASSWORD="${DB_PASSWORD}" psql -q -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" < "${RESTORE_FILE}" >/dev/null
+        fi
+      '
+  local docker_env=(
+    --env "DB_HOST=${DB_HOST}" --env "DB_PORT=${DB_PORT}" --env "DB_USER=${DB_USER}"
+    --env "DB_PASSWORD=${DB_PASSWORD}" --env "DB_NAME=${DB_NAME}"
+    --env "RESTORE_FILE=${restore_file}"
+  )
+
+  docker run --rm "${docker_env[@]}" \
+    -i --network=jms_net \
+    -v "${BACKUP_DIR}:${BACKUP_DIR}" \
+    "${db_images}" bash -c "${restore_cmd}"
+  local restore_status=$?
+
+  [[ -n "${tmp_restore_file}" ]] && rm -f "${tmp_restore_file}"
+  return ${restore_status}
+}
+
+function restore_database() {
+  case "${DB_ENGINE}" in
+    mysql)
+      restore_mysql
+      ;;
+    postgresql)
+      restore_postgresql
+      ;;
+    *)
+      log_error "$(gettext 'Invalid DB Engine selection')!"
+      return 1
+      ;;
+  esac
+}
+
 function main() {
   echo_warn "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
 
   if [[ ! -f "${DB_FILE}" ]]; then
     echo "$(gettext 'file does not exist'): ${DB_FILE}"
-    exit 1
+    return 1
   fi
 
   db_images=$(get_db_images)
@@ -38,76 +125,14 @@ function main() {
       ;;
   esac
 
-  case "${DB_ENGINE}" in
-    mysql)
-      restore_cmd='
-        if [[ "${DB_FILE}" == *.gz ]]; then
-          gzip -dc "${DB_FILE}" | mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}"
-        else
-          mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < "${DB_FILE}"
-        fi
-      '
-      ;;
-    postgresql)
-      restore_file="${DB_FILE}"
-      tmp_restore_file=""
-      if [[ "${DB_FILE}" == *.gz ]]; then
-        tmp_restore_file=$(mktemp "${BACKUP_DIR}/.pg_restore.XXXXXX")
-        if ! gzip -dc "${DB_FILE}" > "${tmp_restore_file}"; then
-          log_error "$(gettext 'Failed to decompress backup file')!"
-          rm -f "${tmp_restore_file}"
-          exit 1
-        fi
-        restore_file="${tmp_restore_file}"
-      fi
-
-      pg_magic=$(dd if="${restore_file}" bs=1 count=5 2>/dev/null)
-      if [[ "${pg_magic}" == "PGDMP" ]]; then
-        echo "$(gettext 'Resetting database schema before restore')..."
-      fi
-
-      restore_cmd='
-        reset_pg_public_schema() {
-          PGPASSWORD="${DB_PASSWORD}" psql -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" \
-            -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();" \
-            -c "DROP SCHEMA IF EXISTS public CASCADE;" \
-            -c "CREATE SCHEMA public;" \
-            -c "GRANT ALL ON SCHEMA public TO public;" \
-            -c "GRANT ALL ON SCHEMA public TO \"${DB_USER}\";"
-        }
-
-        magic=$(dd if="${RESTORE_FILE}" bs=1 count=5 2>/dev/null)
-        if [[ "${magic}" == "PGDMP" ]]; then
-          reset_pg_public_schema
-          PGPASSWORD="${DB_PASSWORD}" pg_restore --disable-triggers --no-owner --exit-on-error -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${RESTORE_FILE}"
-        else
-          PGPASSWORD="${DB_PASSWORD}" psql -q -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" < "${RESTORE_FILE}" >/dev/null
-        fi
-      '
-      ;;
-    *)
-      log_error "$(gettext 'Invalid DB Engine selection')!"
-      exit 1
-      ;;
-  esac
-
-  docker_env=(
-    --env "DB_HOST=${DB_HOST}" --env "DB_PORT=${DB_PORT}" --env "DB_USER=${DB_USER}"
-    --env "DB_PASSWORD=${DB_PASSWORD}" --env "DB_NAME=${DB_NAME}" --env "DB_FILE=${DB_FILE}"
-  )
-  if [[ "${DB_ENGINE}" == "postgresql" ]]; then
-    docker_env+=(--env "RESTORE_FILE=${restore_file}")
-  fi
-
-  if ! docker run --rm "${docker_env[@]}" \
-    -i --network=jms_net \
-    -v "${BACKUP_DIR}:${BACKUP_DIR}" \
-    "${db_images}" bash -c "${restore_cmd}"; then
-    [[ -n "${tmp_restore_file}" ]] && rm -f "${tmp_restore_file}"
+  if ! restore_database; then
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
-    exit 1
+    if [[ -n "$flag" ]]; then
+      down_db_ops_env
+      unset flag
+    fi
+    return 1
   else
-    [[ -n "${tmp_restore_file}" ]] && rm -f "${tmp_restore_file}"
     log_success "$(gettext 'Database recovered successfully')!"
     run_post_restore
   fi
@@ -148,5 +173,7 @@ if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
   fi
   stop_jms_core
   main
+  restore_status=$?
   start_jms_core
+  exit ${restore_status}
 fi

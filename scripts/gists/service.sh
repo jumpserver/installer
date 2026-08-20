@@ -84,11 +84,11 @@ function get_db_info() {
   case "${info_type}" in
     "image")
       if [[ "${mysql_data_exists}" == "1" ]]; then
-        echo "mysql:5.7-debian"
+        echo "mysql:8.0"
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "mariadb:10.6"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        echo "postgres:16.10-bookworm"
+        echo "postgres:16.15-bookworm"
       fi
       ;;
     "file")
@@ -140,6 +140,9 @@ function get_docker_compose_services() {
   [[ "${use_es}" == "1" ]] && services+=" es"
   [[ "${use_minio}" == "1" ]] && services+=" minio"
   [[ "${use_loki}" == "1" ]] && services+=" loki"
+  if is_internal_openbao_enabled; then
+    services+=" openbao"
+  fi
 
   echo "${services}"
 }
@@ -173,7 +176,7 @@ function get_docker_compose_cmd_line() {
     fi
   fi
 
-  if [[ "${use_lb}" == "1" ]]; then
+  if [[ -n "${https_port}" ]]; then
     cmd+=" -f compose/web.https.yml"
   fi
 

@@ -11,6 +11,16 @@ cd "${PROJECT_DIR}" || exit 1
 action=${1-}
 target=${2-}
 args=("$@")
+skip_kotl=false
+
+if [[ "${target}" == "--skip-kotl" ]]; then
+  case "${action}" in
+  start|stop|restart|close|status|down)
+    skip_kotl=true
+    target=""
+    ;;
+  esac
+fi
 
 function check_config_file() {
   if [[ ! -f "${CONFIG_FILE}" ]]; then
@@ -32,7 +42,7 @@ function check_config_file() {
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
-  gen_safe_config
+  gen_safe_config >/dev/null
 }
 
 function pre_check() {
@@ -52,16 +62,17 @@ function usage() {
   echo
   echo "Management Commands: "
   echo "  config            $(gettext 'Configuration  Tools')"
-  echo "  start             $(gettext 'Start     JumpServer')"
-  echo "  stop              $(gettext 'Stop      JumpServer')"
-  echo "  restart           $(gettext 'Restart   JumpServer')"
-  echo "  status            $(gettext 'Check     JumpServer')"
+  echo "  start [--skip-kotl]   $(gettext 'Start     JumpServer')"
+  echo "  stop [--skip-kotl]    $(gettext 'Stop      JumpServer')"
+  echo "  restart [--skip-kotl] $(gettext 'Restart   JumpServer')"
+  echo "  status [--skip-kotl]  $(gettext 'Check     JumpServer')"
   echo "  down              $(gettext 'Offline   JumpServer')"
   echo "  uninstall         $(gettext 'Uninstall JumpServer')"
   echo
   echo "More Commands: "
   echo "  load_image        $(gettext 'Loading docker image')"
   echo "  backup_db         $(gettext 'Backup database')"
+  echo "  backup_no_audit   $(gettext 'Backup database without audit data')"
   echo "  backup_audit      $(gettext 'Backup audits tables')"
   echo "  restore_db [file]        $(gettext 'Data recovery through database backup file')"
   echo "  raw               $(gettext 'Execute the original docker compose command')"
@@ -79,40 +90,52 @@ function service_to_docker_name() {
 
 EXE=""
 
+function should_manage_kotl() {
+  [[ "${skip_kotl}" != "true" ]]
+}
+
 function start() {
+  set_openbao || return 1
+  gen_safe_config >/dev/null
+  EXE=$(get_docker_compose_cmd_line)
   ${EXE} up -d
 
-  base_dir="${PROJECT_DIR}"
-  to="/opt/current/installer"
-  if [[ "$base_dir" == "$to" ]]; then
-    return
-  fi
-  mkdir -p /opt/current
-  echo "$base_dir" > /var/run/installer.lock
-  if [[ ! -L "$to" || "$(readlink -f "$to")" != "$base_dir" ]]; then
-      rm -f "$to"
-      ln -s "$base_dir" "$to"
-  fi
-  if [[ -e "$base_dir" && ! -e "$to" ]]; then
-      ln -s "$base_dir" "$to"
+  ensure_current_installer_link || return 1
+  if should_manage_kotl; then
+    start_kotl
   fi
 }
 
 function stop() {
-  if [[ "${target}" == "ignore_db" ]]; then
+  if [[ "${target}" == "kotl" ]]; then
+    stop_kotl
+  elif [[ "${target}" == "ignore_db" ]]; then
+    if should_manage_kotl; then
+      stop_kotl || return 1
+    fi
     cmd=$(get_docker_compose_cmd_line "ignore_db")
     ${cmd} down -v
   elif [[ -n "${target}" ]]; then
     ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
   else
+    if should_manage_kotl; then
+      stop_kotl || return 1
+    fi
     ${EXE} down -v
   fi
 }
 
 function close() {
   if [[ -n "${target}" ]]; then
+    if [[ "${target}" == "kotl" ]]; then
+      stop_kotl
+      return
+    fi
     ${EXE} stop "${target}"
     return
+  fi
+  if should_manage_kotl; then
+    stop_kotl || return 1
   fi
   services=$(get_docker_compose_services ignore_db)
   for i in ${services}; do
@@ -129,6 +152,10 @@ function pull() {
 }
 
 function restart() {
+  if [[ "${target}" == "kotl" ]]; then
+    restart_kotl
+    return
+  fi
   stop
   echo -e "\n"
 
@@ -243,10 +270,18 @@ function main() {
     ;;
   status)
     ${EXE} ps
+    if should_manage_kotl; then
+      status_kotl
+    fi
     ;;
   down)
     if [[ -z "${target}" ]]; then
+      if should_manage_kotl; then
+        stop_kotl || exit 1
+      fi
       ${EXE} down -v
+    elif [[ "${target}" == "kotl" ]]; then
+      stop_kotl
     else
       ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     fi
@@ -263,6 +298,9 @@ function main() {
   backup_db)
     bash "${SCRIPT_DIR}/5_db_backup.sh"
     ;;
+  backup_no_audit)
+    bash "${SCRIPT_DIR}/5_db_backup.sh" "no_audit"
+    ;;
   backup_audit)
     bash "${SCRIPT_DIR}/5_db_backup.sh" "audit"
     ;;
@@ -275,11 +313,17 @@ function main() {
   pull_images)
     pull_images
     ;;
+  pull_mysql)
+    docker pull registry.cn-beijing.aliyuncs.com/jumpservice/mysql:8.0
+    docker tag registry.cn-beijing.aliyuncs.com/jumpservice/mysql:8.0 mysql:8.0
+    ;;
   cmd)
     echo "${EXE}"
     ;;
   tail)
-    if [[ -z "${target}" ]]; then
+    if [[ "${target}" == "kotl" ]]; then
+      tail_kotl
+    elif [[ -z "${target}" ]]; then
       ${EXE} logs --tail 100 -f
     else
       docker_name=$(service_to_docker_name "${target}")

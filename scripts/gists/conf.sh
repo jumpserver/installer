@@ -1,15 +1,4 @@
 
-
-function is_confirm() {
-  read -r confirmed
-  if [[ "${confirmed}" == "y" || "${confirmed}" == "Y" || ${confirmed} == "" ]]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-
 function has_config() {
   key=$1
   if grep "^[ \t]*${key}=" "${CONFIG_FILE}" &>/dev/null; then
@@ -33,19 +22,18 @@ function get_config() {
   echo "${value}"
 }
 
-function get_env_value() {
-  key=$1
-  default=${2-''}
-  value="${!key}"
-  echo "${value}"
-}
-
 function get_config_or_env() {
   key=$1
   value=''
   default=${2-''}
 
-  value=$(get_env_value "$key")
+  # Bash supports ${!key}, but zsh reports "bad substitution" when this
+  # helper is called from an interactive shell. The installer only passes
+  # configuration variable names here, so use a validated, portable indirect
+  # expansion instead.
+  if [[ "${key}" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+    eval "value=\${${key}:-}"
+  fi
   if [[ -z "$value" && -f "${CONFIG_FILE}" ]];then
     value=$(get_config "$key")
   fi
@@ -56,7 +44,7 @@ function get_config_or_env() {
   echo "${value}"
 }
 
-CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD REDIS_PASSWORD"
+CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD REDIS_PASSWORD VAULT_OPENBAO_TOKEN"
 
 function is_config_excluded() {
   local key=$1
@@ -74,32 +62,19 @@ function gen_safe_config() {
   local base_config_file=${CONFIG_FILE}
   local output_file=${CONFIG_SAFE_FILE}
   local tmp_file="${output_file}.tmp.$$"
-  local line key value
+  local excluded
 
   mkdir -p "${CONFIG_DIR}"
-  : >"${tmp_file}"
-
   if [[ -f "${base_config_file}" ]]; then
-    while IFS= read -r line || [[ -n "${line}" ]]; do
-      [[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
-      [[ "${line}" != *"="* ]] && continue
-
-      key="${line%%=*}"
-      key="${key#"${key%%[![:space:]]*}"}"
-      key="${key%"${key##*[![:space:]]}"}"
-      is_config_excluded "${key}" && continue
-
-      value="${line#*=}"
-      value="${value#"${value%%[![:space:]]*}"}"
-      echo "${key}=${value}" >>"${tmp_file}"
-    done <"${base_config_file}"
+    cp "${base_config_file}" "${tmp_file}"
+    for excluded in ${CONFIG_SAFE_EXCLUDES}; do
+      sed_in_place "/^[[:space:]]*${excluded}=/d" "${tmp_file}"
+    done
+  else
+    : >"${tmp_file}"
   fi
 
-  if [[ -s "${tmp_file}" ]]; then
-    sort -o "${tmp_file}" "${tmp_file}"
-  fi
-
-  if [[ -f "${output_file}" ]] && cmp -s "${tmp_file}" <(sort "${output_file}"); then
+  if [[ -f "${output_file}" ]] && cmp -s "${tmp_file}" "${output_file}"; then
     rm -f "${tmp_file}"
     echo "${output_file}"
     return
@@ -126,7 +101,6 @@ function set_config() {
   has=$(has_config "${key}")
   if [[ ${has} == "0" ]]; then
     echo "${key}=${value}" >>"${CONFIG_FILE}"
-    gen_safe_config >/dev/null
     return
   fi
 
@@ -136,7 +110,15 @@ function set_config() {
   fi
 
   sed_in_place "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
-  gen_safe_config >/dev/null
+}
+
+function remove_config() {
+  key=$1
+
+  has=$(has_config "${key}")
+  if [[ ${has} == "1" ]]; then
+    sed_in_place "/^[ \t]*${key}=.*$/d" "${CONFIG_FILE}"
+  fi
 }
 
 function disable_config() {
@@ -145,7 +127,6 @@ function disable_config() {
   has=$(has_config "${key}")
   if [[ ${has} == "1" ]]; then
     sed_in_place "s,^[ \t]*${key}=.*$,# ${key}=,g" "${CONFIG_FILE}"
-    gen_safe_config >/dev/null
   fi
 }
 
@@ -161,14 +142,19 @@ function get_config_enabled() {
 }
 
 
-function prepare_config() {
-  cd "${PROJECT_DIR}" || exit 1
+function prepare_jmsctl() {
   if check_root; then
     echo -e "#!/usr/bin/env bash\n#" > /usr/bin/jmsctl
     echo -e "cd ${PROJECT_DIR}" >> /usr/bin/jmsctl
     echo -e './jmsctl.sh $@' >> /usr/bin/jmsctl
     chmod 755 /usr/bin/jmsctl
   fi
+}
+
+
+function prepare_config() {
+  cd "${PROJECT_DIR}" || exit 1
+  prepare_jmsctl
 
   echo_yellow "1. $(gettext 'Check Configuration File')"
   echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"
@@ -204,31 +190,41 @@ function prepare_config() {
   done
 
   nginx_cert_dir="${CONFIG_DIR}/nginx/cert"
-  if [[ ! -d ${nginx_cert_dir} ]]; then
-    mkdir -p "${nginx_cert_dir}"
-    \cp -rf "${PROJECT_DIR}/config_init/nginx/cert" "${CONFIG_DIR}/nginx"
-  fi
-
-  # shellcheck disable=SC2045
-  for f in $(ls "${PROJECT_DIR}/config_init/nginx/cert"); do
-    if [[ -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" ]]; then
-      if [[ ! -f "${nginx_cert_dir}/${f}" ]]; then
-        \cp -f "${PROJECT_DIR}/config_init/nginx/cert/${f}" "${nginx_cert_dir}"
-      else
-        echo_check "${nginx_cert_dir}/${f} "
-      fi
+  nginx_cert_file="${nginx_cert_dir}/server.crt"
+  nginx_key_file="${nginx_cert_dir}/server.key"
+  mkdir -p "${nginx_cert_dir}"
+  if [[ ! -f "${nginx_cert_file}" && ! -f "${nginx_key_file}" ]]; then
+    if ! command -v openssl >/dev/null 2>&1; then
+      log_error "$(gettext 'OpenSSL is required to generate the initial Nginx certificate')"
+      exit 1
     fi
-  done
+    if ! openssl_output=$(openssl req -x509 -nodes -newkey rsa:2048 -sha256 -days 3650 \
+      -keyout "${nginx_key_file}" \
+      -out "${nginx_cert_file}" \
+      -subj "/CN=localhost" 2>&1); then
+      log_error "${openssl_output}"
+      exit 1
+    fi
+  elif [[ ! -f "${nginx_cert_file}" || ! -f "${nginx_key_file}" ]]; then
+    log_error "$(gettext 'Nginx certificate and private key must both exist')"
+    exit 1
+  else
+    echo_check "${nginx_cert_file}"
+    echo_check "${nginx_key_file}"
+  fi
   chmod 700 "${CONFIG_DIR}/../"
   find "${CONFIG_DIR}" -type d -exec chmod 700 {} \;
   find "${CONFIG_DIR}" -type f -exec chmod 600 {} \;
   chmod 644 "${CONFIG_DIR}/redis/redis.conf"
+  if [[ -f "${CONFIG_DIR}/openbao/server.hcl" ]]; then
+    chmod 644 "${CONFIG_DIR}/openbao/server.hcl"
+  fi
 
   if [[ "$(uname -m)" == "aarch64" ]]; then
     sed_in_place "s/# ignore-warnings ARM64-COW-BUG/ignore-warnings ARM64-COW-BUG/g" "${CONFIG_DIR}/redis/redis.conf"
   fi
 
-  gen_safe_config
+  gen_safe_config >/dev/null
 }
 
 function ensure_core_data_symlink() {
