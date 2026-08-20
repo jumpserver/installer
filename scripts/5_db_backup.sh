@@ -244,7 +244,8 @@ function backup_audits_postgresql() {
       -d "${DB_NAME}" \
       --data-only \
       --inserts \
-      "${table_args[@]}" | sed '/^INSERT INTO / s/;[[:space:]]*$/ ON CONFLICT DO NOTHING;/' > "${sql_file}" || return 1
+      --on-conflict-do-nothing \
+      "${table_args[@]}" > "${sql_file}" || return 1
 
   gzip -f "${sql_file}" || return 1
 }
