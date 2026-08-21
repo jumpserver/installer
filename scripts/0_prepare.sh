@@ -18,7 +18,7 @@ function download() {
   prepare_check_required_pkg
   if [[ ! -f "${target_path}" ]]; then
     echo "$(gettext 'Starting to download'): ${url}"
-    wget --show-progress -q "${url}" -O "${target_path}" || {
+    wget -q "${url}" -O "${target_path}" || {
       log_error "$(gettext 'Download fails, check the network is normal')"
       rm -f "${target_path}"
       exit 1
