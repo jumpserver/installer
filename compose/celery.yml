@@ -1,6 +1,6 @@
 services:
   celery:
-    image: ${REGISTRY:-docker.io}/jumpserver/core:${VERSION}
+    image: ${NAMESPACE:-jumpserver}/core:${VERSION}
     container_name: jms_celery
     hostname: jms_celery
     ulimits:
@@ -15,6 +15,7 @@ services:
     volumes:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
+      - /var/run/docker.sock:/var/run/docker.sock:z
     healthcheck:
       test: "bash /opt/jumpserver/utils/check_celery.sh"
       interval: 10s

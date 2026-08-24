@@ -13,8 +13,9 @@ fi
 export TEXTDOMAINDIR=$PROJECT_DIR/locale
 export TEXTDOMAIN=jumpserver-installer
 
-export CONFIG_DIR='/opt/jumpserver/config'
+export CONFIG_DIR="${JS_CONFIG_DIR:-/opt/jumpserver/config}"
 export CONFIG_FILE=$CONFIG_DIR/config.txt
+export CONFIG_SAFE_FILE=$CONFIG_DIR/config_safe.txt
 
 # Compose 项目设置
 export COMPOSE_PROJECT_NAME=jms
@@ -26,21 +27,8 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=28.5.1
-DOCKER_URL="https://download.docker.com/linux/static/stable"
-DOCKER_MIRROR="https://download.jumpserver.org/docker/docker-ce/linux/static/stable"
-
-if [[ "${DOCKER_IMAGE_MIRROR}" == "1" || "${DOCKER_BIN_MIRROR}" == "1" ]];then
-  DOCKER_URL=${DOCKER_MIRROR}
-fi
-
+export DOCKER_VERSION=29.7.2
 export DOCKER_COMPOSE_VERSION=v2.40.3
-COMPOSE_URL="https://github.com/docker/compose/releases/download"
-COMPOSE_MIRROR="https://download.jumpserver.org/docker/compose/releases/download"
-
-if [[ "${DOCKER_IMAGE_MIRROR}" == "1" || "${DOCKER_BIN_MIRROR}" == "1" ]];then
-  COMPOSE_URL=${COMPOSE_MIRROR}
-fi
 
 ARCH=$(uname -m)
 if [ -n "${BUILD_ARCH}" ]; then
@@ -48,7 +36,12 @@ if [ -n "${BUILD_ARCH}" ]; then
 fi
 
 export ARCH
-export DOCKER_BIN_URL="${DOCKER_URL}/${ARCH}/docker-${DOCKER_VERSION}.tgz"
-export DOCKER_MD5_URL="${DOCKER_MIRROR}/${ARCH}/docker-${DOCKER_VERSION}.tgz.md5"
-export COMPOSE_BIN_URL="${COMPOSE_URL}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"
-export COMPOSE_MD5_URL="${COMPOSE_MIRROR}/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}.md5"
+DOCKER_BIN_URL="https://download.docker.com/linux/static/stable/${ARCH}/docker-${DOCKER_VERSION}.tgz"
+COMPOSE_BIN_URL="https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"
+
+if [[ -n $DOCKER_BIN_HOST ]];then
+   DOCKER_BIN_URL=$(echo $DOCKER_BIN_URL | sed "s@https://download.docker.com@$DOCKER_BIN_HOST@g")
+   COMPOSE_BIN_URL=$(echo $COMPOSE_BIN_URL | sed "s@https://github.com@$DOCKER_BIN_HOST@g" )
+fi
+export DOCKER_BIN_URL=$DOCKER_BIN_URL
+export COMPOSE_BIN_URL=$COMPOSE_BIN_URL

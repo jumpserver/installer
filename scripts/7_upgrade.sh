@@ -37,6 +37,31 @@ function check_and_set_config() {
   fi
 }
 
+function migrate_compat_config() {
+  local new_key=$1
+  local old_key=$2
+  local default_value=$3
+  local new_value old_value
+
+  new_value=$(get_config "${new_key}")
+  if [[ -n "${new_value}" ]]; then
+    remove_config "${old_key}"
+    return
+  fi
+
+  old_value=$(get_config "${old_key}")
+  if [[ -n "${old_value}" ]]; then
+    set_config "${new_key}" "${old_value}"
+    remove_config "${old_key}"
+    return
+  fi
+
+  if [[ -n "${default_value}" ]]; then
+    set_config "${new_key}" "${default_value}"
+  fi
+
+}
+
 function upgrade_config() {
   if check_root; then
     check_docker_start
@@ -58,8 +83,8 @@ function upgrade_config() {
   if docker image inspect -f '{{.Id}}' jumpserver/mariadb:10.6 &>/dev/null; then
     docker tag jumpserver/mariadb:10.6 mariadb:10.6
   fi
-  if docker image inspect -f '{{.Id}}' jumpserver/mysql:5.7 &>/dev/null; then
-    docker tag jumpserver/mysql:5.7 mysql:5.7-debian
+  if docker image inspect -f '{{.Id}}' jumpserver/mysql:8.0 &>/dev/null; then
+    docker tag jumpserver/mysql:8.0 mysql:8.0
   fi
   check_and_set_config "CURRENT_VERSION" "${VERSION}"
   check_and_set_config "CLIENT_MAX_BODY_SIZE" "4096m"
@@ -67,17 +92,14 @@ function upgrade_config() {
   check_and_set_config "JUMPSERVER_ENABLE_FONT_SMOOTHING" "true"
   check_and_set_config "USE_LB" "1"
   check_and_set_config "VERIFY_EXTERNAL_SSL" "false"
+  if [[ "$(get_config DB_HOST)" == "postgresql" ]]; then
+    check_and_set_config "POSTGRESQL_EXPOSE_PORT" "127.0.0.1:5432"
+  fi
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    check_and_set_config "RDP_PORT" "3389"
     check_and_set_config "XRDP_PORT" "3390"
-    check_and_set_config "MAGNUS_MYSQL_PORT" "33061"
-    check_and_set_config "MAGNUS_MARIADB_PORT" "33062"
-    check_and_set_config "MAGNUS_REDIS_PORT" "63790"
-    check_and_set_config "MAGNUS_POSTGRESQL_PORT" "54320"
-    check_and_set_config "MAGNUS_SQLSERVER_PORT" "14330"
-    check_and_set_config "MAGNUS_ORACLE_PORT" "15210"
+    check_and_set_config "MAGNUS_PORT" "5525"
   fi
 }
 
@@ -156,7 +178,9 @@ function migrate_data_folder() {
 }
 
 function migrate_config() {
-  prepare_config
+  prepare_jmsctl
+  migrate_compat_config "KOKO_SSH_PORT" "SSH_PORT" "2222"
+  migrate_compat_config "RAZOR_RDP_PORT" "RDP_PORT" "3389"
 }
 
 function update_config_if_need() {
@@ -165,6 +189,8 @@ function update_config_if_need() {
   migrate_coco_to_koko
   migrate_config
   upgrade_config
+  set_openbao || exit 1
+  configure_kotl || exit 1
   clean_file
 }
 
@@ -195,6 +221,11 @@ function backup_db() {
 }
 
 function db_migrations() {
+  local role="${ROLE:-master}"
+  if [[ "${role,,}" == "standby" ]]; then
+     echo "Role is standby, skip database migrations"
+     return 
+  fi
   if docker ps | grep -E "core|koko|lion"&>/dev/null; then
     confirm="y"
     read_from_input confirm "$(gettext 'Detected that the JumpServer container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
@@ -221,14 +252,24 @@ function db_migrations() {
 
 function clean_images() {
   current_version=$(get_config CURRENT_VERSION)
-  if [[ "${current_version}" != "${to_version}" ]]; then
-    old_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "jumpserver/" | grep "${current_version}")
-    if [[ -n "${old_images}" ]]; then
-      confirm="y"
-      read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
-      if [[ "${confirm}" == "y" ]]; then
-        echo "${old_images}" | xargs docker rmi -f
-      fi
+
+  if [[ -z "${to_version}" || -z "${current_version}" ]];then
+    echo "to_version or current_version is empty, skip clean images"
+    return
+  fi
+
+  if [[ "${current_version}" == "${to_version}" ]]; then
+    echo "current_version is equal to to_version, skip clean images"
+    return
+  fi
+
+  namespace=${NAMESPACE:-jumpserver}
+  old_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${namespace}/" | grep "${current_version}" || true)
+  if [[ -n "${old_images}" ]]; then
+    confirm="y"
+    read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
+    if [[ "${confirm}" == "y" ]]; then
+      echo "${old_images}" | xargs docker rmi -f || true
     fi
   fi
 }
@@ -273,6 +314,8 @@ function upgrade_compose() {
 }
 
 function main() {
+  cd "${PROJECT_DIR}" || exit 1
+
   confirm="y"
   to_version="${VERSION}"
   if [[ -n "${target}" ]]; then
@@ -328,6 +371,15 @@ function main() {
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
   upgrade_docker
   upgrade_compose
+  ensure_core_data_symlink || log_warn "Failed to prepare host core data symlink, continue upgrade"
+  ensure_current_installer_link || {
+    log_error "Failed to update /opt/current/installer"
+    exit 1
+  }
+  upgrade_kotl || {
+    log_error "Failed to upgrade KOTL"
+    exit 1
+  }
 
   installation_log "upgrade"
 

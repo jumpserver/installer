@@ -129,6 +129,11 @@ DOMAINS=
 # CHEN_ENABLED=0
 # WEB_ENABLED=0
 
+# KOTL is an Enterprise Edition host management console. It is distributed as
+# an artifact image, then installed as a systemd service on the host instead of
+# running in Compose. It requires USE_XPACK=1 and can be disabled with:
+# KOTL_ENABLED=0
+
 # Lion enables font smoothing to optimize the experience
 #
 JUMPSERVER_ENABLE_FONT_SMOOTHING=true
@@ -136,18 +141,12 @@ JUMPSERVER_ENABLE_FONT_SMOOTHING=true
 ################################# XPack Configuration #################################
 # XPack package, invalid setting in open source version
 #
-SSH_PORT=2222
-RDP_PORT=3389
+KOKO_SSH_PORT=2222
+RAZOR_RDP_PORT=3389
 XRDP_PORT=3390
-MAGNUS_MYSQL_PORT=33061
-MAGNUS_MARIADB_PORT=33062
-MAGNUS_REDIS_PORT=63790
-MAGNUS_POSTGRESQL_PORT=54320
-MAGNUS_SQLSERVER_PORT=14330
-MAGNUS_ORACLE_PORT=15210
-MAGNUS_MONGODB_PORT=27018
+MAGNUS_PORT=5525
 
-XRDP_ENABLED=0
+#XRDP_ENABLED=1
 
 ################################## Other Configuration ################################
 # The terminal uses the host HOSTNAME as the identifier, automatically generated during the first installation
@@ -163,3 +162,36 @@ USE_LB=1
 #
 TZ=Asia/Shanghai
 CURRENT_VERSION=
+
+################################# Vault Configuration #################################
+# OpenBao runs as an independent Docker service in this installer. JumpServer connects to OpenBao Server directly.
+# OpenBao 作为独立 Docker 服务部署，JumpServer 直接访问 OpenBao Server。
+#
+# Disabled by default. Set to true to enable Vault storage. When the backend is
+# openbao and OPENBAO_EXTERNAL=false, the installer starts the built-in service.
+# 默认关闭；设为 true 后启用 Vault。当后端为 openbao 且 OPENBAO_EXTERNAL=false 时，安装器启动内置服务。
+VAULT_ENABLED=false
+VAULT_BACKEND=openbao
+VAULT_OPENBAO_ADDR=http://openbao:8200
+VAULT_OPENBAO_MOUNT_POINT=pam
+VAULT_OPENBAO_TOKEN=
+VAULT_OPENBAO_TIMEOUT=10
+
+# Set to true when VAULT_OPENBAO_ADDR points to an external OpenBao cluster or HA endpoint.
+# 设置为 true 时，installer 不会启动内置 OpenBao，Core 仍使用上面的 Vault 配置连接外部服务。
+OPENBAO_EXTERNAL=false
+
+OPENBAO_RAFT_NODE_ID=openbao
+OPENBAO_RAFT_API_ADDR=http://openbao:8200
+OPENBAO_RAFT_CLUSTER_ADDR=http://openbao:8201
+OPENBAO_RAFT_BOOTSTRAP=true
+# Additional Raft nodes must set OPENBAO_RAFT_BOOTSTRAP=false and receive a
+# protected copy of openbao/init.json from the bootstrap node before startup.
+# OPENBAO_RAFT_RETRY_JOIN=http://openbao-1:8200,http://openbao-2:8200
+
+OPENBAO_UNSEAL_KEY_SHARES=5
+OPENBAO_UNSEAL_KEY_THRESHOLD=3
+OPENBAO_UI_BIND=127.0.0.1
+OPENBAO_UI_PORT=8200
+OPENBAO_CLUSTER_BIND=127.0.0.1
+OPENBAO_CLUSTER_PORT=8201
