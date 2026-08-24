@@ -46,7 +46,7 @@ function should_include_openbao_image() {
 
 function set_openbao() {
   local vault_enabled vault_backend ssh_ca_enabled openbao_external
-  local vault_addr vault_token ssh_ca_token
+  local vault_addr ssh_ca_addr vault_token ssh_ca_token
   local vault_openbao_required="false" ssh_ca_required="false"
 
   vault_enabled=$(get_config VAULT_ENABLED "false")
@@ -70,14 +70,20 @@ function set_openbao() {
   fi
 
   vault_addr=$(get_config VAULT_OPENBAO_ADDR)
+  ssh_ca_addr=$(get_config SSH_CA_OPENBAO_ADDR)
   vault_token=$(get_config VAULT_OPENBAO_TOKEN)
   ssh_ca_token=$(get_config SSH_CA_OPENBAO_TOKEN)
 
   if [[ -z "${vault_addr}" ]]; then
     vault_addr="http://openbao:8200"
   fi
+  # Preserve upgrades from versions where SSH CA reused VAULT_OPENBAO_ADDR.
+  if [[ -z "${ssh_ca_addr}" ]]; then
+    ssh_ca_addr="${vault_addr}"
+  fi
 
   set_config VAULT_OPENBAO_ADDR "${vault_addr}"
+  set_config SSH_CA_OPENBAO_ADDR "${ssh_ca_addr}"
   set_config SSH_CA_OPENBAO_MOUNT_POINT "$(get_config SSH_CA_OPENBAO_MOUNT_POINT ssh-client-signer)"
   set_config SSH_CA_OPENBAO_ROLE "$(get_config SSH_CA_OPENBAO_ROLE jumpserver)"
   set_config SSH_CA_OPENBAO_TTL "$(get_config SSH_CA_OPENBAO_TTL 300)"
@@ -86,8 +92,14 @@ function set_openbao() {
   set_config SSH_CA_OPENBAO_SOURCE_ADDRESS "$(get_config SSH_CA_OPENBAO_SOURCE_ADDRESS)"
 
   if openbao_value_is_true "${openbao_external}"; then
-    if [[ -z "${vault_addr}" || "${vault_addr}" == "http://openbao:8200" || "${vault_addr}" == "https://openbao:8200" ]]; then
+    if [[ "${vault_openbao_required}" == "true" ]] && \
+        { [[ -z "${vault_addr}" ]] || [[ "${vault_addr}" == "http://openbao:8200" ]] || [[ "${vault_addr}" == "https://openbao:8200" ]]; }; then
       log_error "$(gettext 'Set VAULT_OPENBAO_ADDR to the external OpenBao address')"
+      return 1
+    fi
+    if [[ "${ssh_ca_required}" == "true" ]] && \
+        { [[ -z "${ssh_ca_addr}" ]] || [[ "${ssh_ca_addr}" == "http://openbao:8200" ]] || [[ "${ssh_ca_addr}" == "https://openbao:8200" ]]; }; then
+      log_error "$(gettext 'Set SSH_CA_OPENBAO_ADDR to the external OpenBao address')"
       return 1
     fi
     if [[ "${vault_openbao_required}" == "true" && -z "${vault_token}" ]]; then
