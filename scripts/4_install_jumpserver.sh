@@ -21,7 +21,7 @@ function pre_install() {
     }
   fi
 
-  if ! command -v iptables &>/dev/null; then 
+  if ! command -v iptables &>/dev/null; then
     log_error "$(gettext 'command not found, Please install it first') iptables"
     exit 1
   fi
@@ -33,7 +33,7 @@ function pre_install() {
     break
   fi
   done
-  
+
   if [ $found -eq 0 ]; then
     log_error "$(gettext 'command not found, Please install it first') python"
     exit 1
@@ -70,7 +70,7 @@ function post_install() {
     echo "http://${host}:${http_port}"
   fi
 
-  echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): ChangeMe"
+  echo "$(gettext 'Default username'): admin  $(gettext 'Default password'): admin"
 
   if [[ "${use_xpack}" == "1" ]]; then
     echo_yellow "\n4. SSH/SFTP $(gettext 'access')"
@@ -110,7 +110,7 @@ function main() {
     log_error "$(gettext 'Failed to change the table structure')!"
     exit 1
   fi
- 
+
   installation_log "install"
   post_install
 }

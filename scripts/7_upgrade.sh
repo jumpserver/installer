@@ -67,8 +67,7 @@ function upgrade_config() {
   check_and_set_config "JUMPSERVER_ENABLE_FONT_SMOOTHING" "true"
   check_and_set_config "USE_LB" "1"
   check_and_set_config "VERIFY_EXTERNAL_SSL" "false"
-  check_and_set_config "TREE_NODE_AMOUNT_ENABLED" "False"
-  check_and_set_config "AUTO_RELOGIN_AT_SESSION_EXPIRE" "True"
+
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
@@ -200,7 +199,7 @@ function db_migrations() {
   local role="${ROLE:-master}"
   if [[ "${role,,}" == "standby" ]]; then
      echo "Role is standby, skip database migrations"
-     return 
+     return
   fi
   if docker ps | grep -E "core|koko|lion"&>/dev/null; then
     confirm="y"
