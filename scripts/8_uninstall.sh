@@ -98,7 +98,7 @@ function remove_jumpserver() {
 function main() {
   echo_yellow "\n>>> $(gettext 'Uninstall JumpServer')"
   stop_services
-  disable_kotl || log_warn "Failed to disable KOTL"
+  disable_jdmc || log_warn "Failed to disable JDMC"
   installation_log "uninstall"
   remove_jmsctl
   remove_jumpserver

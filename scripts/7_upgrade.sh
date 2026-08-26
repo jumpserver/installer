@@ -187,7 +187,7 @@ function update_config_if_need() {
   migrate_config
   upgrade_config
   set_openbao || exit 1
-  configure_kotl || exit 1
+  configure_jdmc || exit 1
   clean_file
 }
 
@@ -350,7 +350,10 @@ function main() {
   check_compose_install
 
   echo_yellow "\n2. $(gettext 'Loading Docker Image')"
-  bash "${BASE_DIR}/3_load_images.sh"
+  if ! bash "${BASE_DIR}/3_load_images.sh"; then
+    log_error "$(gettext 'Failed to load Docker images')"
+    exit 1
+  fi
 
   echo_yellow "\n3. $(gettext 'Backup database')"
   backup_db
@@ -373,8 +376,8 @@ function main() {
     log_error "Failed to update /opt/current/installer"
     exit 1
   }
-  upgrade_kotl || {
-    log_error "Failed to upgrade KOTL"
+  upgrade_jdmc || {
+    log_error "Failed to upgrade JDMC"
     exit 1
   }
 
