@@ -28,8 +28,8 @@ function get_pull_images() {
   if should_include_openbao_image; then
     images+=("$(get_openbao_image)")
   fi
-  if should_include_kotl_image; then
-    images+=("jumpserver/kotl:${VERSION}")
+  if should_include_jdmc_image; then
+    images+=("$(get_jdmc_pull_image)")
   fi
   echo "${images[@]}"
 }
@@ -56,8 +56,8 @@ function get_images() {
   if should_include_openbao_image; then
     images+=("$(get_openbao_image)")
   fi
-  if should_include_kotl_image; then
-    images+=("$(get_kotl_image)")
+  if should_include_jdmc_image; then
+    images+=("$(get_jdmc_image)")
   fi
   echo "${images[@]}"
 }
@@ -91,6 +91,16 @@ function image_uses_mirror_prefix() {
   fi
 }
 
+function image_is_registry_qualified() {
+  local image=$1 first_component
+
+  [[ "${image}" == */* ]] || return 1
+  first_component=${image%%/*}
+  [[ "${first_component}" == "localhost" ||
+    "${first_component}" == *.* ||
+    "${first_component}" == *:* ]]
+}
+
 function check_image_exists() {
   image=$1
   if docker image inspect -f '{{ .Id }}' "$image" &>/dev/null; then
@@ -106,7 +116,12 @@ function get_image_full_path() {
   IMAGE_PULL_POLICY=$(get_config_or_env 'IMAGE_PULL_POLICY')
   DOCKER_IMAGE_PREFIX=$(get_config_or_env 'DOCKER_IMAGE_PREFIX')
 
-  if [[ -n "${REGISTRY}" ]]; then
+  if image_is_registry_qualified "${image}"; then
+    echo "${image}"
+    return 0
+  fi
+
+  if [[ -n "${REGISTRY:-}" ]]; then
     DOCKER_IMAGE_MIRROR="1"
     DOCKER_IMAGE_PREFIX="${REGISTRY}/jumpserver"
   fi
@@ -134,8 +149,15 @@ function get_image_full_path() {
 }
 
 function pull_image() {
-  image=$1
-  full_image_path=$(get_image_full_path "${image}")
+  local image=$1 requested_target=${2:-} exact_source=${3:-0}
+  local full_image_path pull_args to_image image_pull_policy
+
+  if [[ "${exact_source}" == "1" ]]; then
+    full_image_path="${image}"
+  else
+    full_image_path=$(get_image_full_path "${image}")
+  fi
+  image_pull_policy=$(get_config_or_env 'IMAGE_PULL_POLICY')
 
   pull_args=""
   case "${BUILD_ARCH}" in
@@ -152,36 +174,63 @@ function pull_image() {
   fi
 
   echo "$(check_image_exists "${image}")"
-  to_image="${image}"
-  if [[ -n "${NAMESPACE}" ]]; then
-    to_image=${to_image/jumpserver/${NAMESPACE}}
+  if [[ -n "${requested_target}" ]]; then
+    to_image="${requested_target}"
+  else
+    to_image="${image}"
   fi
-  if [[ "$(check_image_exists "${full_image_path}")" != "1" || "$IMAGE_PULL_POLICY" == "Always" ]]; then
-    docker pull ${pull_args} "${full_image_path}"
+  if [[ -z "${requested_target}" && -n "${NAMESPACE:-}" && "${to_image}" == jumpserver/* ]]; then
+    to_image="${NAMESPACE}/${to_image#jumpserver/}"
+  fi
+  if [[ "$(check_image_exists "${full_image_path}")" != "1" || "${image_pull_policy}" == "Always" ]]; then
+    if ! docker pull ${pull_args} "${full_image_path}"; then
+      echo "[${image}] pull failed" >&2
+      return 1
+    fi
   fi
   
   if [[ "${full_image_path}" != "${to_image}" ]]; then
-    docker tag "${full_image_path}" "${to_image}"
+    if ! docker tag "${full_image_path}" "${to_image}"; then
+      echo "[${image}] tag failed: ${full_image_path} -> ${to_image}" >&2
+      return 1
+    fi
   fi
   echo ""
+  return 0
 }
 
 
 function pull_images() {
-  images_to=$(get_pull_images)
-  pids=()
+  local images_to image pid jdmc_pull_image="" jdmc_target_image=""
+  local pull_failed=0
+  local -a pids=()
 
-  if [[ -n "${REGISTRY}" ]]; then
-    images_to=$(echo "${images_to}" | sed "s|${REGISTRY}||g")
+  images_to=$(get_pull_images)
+  if should_include_jdmc_image; then
+    jdmc_pull_image=$(get_jdmc_pull_image)
+    jdmc_target_image=$(get_jdmc_image)
   fi
 
   trap 'kill ${pids[*]}' SIGINT SIGTERM
 
   for image in ${images_to}; do
-    pull_image "$image" &
-    pids+=($!)
+    if [[ -n "${jdmc_pull_image}" && "${image}" == "${jdmc_pull_image}" ]]; then
+      if [[ -n "${JDMC_IMAGE:-}" ]]; then
+        pull_image "${image}" "${jdmc_target_image}" 1 &
+      else
+        pull_image "${image}" "${jdmc_target_image}" &
+      fi
+    else
+      pull_image "${image}" &
+    fi
+    pids+=("$!")
   done
-  wait ${pids[*]}
+  for pid in "${pids[@]}"; do
+    if ! wait "${pid}"; then
+      pull_failed=1
+    fi
+  done
 
   trap - SIGINT SIGTERM
+  return "${pull_failed}"
 }

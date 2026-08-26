@@ -11,12 +11,12 @@ cd "${PROJECT_DIR}" || exit 1
 action=${1-}
 target=${2-}
 args=("$@")
-skip_kotl=false
+skip_jdmc=false
 
-if [[ "${target}" == "--skip-kotl" ]]; then
+if [[ "${target}" == "--skip-jdmc" || "${target}" == "--skip-kotl" ]]; then
   case "${action}" in
   start|stop|restart|close|status|down)
-    skip_kotl=true
+    skip_jdmc=true
     target=""
     ;;
   esac
@@ -62,10 +62,10 @@ function usage() {
   echo
   echo "Management Commands: "
   echo "  config            $(gettext 'Configuration  Tools')"
-  echo "  start [--skip-kotl]   $(gettext 'Start     JumpServer')"
-  echo "  stop [--skip-kotl]    $(gettext 'Stop      JumpServer')"
-  echo "  restart [--skip-kotl] $(gettext 'Restart   JumpServer')"
-  echo "  status [--skip-kotl]  $(gettext 'Check     JumpServer')"
+  echo "  start [--skip-jdmc]   $(gettext 'Start     JumpServer')"
+  echo "  stop [--skip-jdmc]    $(gettext 'Stop      JumpServer')"
+  echo "  restart [--skip-jdmc] $(gettext 'Restart   JumpServer')"
+  echo "  status [--skip-jdmc]  $(gettext 'Check     JumpServer')"
   echo "  down              $(gettext 'Offline   JumpServer')"
   echo "  uninstall         $(gettext 'Uninstall JumpServer')"
   echo
@@ -90,36 +90,41 @@ function service_to_docker_name() {
 
 EXE=""
 
-function should_manage_kotl() {
-  [[ "${skip_kotl}" != "true" ]]
+function should_manage_jdmc() {
+  [[ "${skip_jdmc}" != "true" ]]
+}
+
+function is_jdmc_target() {
+  [[ "${target}" == "jdmc" || "${target}" == "kotl" ]]
 }
 
 function start() {
   set_openbao || return 1
+  configure_jdmc || return 1
   gen_safe_config >/dev/null
   EXE=$(get_docker_compose_cmd_line)
-  ${EXE} up -d
+  ${EXE} up -d || return 1
 
   ensure_current_installer_link || return 1
-  if should_manage_kotl; then
-    start_kotl
+  if should_manage_jdmc; then
+    start_jdmc
   fi
 }
 
 function stop() {
-  if [[ "${target}" == "kotl" ]]; then
-    stop_kotl
+  if is_jdmc_target; then
+    stop_jdmc
   elif [[ "${target}" == "ignore_db" ]]; then
-    if should_manage_kotl; then
-      stop_kotl || return 1
+    if should_manage_jdmc; then
+      stop_jdmc || return 1
     fi
     cmd=$(get_docker_compose_cmd_line "ignore_db")
     ${cmd} down -v
   elif [[ -n "${target}" ]]; then
     ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
   else
-    if should_manage_kotl; then
-      stop_kotl || return 1
+    if should_manage_jdmc; then
+      stop_jdmc || return 1
     fi
     ${EXE} down -v
   fi
@@ -127,15 +132,15 @@ function stop() {
 
 function close() {
   if [[ -n "${target}" ]]; then
-    if [[ "${target}" == "kotl" ]]; then
-      stop_kotl
+    if is_jdmc_target; then
+      stop_jdmc
       return
     fi
     ${EXE} stop "${target}"
     return
   fi
-  if should_manage_kotl; then
-    stop_kotl || return 1
+  if should_manage_jdmc; then
+    stop_jdmc || return 1
   fi
   services=$(get_docker_compose_services ignore_db)
   for i in ${services}; do
@@ -152,11 +157,11 @@ function pull() {
 }
 
 function restart() {
-  if [[ "${target}" == "kotl" ]]; then
-    restart_kotl
+  if is_jdmc_target; then
+    restart_jdmc
     return
   fi
-  stop
+  stop || return 1
   echo -e "\n"
 
   if [[ -n "${target}" && "${target}" != "ignore_db" ]]; then
@@ -270,18 +275,18 @@ function main() {
     ;;
   status)
     ${EXE} ps
-    if should_manage_kotl; then
-      status_kotl
+    if should_manage_jdmc; then
+      status_jdmc
     fi
     ;;
   down)
     if [[ -z "${target}" ]]; then
-      if should_manage_kotl; then
-        stop_kotl || exit 1
+      if should_manage_jdmc; then
+        stop_jdmc || exit 1
       fi
       ${EXE} down -v
-    elif [[ "${target}" == "kotl" ]]; then
-      stop_kotl
+    elif is_jdmc_target; then
+      stop_jdmc
     else
       ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     fi
@@ -321,8 +326,8 @@ function main() {
     echo "${EXE}"
     ;;
   tail)
-    if [[ "${target}" == "kotl" ]]; then
-      tail_kotl
+    if is_jdmc_target; then
+      tail_jdmc
     elif [[ -z "${target}" ]]; then
       ${EXE} logs --tail 100 -f
     else
