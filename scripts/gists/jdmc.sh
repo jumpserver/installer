@@ -15,14 +15,7 @@ function is_enterprise_edition() {
 }
 
 function get_jdmc_host_enabled() {
-  local enabled
-
-  enabled=$(get_config_or_env JDMC_HOST_ENABLED "")
-  if [[ -z "${enabled}" ]]; then
-    # KOTL_ENABLED was the installer switch before the component was renamed.
-    enabled=$(get_config_or_env KOTL_ENABLED 1)
-  fi
-  echo "${enabled}"
+  get_config_or_env JDMC_HOST_ENABLED 1
 }
 
 function is_jdmc_enabled() {
@@ -58,22 +51,30 @@ function get_jdmc_pull_image() {
 }
 
 function configure_jdmc() {
-  local enabled socket_path
+  local enabled legacy_enabled socket_path
 
-  is_enterprise_edition || return 0
+  # Convert the removed KOTL switch once, preserving an existing explicit
+  # opt-out while making JDMC enabled by default for new dev installations.
+  legacy_enabled=$(get_config KOTL_ENABLED)
+  if [[ -z "$(get_config JDMC_HOST_ENABLED)" && -n "${legacy_enabled}" ]]; then
+    set_config JDMC_HOST_ENABLED "${legacy_enabled}"
+  fi
+  remove_config KOTL_ENABLED
+
+  if ! is_enterprise_edition; then
+    set_config JDMC_ENABLED 0
+    gen_safe_config >/dev/null
+    return 0
+  fi
   enabled=$(get_jdmc_host_enabled)
   set_config JDMC_HOST_ENABLED "${enabled}"
 
   if [[ "${enabled}" != "1" ]]; then
-    # Current Core and docker-web releases still consume this compatibility
-    # flag to expose the host-management route.
-    set_config KOTL_ENABLED 0
     set_config JDMC_ENABLED 0
     gen_safe_config >/dev/null
     return 0
   fi
 
-  set_config KOTL_ENABLED 1
   set_config JDMC_ENABLED 1
   socket_path="${JDMC_CORE_SOCKET_PATH}"
   if check_legacy_kotl_installed && ! check_current_jdmc_installed; then

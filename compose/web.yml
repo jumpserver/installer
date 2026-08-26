@@ -24,9 +24,7 @@ services:
       KAEL_ENABLED: ${KAEL_ENABLED:-0}
       RAZOR_ENABLED: ${RAZOR_ENABLED:-1}
       FACELIVE_ENABLED: ${FACELIVE_ENABLED:-0}
-      JDMC_HOST_ENABLED: ${JDMC_HOST_ENABLED:-0}
-      # Compatibility flag consumed by current Core and docker-web releases.
-      KOTL_ENABLED: ${KOTL_ENABLED:-0}
+      JDMC_ENABLED: ${JDMC_ENABLED:-0}
       BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data

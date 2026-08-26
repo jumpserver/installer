@@ -100,6 +100,7 @@ function is_jdmc_target() {
 
 function start() {
   set_openbao || return 1
+  configure_jdmc || return 1
   gen_safe_config >/dev/null
   EXE=$(get_docker_compose_cmd_line)
   ${EXE} up -d || return 1

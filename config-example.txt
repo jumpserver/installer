@@ -134,10 +134,6 @@ DOMAINS=
 # running in Compose. It inherits VOLUME_DIR from the installer, requires
 # USE_XPACK=1, and can be disabled with:
 # JDMC_HOST_ENABLED=0
-#
-# KOTL_ENABLED is retained as a Core/web compatibility flag during migration.
-# Existing installations may still use KOTL_ENABLED=0 as the host-component
-# switch until JDMC_HOST_ENABLED is added to config.txt.
 
 # Lion enables font smoothing to optimize the experience
 #

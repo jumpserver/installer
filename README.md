@@ -55,8 +55,7 @@ JDMC_HOST_ENABLED=0
 该镜像；设置 `JDMC_HOST_ENABLED=0` 后不会包含 JDMC 镜像。服务跟随
 `jmsctl.sh start/stop/restart/status`
 管理，日志可通过 `./jmsctl.sh tail jdmc` 查看。启用时还会自动为 Core 配置
-`JDMC_ENABLED=1`、`JDMC_SOCK_PATH=/opt/jumpserver/data/unshare/jdmc.sock`，并在
-当前 Core/web 版本所需的兼容周期内保留 `KOTL_ENABLED=1`。
+`JDMC_ENABLED=1` 和 `JDMC_SOCK_PATH=/opt/jumpserver/data/unshare/jdmc.sock`。
 
 安装或升级 JDMC 时，安装器会将当前 `VOLUME_DIR` 传递给 JDMC artifact
 脚本。JDMC 据此配置宿主机上的 Core Unix Socket、日志和备份路径，因此可以
@@ -67,10 +66,10 @@ JDMC 启动时也会直接读取 `/opt/jumpserver/config/config.txt` 中的
 显式迁移对应的同级 `jdmc` 目录。
 
 从旧 KOTL 升级时，安装器会识别 `/opt/kotl` 和 `kotl.service`，并调用新
-JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。过渡期仍接受
-`KOTL_ENABLED`、`--skip-kotl` 以及 `./jmsctl.sh tail kotl`，新部署应使用
-`JDMC_HOST_ENABLED`、`--skip-jdmc` 和 `jdmc` 命令目标。`JDMC_ENABLED` 与
-`JDMC_SOCK_PATH` 始终是 Core 集成配置，不作为安装器组件开关使用。
+JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。旧组件开关会一次性
+迁移为 `JDMC_HOST_ENABLED` 并从配置中删除；命令行过渡期仍接受 `--skip-kotl` 和
+`./jmsctl.sh tail kotl`，新部署应使用 `--skip-jdmc` 和 `jdmc` 命令目标。
+`JDMC_ENABLED` 与 `JDMC_SOCK_PATH` 始终是 Core 集成配置，不作为安装器组件开关使用。
 
 ## 配置文件说明
 
