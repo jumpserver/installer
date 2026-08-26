@@ -24,20 +24,8 @@ function get_kotl_image() {
   echo "${NAMESPACE:-jumpserver}/kotl:${VERSION}"
 }
 
-function check_kotl_volume_dir() {
-  local volume_dir
-
-  volume_dir=$(get_config_or_env VOLUME_DIR /data/jumpserver)
-  volume_dir=${volume_dir%/}
-  if [[ "${volume_dir}" != "/data/jumpserver" ]]; then
-    log_error "KOTL currently requires VOLUME_DIR=/data/jumpserver (got: ${volume_dir})"
-    return 1
-  fi
-}
-
 function configure_kotl() {
   is_kotl_enabled || return 0
-  check_kotl_volume_dir || return 1
   set_config KOTL_ENABLED 1
   set_config JDMC_ENABLED 1
   set_config JDMC_SOCK_PATH "${KOTL_CORE_SOCKET_PATH}"
@@ -57,9 +45,10 @@ function check_kotl_installed() {
 
 function run_kotl_package_action() {
   local action=$1
-  local image
+  local image volume_dir
 
   image=$(get_kotl_image)
+  volume_dir=$(get_config_or_env VOLUME_DIR /data/jumpserver)
   if ! docker image inspect "${image}" &>/dev/null; then
     log_error "KOTL artifact image not found: ${image}"
     return 1
@@ -100,6 +89,10 @@ function run_kotl_package_action() {
 
     chmod +x "${script_path}" || exit 1
     cd "${temp_dir}" || exit 1
+    # KOTL runs on the host, so its package scripts need the host-side
+    # JumpServer data root instead of the paths mounted inside Compose.
+    JUMPSERVER_VOLUME_DIR="${volume_dir}"
+    export JUMPSERVER_VOLUME_DIR
     bash "./scripts/${action}.sh"
   )
 }

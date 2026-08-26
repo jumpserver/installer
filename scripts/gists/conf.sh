@@ -44,7 +44,7 @@ function get_config_or_env() {
   echo "${value}"
 }
 
-CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD VAULT_OPENBAO_TOKEN"
+CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD VAULT_OPENBAO_TOKEN SSH_CA_OPENBAO_TOKEN"
 
 function is_config_excluded() {
   local key=$1

@@ -52,8 +52,11 @@ KOTL_ENABLED=0
 管理，日志可通过 `./jmsctl.sh tail kotl` 查看。启用时还会自动为 Core 配置
 `KOTL_ENABLED=1`、`JDMC_ENABLED=1` 和 `/opt/jumpserver/data/unshare/kotl.sock`。
 
-当前 KOTL 的宿主机路径固定使用 `/data/jumpserver`，因此启用时
-`VOLUME_DIR` 也必须保持为 `/data/jumpserver`。
+安装或升级 KOTL 时，安装器会将当前 `VOLUME_DIR` 传递给 KOTL artifact
+脚本。KOTL 据此配置宿主机上的 Core Unix Socket、日志和备份路径，因此可以
+继续使用已有的自定义持久化目录，不需要为了升级迁移到 `/data/jumpserver`。
+KOTL 启动时也会直接读取 `/opt/jumpserver/config/config.txt` 中的
+`VOLUME_DIR`；配置变化后可通过 `systemctl restart kotl` 重新加载 KOTL 路径。
 
 ## 配置文件说明
 
