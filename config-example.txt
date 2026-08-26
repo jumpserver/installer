@@ -131,7 +131,8 @@ DOMAINS=
 
 # KOTL is an Enterprise Edition host management console. It is distributed as
 # an artifact image, then installed as a systemd service on the host instead of
-# running in Compose. It requires USE_XPACK=1 and can be disabled with:
+# running in Compose. It inherits VOLUME_DIR from the installer, requires
+# USE_XPACK=1, and can be disabled with:
 # KOTL_ENABLED=0
 
 # Lion enables font smoothing to optimize the experience
@@ -163,13 +164,8 @@ USE_LB=1
 TZ=Asia/Shanghai
 CURRENT_VERSION=
 
-################################# Vault Configuration #################################
-# OpenBao runs as an independent Docker service in this installer. JumpServer connects to OpenBao Server directly.
-# OpenBao 作为独立 Docker 服务部署，JumpServer 直接访问 OpenBao Server。
-#
-# Disabled by default. Set to true to enable Vault storage. When the backend is
-# openbao and OPENBAO_EXTERNAL=false, the installer starts the built-in service.
-# 默认关闭；设为 true 后启用 Vault。当后端为 openbao 且 OPENBAO_EXTERNAL=false 时，安装器启动内置服务。
+################################ OpenBao Configuration ################################
+# Vault storage is disabled by default.
 VAULT_ENABLED=false
 VAULT_BACKEND=openbao
 VAULT_OPENBAO_ADDR=http://openbao:8200
@@ -177,8 +173,24 @@ VAULT_OPENBAO_MOUNT_POINT=pam
 VAULT_OPENBAO_TOKEN=
 VAULT_OPENBAO_TIMEOUT=10
 
-# Set to true when VAULT_OPENBAO_ADDR points to an external OpenBao cluster or HA endpoint.
-# 设置为 true 时，installer 不会启动内置 OpenBao，Core 仍使用上面的 Vault 配置连接外部服务。
+# OpenBao SSH CA has an independent endpoint and least-privilege token. It may
+# use the same OpenBao cluster as Vault KV or a separate external cluster.
+SSH_CA_ENABLED=false
+SSH_CA_OPENBAO_ADDR=http://openbao:8200
+SSH_CA_OPENBAO_TOKEN=
+SSH_CA_OPENBAO_MOUNT_POINT=ssh-client-signer
+SSH_CA_OPENBAO_ROLE=jumpserver
+SSH_CA_OPENBAO_TTL=300
+SSH_CA_OPENBAO_TIMEOUT=10
+SSH_CA_OPENBAO_VERIFY_TLS=true
+# Optional comma-separated CIDRs seen by the target sshd.
+SSH_CA_OPENBAO_SOURCE_ADDRESS=
+
+# Set to true when enabled features use external OpenBao clusters or HA
+# endpoints. The installer then validates VAULT_OPENBAO_ADDR and/or
+# SSH_CA_OPENBAO_ADDR independently, and does not initialize a built-in service.
+# 启用的功能使用外部 OpenBao 或 HA 地址时设为 true；installer 将分别校验
+# VAULT_OPENBAO_ADDR 与 SSH_CA_OPENBAO_ADDR，不再初始化内置 OpenBao。
 OPENBAO_EXTERNAL=false
 
 OPENBAO_RAFT_NODE_ID=openbao
