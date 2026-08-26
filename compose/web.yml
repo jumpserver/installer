@@ -24,7 +24,9 @@ services:
       KAEL_ENABLED: ${KAEL_ENABLED:-0}
       RAZOR_ENABLED: ${RAZOR_ENABLED:-1}
       FACELIVE_ENABLED: ${FACELIVE_ENABLED:-0}
-      JDMC_ENABLED: ${JDMC_ENABLED:-0}
+      # Compatibility for older web images; the value is derived from the
+      # edition and is not a user-configurable JDMC switch.
+      JDMC_ENABLED: ${USE_XPACK:-0}
       BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
     volumes:
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data

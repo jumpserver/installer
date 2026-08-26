@@ -39,23 +39,19 @@ $ ./jmsctl.sh tail
 ## JDMC（企业版）
 
 JDMC 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设置
-`USE_XPACK=1`。它作为宿主机 systemd 服务安装，不加入 Docker Compose；企业版中
-默认启用，如需关闭可设置：
-
-```bash
-JDMC_HOST_ENABLED=0
-```
+`USE_XPACK=1`。它作为宿主机 systemd 服务安装，不加入 Docker Compose。社区版不
+下载或安装 JDMC；企业版必须安装 JDMC，不再提供单独的启用或禁用开关。
 
 安装器默认从 `${REGISTRY}/jumpserver/jdmc:${VERSION}` 拉取 artifact 镜像（未配置
 `REGISTRY` 时使用 `jumpserver/jdmc:${VERSION}`），再按需标记为
 `${NAMESPACE:-jumpserver}/jdmc:${VERSION}`，从 `/dist` 提取并执行 JDMC 自带的
 `scripts/install.sh` 或 `scripts/upgrade.sh`。
 也可通过 `JDMC_IMAGE` 指定不受 `REGISTRY` 改写的完整拉取地址；拉取后统一标记为
-`${NAMESPACE:-jumpserver}/jdmc:${VERSION}` 供安装器使用。离线包在 JDMC 启用时包含
-该镜像；设置 `JDMC_HOST_ENABLED=0` 后不会包含 JDMC 镜像。服务跟随
-`jmsctl.sh start/stop/restart/status`
-管理，日志可通过 `./jmsctl.sh tail jdmc` 查看。启用时还会自动为 Core 配置
-`JDMC_ENABLED=1` 和 `JDMC_SOCK_PATH=/opt/jumpserver/data/unshare/jdmc.sock`。
+`${NAMESPACE:-jumpserver}/jdmc:${VERSION}` 供安装器使用。企业版离线包始终包含
+该镜像。服务跟随 `jmsctl.sh start/stop/restart/status` 管理，日志可通过
+`./jmsctl.sh tail jdmc` 查看。安装器会为 Core 配置
+`JDMC_SOCK_PATH=/opt/jumpserver/data/unshare/jdmc.sock`；Core 根据企业版自动启用
+JDMC 集成。
 
 安装或升级 JDMC 时，安装器会将当前 `VOLUME_DIR` 传递给 JDMC artifact
 脚本。JDMC 据此配置宿主机上的 Core Unix Socket、日志和备份路径，因此可以
@@ -66,10 +62,10 @@ JDMC 启动时也会直接读取 `/opt/jumpserver/config/config.txt` 中的
 显式迁移对应的同级 `jdmc` 目录。
 
 从旧 KOTL 升级时，安装器会识别 `/opt/kotl` 和 `kotl.service`，并调用新
-JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。旧组件开关会一次性
-迁移为 `JDMC_HOST_ENABLED` 并从配置中删除；命令行过渡期仍接受 `--skip-kotl` 和
-`./jmsctl.sh tail kotl`，新部署应使用 `--skip-jdmc` 和 `jdmc` 命令目标。
-`JDMC_ENABLED` 与 `JDMC_SOCK_PATH` 始终是 Core 集成配置，不作为安装器组件开关使用。
+JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。安装或升级成功后会清理旧的
+`KOTL_ENABLED`、`JDMC_HOST_ENABLED` 和 `JDMC_ENABLED` 配置，历史禁用值不再生效。
+命令行过渡期仍接受 `./jmsctl.sh tail kotl`，新部署应使用 `jdmc` 命令目标。
+`--skip-jdmc` 仅供 JDMC 发起 JumpServer 重启时避免停止自身，不是组件开关。
 
 ## 配置文件说明
 

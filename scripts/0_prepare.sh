@@ -59,12 +59,6 @@ function prepare_image_files() {
   local INCLUDE_OPENBAO_IMAGE=1
   export INCLUDE_OPENBAO_IMAGE
 
-  # JDMC follows the host-component switch. SXF disables it because that
-  # package supplies and manages its own OSM build of JDMC.
-  if is_jdmc_enabled; then
-    local INCLUDE_JDMC_IMAGE=1
-    export INCLUDE_JDMC_IMAGE
-  fi
   if ! pull_images; then
     log_error "$(gettext 'Failed to pull Docker images')"
     return 1

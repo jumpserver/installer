@@ -187,7 +187,6 @@ function update_config_if_need() {
   migrate_config
   upgrade_config
   set_openbao || exit 1
-  configure_jdmc || exit 1
   clean_file
 }
 
@@ -360,6 +359,10 @@ function main() {
 
   echo_yellow "\n4. $(gettext 'Backup Configuration File')"
   backup_config
+  configure_jdmc || {
+    log_error "Failed to configure JDMC"
+    exit 1
+  }
 
   echo_yellow "\n5. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"

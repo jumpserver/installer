@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-# JDMC_HOST_ENABLED controls whether the installer manages the host-side JDMC
-# component. JDMC_ENABLED and JDMC_SOCK_PATH are intentionally kept for their
-# existing Core integration semantics.
+# JDMC is a mandatory host-side component in Enterprise Edition. Community
+# Edition does not install it. JDMC_SOCK_PATH is kept for Core integration.
 JDMC_SERVICE_NAME=${JDMC_SERVICE_NAME:-jdmc.service}
 JDMC_CORE_SOCKET_PATH=${JDMC_CORE_SOCKET_PATH:-/opt/jumpserver/data/unshare/jdmc.sock}
 JDMC_INSTALL_DIR=${JDMC_INSTALL_DIR:-/opt/jdmc}
@@ -14,20 +13,11 @@ function is_enterprise_edition() {
   [[ "$(get_config_or_env USE_XPACK 0)" == "1" ]]
 }
 
-function get_jdmc_host_enabled() {
-  get_config_or_env JDMC_HOST_ENABLED 1
-}
-
 function is_jdmc_enabled() {
-  is_enterprise_edition && [[ "$(get_jdmc_host_enabled)" == "1" ]]
+  is_enterprise_edition
 }
 
 function should_include_jdmc_image() {
-  is_enterprise_edition || return 1
-
-  case "${INCLUDE_JDMC_IMAGE:-${INCLUDE_KOTL_IMAGE:-}}" in
-    1|true|True|TRUE) return 0 ;;
-  esac
   is_jdmc_enabled
 }
 
@@ -51,31 +41,16 @@ function get_jdmc_pull_image() {
 }
 
 function configure_jdmc() {
-  local enabled legacy_enabled socket_path
+  local socket_path
 
-  # Convert the removed KOTL switch once, preserving an existing explicit
-  # opt-out while making JDMC enabled by default for new dev installations.
-  legacy_enabled=$(get_config KOTL_ENABLED)
-  if [[ -z "$(get_config JDMC_HOST_ENABLED)" && -n "${legacy_enabled}" ]]; then
-    set_config JDMC_HOST_ENABLED "${legacy_enabled}"
-  fi
-  remove_config KOTL_ENABLED
-
+  # JDMC follows the edition and is no longer configurable. Legacy switches
+  # are deliberately ignored here and cleaned only after install/upgrade has
+  # succeeded, so a failed upgrade can still be rolled back with its old config.
   if ! is_enterprise_edition; then
-    set_config JDMC_ENABLED 0
-    gen_safe_config >/dev/null
-    return 0
-  fi
-  enabled=$(get_jdmc_host_enabled)
-  set_config JDMC_HOST_ENABLED "${enabled}"
-
-  if [[ "${enabled}" != "1" ]]; then
-    set_config JDMC_ENABLED 0
     gen_safe_config >/dev/null
     return 0
   fi
 
-  set_config JDMC_ENABLED 1
   socket_path="${JDMC_CORE_SOCKET_PATH}"
   if check_legacy_kotl_installed && ! check_current_jdmc_installed; then
     # Keep Core connected to a still-running legacy service until the new
@@ -83,6 +58,13 @@ function configure_jdmc() {
     socket_path=$(get_config_or_env JDMC_SOCK_PATH "${JDMC_LEGACY_CORE_SOCKET_PATH}")
   fi
   set_config JDMC_SOCK_PATH "${socket_path}"
+  gen_safe_config >/dev/null
+}
+
+function cleanup_jdmc_legacy_switches() {
+  remove_config KOTL_ENABLED
+  remove_config JDMC_HOST_ENABLED
+  remove_config JDMC_ENABLED
   gen_safe_config >/dev/null
 }
 
@@ -223,13 +205,17 @@ function run_jdmc_package_action() {
 }
 
 function install_jdmc() {
-  is_jdmc_enabled || return 0
+  if ! is_jdmc_enabled; then
+    cleanup_jdmc_legacy_switches
+    return $?
+  fi
   check_jdmc_runtime || return 1
   configure_jdmc || return 1
 
   if check_current_jdmc_installed; then
     echo_check "JDMC is already installed"
-    return 0
+    cleanup_jdmc_legacy_switches
+    return $?
   fi
 
   if check_jdmc_installed; then
@@ -239,17 +225,22 @@ function install_jdmc() {
       echo_yellow "\n>>> Repairing or upgrading JDMC"
     fi
     run_jdmc_package_action upgrade || return 1
-    configure_jdmc
+    configure_jdmc || return 1
+    cleanup_jdmc_legacy_switches
     return $?
   fi
 
   echo_yellow "\n>>> Installing JDMC"
   run_jdmc_package_action install || return 1
-  configure_jdmc
+  configure_jdmc || return 1
+  cleanup_jdmc_legacy_switches
 }
 
 function upgrade_jdmc() {
-  is_jdmc_enabled || return 0
+  if ! is_jdmc_enabled; then
+    cleanup_jdmc_legacy_switches
+    return $?
+  fi
   check_jdmc_runtime || return 1
   configure_jdmc || return 1
 
@@ -259,7 +250,8 @@ function upgrade_jdmc() {
   else
     run_jdmc_package_action install || return 1
   fi
-  configure_jdmc
+  configure_jdmc || return 1
+  cleanup_jdmc_legacy_switches
 }
 
 function start_jdmc() {
