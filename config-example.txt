@@ -129,11 +129,9 @@ DOMAINS=
 # CHEN_ENABLED=0
 # WEB_ENABLED=0
 
-# JDMC is an Enterprise Edition host management console. It is distributed as
-# an artifact image, then installed as a systemd service on the host instead of
-# running in Compose. It inherits VOLUME_DIR from the installer, requires
-# USE_XPACK=1, and can be disabled with:
-# JDMC_HOST_ENABLED=0
+# JDMC is installed as a mandatory host-side systemd service when USE_XPACK=1.
+# Community Edition does not download or install JDMC. JDMC inherits VOLUME_DIR
+# from the installer and has no separate enable/disable switch.
 
 # Lion enables font smoothing to optimize the experience
 #
