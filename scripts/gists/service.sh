@@ -64,7 +64,6 @@ function get_db_info() {
     db_engine=$(get_config DB_ENGINE "postgresql")
   fi
 
-  postgresql_expose_port=$(get_config POSTGRESQL_EXPOSE_PORT)
   mysql_data_exists="0"
   mariadb_data_exists="0"
   postgres_data_exists="0"
@@ -93,15 +92,11 @@ function get_db_info() {
       ;;
     "file")
       if [[ "${mysql_data_exists}" == "1" ]]; then
-        echo "compose/mysql.yml"
+        echo "compose/mysql.yml -f compose/mysql.port.yml"
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
-        echo "compose/mariadb.yml"
+        echo "compose/mariadb.yml -f compose/mysql.port.yml"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        if [[ -n "${postgresql_expose_port}" ]]; then
-          echo "compose/postgresql.yml -f compose/postgresql.port.yml"
-        else
-          echo "compose/postgresql.yml"
-        fi
+        echo "compose/postgresql.yml -f compose/postgresql.port.yml"
       fi
       ;;
     *)
@@ -116,7 +111,6 @@ function get_docker_compose_services() {
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
   redis_expose_port=$(get_config REDIS_EXPOSE_PORT)
-  pg_expose_port=$(get_config POSTGRESQL_EXPOSE_PORT)
   use_es=$(get_config USE_ES)
   use_minio=$(get_config USE_MINIO)
   use_loki=$(get_config USE_LOKI)
@@ -131,7 +125,7 @@ function get_docker_compose_services() {
         [[ "${db_host}" == "mysql" || "${ha_mode}" == "1" ]] && services+=" mysql"
         ;;
       postgresql)
-        [[ "${db_host}" == "postgresql" || "${ha_mode}" == "1" || -n "${pg_expose_port}" ]] && services+=" postgresql"
+        [[ "${db_host}" == "postgresql" || "${ha_mode}" == "1" ]] && services+=" postgresql"
         ;;
     esac
     [[ "${redis_host}" == "redis" || "${ha_mode}" == "1" || -n "${redis_expose_port}" ]] && services+=" redis"
