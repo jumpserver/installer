@@ -12,16 +12,6 @@ action=${1-}
 target=${2-}
 args=("$@")
 
-# SXF owns its OSM JDMC service outside this installer. Consume the shared
-# lifecycle flag so it is never mistaken for a Compose service name.
-if [[ "${target}" == "--skip-jdmc" || "${target}" == "--skip-kotl" ]]; then
-  case "${action}" in
-  start|stop|restart|close|status|down)
-    target=""
-    ;;
-  esac
-fi
-
 function check_config_file() {
   if [[ ! -f "${CONFIG_FILE}" ]]; then
     echo "$(gettext 'Configuration file not found'): ${CONFIG_FILE}"
@@ -61,10 +51,10 @@ function usage() {
   echo
   echo "Management Commands: "
   echo "  config            $(gettext 'Configuration  Tools')"
-  echo "  start [--skip-jdmc]   $(gettext 'Start     JumpServer')"
-  echo "  stop [--skip-jdmc]    $(gettext 'Stop      JumpServer')"
-  echo "  restart [--skip-jdmc] $(gettext 'Restart   JumpServer')"
-  echo "  status [--skip-jdmc]  $(gettext 'Check     JumpServer')"
+  echo "  start             $(gettext 'Start     JumpServer')"
+  echo "  stop              $(gettext 'Stop      JumpServer')"
+  echo "  restart           $(gettext 'Restart   JumpServer')"
+  echo "  status            $(gettext 'Check     JumpServer')"
   echo "  down              $(gettext 'Offline   JumpServer')"
   echo "  uninstall         $(gettext 'Uninstall JumpServer')"
   echo
