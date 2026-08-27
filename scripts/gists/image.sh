@@ -15,7 +15,7 @@ function get_pull_images() {
   for service in ${enabled_services}; do
     if [[ "${service}" == "video" ]]; then
       image="jumpserver/video-worker:${VERSION}"
-    elif [[ "${service}" == "" || "${service}" == "celery" ]]; then
+    elif [[ "${service}" == "" || "${service}" == "celery" || "${service}" == "ai" ]]; then
       continue
     else
       image="jumpserver/${service}:${VERSION}"
@@ -43,7 +43,7 @@ function get_images() {
   for service in ${enabled_services}; do
     if [[ "${service}" == "video" ]]; then
       image="${namespace}/video-worker:${VERSION}"
-    elif [[ "${service}" == "" || "${service}" == "celery" ]]; then
+    elif [[ "${service}" == "" || "${service}" == "celery" || "${service}" == "ai" ]]; then
       continue
     else
       image="${namespace}/${service}:${VERSION}"

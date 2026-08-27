@@ -1,5 +1,5 @@
 
-common_services=(core celery koko lion chen web)
+common_services=(core ai celery koko lion chen web)
 xpack_services=(magnus razor xrdp video panda nec facelive)
 
 
