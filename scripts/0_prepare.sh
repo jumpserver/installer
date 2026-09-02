@@ -39,9 +39,14 @@ function prepare_compose_bin() {
 }
 
 function prepare_image_files() {
+  local images image app_name filename image_path md5_filename md5_path
+  local image_id saved_id pid index
+  local save_failed=0
+  local -a save_images=() save_paths=() save_md5_paths=() save_ids=() save_pids=()
+
   if ! pgrep -f "docker"&>/dev/null; then
     echo "$(gettext 'Docker is not running, please install and start') ..."
-    exit 1
+    return 1
   fi
 
   if [[ ! -d "${IMAGE_DIR}" ]]; then
@@ -54,13 +59,10 @@ function prepare_image_files() {
   local INCLUDE_OPENBAO_IMAGE=1
   export INCLUDE_OPENBAO_IMAGE
 
-  # KOTL is an Enterprise Edition component. Include it in the offline bundle
-  # only when building an XPack deployment.
-  if is_enterprise_edition; then
-    local INCLUDE_KOTL_IMAGE=1
-    export INCLUDE_KOTL_IMAGE
+  if ! pull_images; then
+    log_error "$(gettext 'Failed to pull Docker images')"
+    return 1
   fi
-  pull_images
 
   images=$(get_images)
   for image in ${images}; do
@@ -90,10 +92,36 @@ function prepare_image_files() {
       fi
     fi
     echo "$(gettext 'Save image') ${image} -> ${image_path}"
-    docker save "${image}" | zstd -f -q -o "${image_path}" &
-    echo "${image_id}" >"${md5_path}" &
+    save_images+=("${image}")
+    save_paths+=("${image_path}")
+    save_md5_paths+=("${md5_path}")
+    save_ids+=("${image_id}")
   done
-  wait
+
+  for index in "${!save_images[@]}"; do
+    (
+      set -o pipefail
+      if ! docker save "${save_images[${index}]}" | zstd -f -q -o "${save_paths[${index}]}"; then
+        rm -f "${save_paths[${index}]}" "${save_md5_paths[${index}]}"
+        exit 1
+      fi
+      if ! printf '%s\n' "${save_ids[${index}]}" >"${save_md5_paths[${index}]}"; then
+        rm -f "${save_paths[${index}]}" "${save_md5_paths[${index}]}"
+        exit 1
+      fi
+    ) &
+    save_pids+=("$!")
+  done
+
+  for index in "${!save_pids[@]}"; do
+    pid="${save_pids[${index}]}"
+    if ! wait "${pid}"; then
+      log_error "$(gettext 'Failed to save Docker image'): ${save_images[${index}]}"
+      save_failed=1
+    fi
+  done
+
+  return "${save_failed}"
 }
 
 function main() {
