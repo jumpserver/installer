@@ -24,15 +24,25 @@ function load_image_files() {
     fi
 
     echo -n "${image} <= ${IMAGE_DIR}/${filename} "
-    md5_filename=$(basename "${image}").md5
-    md5_path=${IMAGE_DIR}/${md5_filename}
-    image_id=$(docker inspect -f "{{.ID}}" "${image}" 2>/dev/null || echo "")
-    saved_id=""
-
-    if [[ -f "${md5_path}" ]]; then
-      saved_id=$(cat "${md5_path}")
+    sha256_filename=$(basename "${image}").sha256
+    sha256_path=${IMAGE_DIR}/${sha256_filename}
+    if [[ ! -f "${sha256_path}" ]]; then
+      echo
+      echo_red "$(gettext 'Docker image ID file not found'): ${sha256_path}"
+      load_failed=1
+      continue
     fi
-    if [[ ${image_id} != "${saved_id}" ]]; then
+
+    image_id=$(docker image inspect -f "{{.ID}}" "${image}" 2>/dev/null || echo "")
+    saved_id=$(cat "${sha256_path}")
+    if [[ -z "${saved_id}" ]]; then
+      echo
+      echo_red "$(gettext 'Docker image ID file is empty'): ${sha256_path}"
+      load_failed=1
+      continue
+    fi
+
+    if [[ -z "${image_id}" || "${image_id}" != "${saved_id}" ]]; then
       echo
       if ! docker load <"${IMAGE_DIR}/${filename}"; then
         echo_red "$(gettext 'Error loading image'): ${filename}"

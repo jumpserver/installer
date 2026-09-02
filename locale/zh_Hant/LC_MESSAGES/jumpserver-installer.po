@@ -261,6 +261,14 @@ msgstr "初始化資料庫"
 msgid "Docker image not found"
 msgstr "未找到 Docker 鏡像文件"
 
+#: scripts/3_load_images.sh:30
+msgid "Docker image ID file not found"
+msgstr "未找到 Docker 鏡像 ID 文件"
+
+#: scripts/3_load_images.sh:39
+msgid "Docker image ID file is empty"
+msgstr "Docker 鏡像 ID 文件為空"
+
 #: scripts/3_load_images.sh:35
 #, fuzzy
 msgid "Error loading image"

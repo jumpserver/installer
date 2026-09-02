@@ -39,10 +39,10 @@ function prepare_compose_bin() {
 }
 
 function prepare_image_files() {
-  local images image app_name filename image_path md5_filename md5_path
+  local images image app_name filename image_path sha256_filename sha256_path
   local image_id saved_id pid index
   local save_failed=0
-  local -a save_images=() save_paths=() save_md5_paths=() save_ids=() save_pids=()
+  local -a save_images=() save_paths=() save_sha256_paths=() save_ids=() save_pids=()
 
   if ! pgrep -f "docker"&>/dev/null; then
     echo "$(gettext 'Docker is not running, please install and start') ..."
@@ -71,21 +71,21 @@ function prepare_image_files() {
     echo "${image}"
     
     image_path="${IMAGE_DIR}/${filename}"
-    md5_filename=$(basename "${image}").md5
-    md5_path="${IMAGE_DIR}/${md5_filename}"
+    sha256_filename=$(basename "${image}").sha256
+    sha256_path="${IMAGE_DIR}/${sha256_filename}"
 
     if ! image_id=$(docker image inspect -f "{{.ID}}" "${image}" 2>/dev/null); then
       log_error "$(gettext 'Image inspect failed'): ${image}"
       return 1
     fi
     saved_id=""
-    if [[ -f "${md5_path}" ]]; then
-      saved_id=$(cat "${md5_path}")
+    if [[ -f "${sha256_path}" ]]; then
+      saved_id=$(cat "${sha256_path}")
     fi
 
     if [[ -f "${image_path}" ]]; then
       if [[ "${image_id}" != "${saved_id}" ]]; then
-        rm -f "${image_path}" "${md5_path}"
+        rm -f "${image_path}" "${sha256_path}"
       else
         echo "$(gettext 'The image has been saved, skipping'): ${image}"
         continue
@@ -94,7 +94,7 @@ function prepare_image_files() {
     echo "$(gettext 'Save image') ${image} -> ${image_path}"
     save_images+=("${image}")
     save_paths+=("${image_path}")
-    save_md5_paths+=("${md5_path}")
+    save_sha256_paths+=("${sha256_path}")
     save_ids+=("${image_id}")
   done
 
@@ -102,11 +102,11 @@ function prepare_image_files() {
     (
       set -o pipefail
       if ! docker save "${save_images[${index}]}" | zstd -f -q -o "${save_paths[${index}]}"; then
-        rm -f "${save_paths[${index}]}" "${save_md5_paths[${index}]}"
+        rm -f "${save_paths[${index}]}" "${save_sha256_paths[${index}]}"
         exit 1
       fi
-      if ! printf '%s\n' "${save_ids[${index}]}" >"${save_md5_paths[${index}]}"; then
-        rm -f "${save_paths[${index}]}" "${save_md5_paths[${index}]}"
+      if ! printf '%s\n' "${save_ids[${index}]}" >"${save_sha256_paths[${index}]}"; then
+        rm -f "${save_paths[${index}]}" "${save_sha256_paths[${index}]}"
         exit 1
       fi
     ) &
