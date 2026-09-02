@@ -46,9 +46,8 @@ JDMC 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设�
 `jumpserver/jdmc:${VERSION}`），再按需标记为
 `${NAMESPACE:-jumpserver}/jdmc:${VERSION}`，从 `/dist` 提取并执行 JDMC 自带的
 `scripts/install.sh` 或 `scripts/upgrade.sh`。
-也可通过 `JDMC_IMAGE` 指定不受 `IMAGE_PULL_PREFIX` 改写的完整拉取地址；拉取后统一标记为
-`${NAMESPACE:-jumpserver}/jdmc:${VERSION}` 供安装器使用。企业版离线包始终包含
-该镜像。服务跟随 `jmsctl.sh start/stop/restart/status` 管理，日志可通过
+JDMC 与 Core 等自有组件使用相同的拉取和重标记规则，企业版离线包始终包含该镜像。
+服务跟随 `jmsctl.sh start/stop/restart/status` 管理，日志可通过
 `./jmsctl.sh tail jdmc` 查看。安装器会为 Core 配置
 `JDMC_SOCK_PATH=/opt/jumpserver/data/unshare/jdmc.sock`；Core 根据企业版自动启用
 JDMC 集成。
@@ -85,6 +84,8 @@ PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通�
 `IMAGE_PULL_PREFIX` 只决定 JumpServer 自有镜像的拉取来源，`NAMESPACE` 只决定这些
 镜像拉取后的本地运行名称。Redis、数据库和 OpenBao 等基础镜像保留自己的 registry
 和 namespace，不使用 `NAMESPACE`；OpenBao 固定使用 `openbao/openbao:2.6.0`。
+`IMAGE_PULL_SCOPE` 默认为 `jumpserver`；设置为 `all` 时，基础镜像也从
+`IMAGE_PULL_PREFIX` 拉取，但拉取后仍恢复成各自的固定运行名称。
 
 ## 配置文件说明
 

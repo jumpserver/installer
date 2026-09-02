@@ -36,7 +36,7 @@ function emit_image_mapping() {
 }
 
 function get_image_mappings() {
-  local use_xpack enabled_services service image db_image jdmc_exact_source namespace
+  local use_xpack enabled_services service image db_image namespace
 
   use_xpack=$(get_config_or_env USE_XPACK)
   namespace=$(get_image_namespace)
@@ -76,12 +76,9 @@ function get_image_mappings() {
     emit_image_mapping "${image}" "${image}"
   fi
   if should_include_jdmc_image; then
-    jdmc_exact_source=0
-    [[ -n "$(get_config_or_env JDMC_IMAGE)" ]] && jdmc_exact_source=1
     emit_image_mapping \
-      "$(get_jdmc_pull_image)" \
-      "$(get_jdmc_image)" \
-      "${jdmc_exact_source}"
+      "jumpserver/jdmc:${VERSION}" \
+      "${namespace}/jdmc:${VERSION}"
   fi
 }
 
@@ -168,7 +165,8 @@ function check_image_exists() {
 }
 
 function get_image_full_path() {
-  local image=$1 image_pull_prefix docker_image_mirror docker_image_prefix
+  local image=$1 image_pull_prefix image_pull_scope
+  local docker_image_mirror docker_image_prefix
   local full_image_path app
 
   if image_is_registry_qualified "${image}"; then
@@ -177,8 +175,9 @@ function get_image_full_path() {
   fi
 
   image_pull_prefix=$(get_image_pull_prefix)
+  image_pull_scope=$(get_config_or_env IMAGE_PULL_SCOPE jumpserver)
   if [[ -n "${image_pull_prefix}" ]]; then
-    if [[ $(image_has_prefix "${image}") == "1" ]]; then
+    if [[ "${image_pull_scope}" == "all" || $(image_has_prefix "${image}") == "1" ]]; then
       app=${image##*/}
       echo "${image_pull_prefix}/${app}"
     else

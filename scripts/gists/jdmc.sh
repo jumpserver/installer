@@ -29,22 +29,6 @@ function get_jdmc_image() {
   echo "${namespace:-jumpserver}/jdmc:${VERSION}"
 }
 
-function get_jdmc_pull_image() {
-  local jdmc_image
-
-  jdmc_image=$(get_config_or_env JDMC_IMAGE)
-  if [[ -n "${jdmc_image}" ]]; then
-    # JDMC_IMAGE is an exact source reference. It must not be rewritten by
-    # IMAGE_PULL_PREFIX or the legacy mirror configuration.
-    echo "${jdmc_image}"
-    return 0
-  fi
-
-  # The central image mapping resolves this logical source through
-  # IMAGE_PULL_PREFIX and then tags it with the runtime NAMESPACE.
-  echo "jumpserver/jdmc:${VERSION}"
-}
-
 function configure_jdmc() {
   local socket_path
 

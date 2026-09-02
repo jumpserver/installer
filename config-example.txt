@@ -12,6 +12,12 @@
 #
 # IMAGE_PULL_PREFIX=
 
+# Scope of IMAGE_PULL_PREFIX: jumpserver only rewrites JumpServer application
+# images; all also pulls infrastructure images from the prefix and restores
+# their canonical local tags before Compose starts.
+#
+# IMAGE_PULL_SCOPE=jumpserver
+
 # Local runtime namespace for JumpServer application images. This does not
 # select a remote registry; images are tagged locally before Compose starts.
 #
