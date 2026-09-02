@@ -34,7 +34,7 @@ function is_internal_openbao_enabled() {
 }
 
 function get_openbao_image() {
-  get_config_or_env OPENBAO_IMAGE "openbao/openbao:2.6.0"
+  echo "openbao/openbao:2.6.0"
 }
 
 function should_include_openbao_image() {

@@ -42,11 +42,11 @@ JDMC 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设�
 `USE_XPACK=1`。它作为宿主机 systemd 服务安装，不加入 Docker Compose。社区版不
 下载或安装 JDMC；企业版必须安装 JDMC，不再提供单独的启用或禁用开关。
 
-安装器默认从 `${REGISTRY}/jumpserver/jdmc:${VERSION}` 拉取 artifact 镜像（未配置
-`REGISTRY` 时使用 `jumpserver/jdmc:${VERSION}`），再按需标记为
+安装器默认根据 `IMAGE_PULL_PREFIX` 拉取 JDMC artifact 镜像（未配置时使用
+`jumpserver/jdmc:${VERSION}`），再按需标记为
 `${NAMESPACE:-jumpserver}/jdmc:${VERSION}`，从 `/dist` 提取并执行 JDMC 自带的
 `scripts/install.sh` 或 `scripts/upgrade.sh`。
-也可通过 `JDMC_IMAGE` 指定不受 `REGISTRY` 改写的完整拉取地址；拉取后统一标记为
+也可通过 `JDMC_IMAGE` 指定不受 `IMAGE_PULL_PREFIX` 改写的完整拉取地址；拉取后统一标记为
 `${NAMESPACE:-jumpserver}/jdmc:${VERSION}` 供安装器使用。企业版离线包始终包含
 该镜像。服务跟随 `jmsctl.sh start/stop/restart/status` 管理，日志可通过
 `./jmsctl.sh tail jdmc` 查看。安装器会为 Core 配置
@@ -66,6 +66,25 @@ JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。安
 `KOTL_ENABLED`、`JDMC_HOST_ENABLED` 和 `JDMC_ENABLED` 配置，历史禁用值不再生效。
 命令行过渡期仍接受 `./jmsctl.sh tail kotl`，新部署应使用 `jdmc` 命令目标。
 `--skip-jdmc` 仅供 JDMC 发起 JumpServer 重启时避免停止自身，不是组件开关。
+
+## 离线镜像清单
+
+`scripts/gists/image.sh` 是离线镜像选择和重标记规则的唯一来源。调用
+`get_offline_image_manifest` 会逐行输出以 Tab 分隔的源镜像和离线包目标镜像：
+
+```text
+redis:7.4.10-bookworm<TAB>redis:7.4.10-bookworm
+registry.example.com/jumpserver/core:VERSION<TAB>jumpserver/core:VERSION
+```
+
+安装器的镜像拉取流程和外部 CI 打包流程都应消费该清单，不应分别维护 Redis、
+PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通过
+`OFFLINE_IMAGE_SERVICES` 传入逗号或空格分隔的服务范围；未设置时，清单使用安装器
+当前配置所启用的服务。
+
+`IMAGE_PULL_PREFIX` 只决定 JumpServer 自有镜像的拉取来源，`NAMESPACE` 只决定这些
+镜像拉取后的本地运行名称。Redis、数据库和 OpenBao 等基础镜像保留自己的 registry
+和 namespace，不使用 `NAMESPACE`；OpenBao 固定使用 `openbao/openbao:2.6.0`。
 
 ## 配置文件说明
 
@@ -94,6 +113,6 @@ JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。安
 
 ### config.txt 说明
 
-config.txt 文件是环境变量配置文件，会挂在到各个容器中，这样可以不必为 koko，core，lion 单独设置配置文件。
+config.txt 文件是环境变量配置文件，会挂载到各个容器中，这样可以不必为 koko、core 单独设置配置文件。
 
 具体可以参考： [JumpServer 参数说明文档](https://docs.jumpserver.org/zh/master/admin-guide/env/)

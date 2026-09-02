@@ -1,6 +1,6 @@
 
-common_services=(core ai celery koko lion chen web)
-xpack_services=(magnus razor xrdp video panda nec facelive)
+common_services=(core ai celery koko chen web)
+xpack_services=(magnus razor xrdp video nec)
 
 
 function get_enabled_services() {

@@ -22,22 +22,27 @@ function should_include_jdmc_image() {
 }
 
 function get_jdmc_image() {
-  echo "${NAMESPACE:-jumpserver}/jdmc:${VERSION}"
+  local namespace
+
+  namespace=$(get_config_or_env NAMESPACE jumpserver)
+  namespace=${namespace%/}
+  echo "${namespace:-jumpserver}/jdmc:${VERSION}"
 }
 
 function get_jdmc_pull_image() {
-  if [[ -n "${JDMC_IMAGE:-}" ]]; then
+  local jdmc_image
+
+  jdmc_image=$(get_config_or_env JDMC_IMAGE)
+  if [[ -n "${jdmc_image}" ]]; then
     # JDMC_IMAGE is an exact source reference. It must not be rewritten by
-    # REGISTRY or the generic mirror configuration.
-    echo "${JDMC_IMAGE}"
+    # IMAGE_PULL_PREFIX or the legacy mirror configuration.
+    echo "${jdmc_image}"
     return 0
   fi
 
-  if [[ -n "${REGISTRY:-}" ]]; then
-    echo "${REGISTRY%/}/jumpserver/jdmc:${VERSION}"
-  else
-    echo "jumpserver/jdmc:${VERSION}"
-  fi
+  # The central image mapping resolves this logical source through
+  # IMAGE_PULL_PREFIX and then tags it with the runtime NAMESPACE.
+  echo "jumpserver/jdmc:${VERSION}"
 }
 
 function configure_jdmc() {

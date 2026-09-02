@@ -11,5 +11,3 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 . "${BASE_DIR}/gists/kotl.sh"
 . "${BASE_DIR}/gists/image.sh"
 . "${BASE_DIR}/gists/service.sh"
-
-namespace=${NAMESPACE:-jumpserver}

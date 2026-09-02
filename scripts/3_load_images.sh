@@ -37,6 +37,9 @@ function load_image_files() {
       if ! docker load <"${IMAGE_DIR}/${filename}"; then
         echo_red "$(gettext 'Error loading image'): ${filename}"
         load_failed=1
+      elif ! docker image inspect "${image}" &>/dev/null; then
+        echo_red "$(gettext 'Docker image not found after loading'): ${image}"
+        load_failed=1
       fi
     else
       echo "$(gettext 'Docker image loaded, skipping')"

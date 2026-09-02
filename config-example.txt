@@ -5,8 +5,20 @@
 
 ################################# Image Configuration #################################
 #
+# Pull JumpServer application images from this prefix. For example,
+# IMAGE_PULL_PREFIX=registry.example.com/jumpserver pulls core from
+# registry.example.com/jumpserver/core:${VERSION}. Infrastructure images such
+# as Redis, PostgreSQL and OpenBao keep their own image names.
+#
+# IMAGE_PULL_PREFIX=
+
+# Local runtime namespace for JumpServer application images. This does not
+# select a remote registry; images are tagged locally before Compose starts.
+#
+# NAMESPACE=jumpserver
+
 # The connection to docker.io in China will timeout or the download speed will be slow, enable this option to use Huawei Cloud image acceleration
-# Replace the old version DOCKER_IMAGE_PREFIX
+# Legacy mirror configuration. IMAGE_PULL_PREFIX takes precedence when set.
 #
 # DOCKER_IMAGE_MIRROR=1
 
@@ -126,7 +138,6 @@ DOMAINS=
 # AI_ENABLED=0
 # CELERY_ENABLED=0
 # KOKO_ENABLED=0
-# LION_ENABLED=0
 # CHEN_ENABLED=0
 # WEB_ENABLED=0
 
@@ -139,7 +150,7 @@ DOMAINS=
 # Community Edition does not download or install JDMC. JDMC inherits VOLUME_DIR
 # from the installer and has no separate enable/disable switch.
 
-# Lion enables font smoothing to optimize the experience
+# Koko enables font smoothing to optimize the experience.
 #
 JUMPSERVER_ENABLE_FONT_SMOOTHING=true
 
@@ -148,10 +159,11 @@ JUMPSERVER_ENABLE_FONT_SMOOTHING=true
 #
 KOKO_SSH_PORT=2222
 RAZOR_RDP_PORT=3389
-XRDP_PORT=3390
 MAGNUS_PORT=5525
 
-#XRDP_ENABLED=1
+# XRDP is optional and disabled by default. Set it to 1 only when needed.
+XRDP_ENABLED=0
+# XRDP_PORT=3390
 
 ################################## Other Configuration ################################
 # The terminal uses the host HOSTNAME as the identifier, automatically generated during the first installation

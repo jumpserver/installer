@@ -95,7 +95,10 @@ function upgrade_config() {
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    check_and_set_config "XRDP_PORT" "3390"
+    check_and_set_config "XRDP_ENABLED" "0"
+    if [[ "$(get_config_or_env XRDP_ENABLED)" == "1" ]]; then
+      check_and_set_config "XRDP_PORT" "3390"
+    fi
     check_and_set_config "MAGNUS_PORT" "5525"
   fi
 }
@@ -175,9 +178,14 @@ function migrate_data_folder() {
 }
 
 function migrate_config() {
+  local component
+
   prepare_jmsctl
   migrate_compat_config "KOKO_SSH_PORT" "SSH_PORT" "2222"
   migrate_compat_config "RAZOR_RDP_PORT" "RDP_PORT" "3389"
+  for component in CORE AI CELERY KOKO CHEN WEB MAGNUS RAZOR XRDP VIDEO NEC; do
+    migrate_compat_config "${component}_ENABLED" "${component}_ENABLE" ""
+  done
 }
 
 function update_config_if_need() {
@@ -222,7 +230,7 @@ function db_migrations() {
      echo "Role is standby, skip database migrations"
      return 
   fi
-  if docker ps | grep -E "core|koko|lion"&>/dev/null; then
+  if docker ps | grep -E "core|koko"&>/dev/null; then
     confirm="y"
     read_from_input confirm "$(gettext 'Detected that the JumpServer container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
@@ -259,7 +267,8 @@ function clean_images() {
     return
   fi
 
-  namespace=${NAMESPACE:-jumpserver}
+  namespace=$(get_config_or_env NAMESPACE jumpserver)
+  namespace=${namespace%/}
   old_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${namespace}/" | grep "${current_version}" || true)
   if [[ -n "${old_images}" ]]; then
     confirm="y"
