@@ -21,8 +21,7 @@ function pre_install() {
     }
   fi
 
-  if ! command -v iptables &>/dev/null; then 
-    log_error "$(gettext 'command not found, Please install it first') iptables"
+  if ! ensure_iptables; then
     exit 1
   fi
 
