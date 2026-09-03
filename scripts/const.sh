@@ -36,5 +36,12 @@ if [ -n "${BUILD_ARCH}" ]; then
 fi
 
 export ARCH
-export DOCKER_BIN_URL="https://download.docker.com/linux/static/stable/${ARCH}/docker-${DOCKER_VERSION}.tgz"
-export COMPOSE_BIN_URL="https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"
+DOCKER_BIN_URL="https://download.docker.com/linux/static/stable/${ARCH}/docker-${DOCKER_VERSION}.tgz"
+COMPOSE_BIN_URL="https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"
+
+if [[ -n $DOCKER_BIN_HOST ]];then
+   DOCKER_BIN_URL=$(echo $DOCKER_BIN_URL | sed "s@https://download.docker.com@$DOCKER_BIN_HOST@g")
+   COMPOSE_BIN_URL=$(echo $COMPOSE_BIN_URL | sed "s@https://github.com@$DOCKER_BIN_HOST@g" )
+fi
+export DOCKER_BIN_URL=$DOCKER_BIN_URL
+export COMPOSE_BIN_URL=$COMPOSE_BIN_URL

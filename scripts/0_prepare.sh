@@ -39,9 +39,14 @@ function prepare_compose_bin() {
 }
 
 function prepare_image_files() {
+  local images image app_name filename image_path sha256_filename sha256_path
+  local image_id saved_id pid index
+  local save_failed=0
+  local -a save_images=() save_paths=() save_sha256_paths=() save_ids=() save_pids=()
+
   if ! pgrep -f "docker"&>/dev/null; then
     echo "$(gettext 'Docker is not running, please install and start') ..."
-    exit 1
+    return 1
   fi
 
   if [[ ! -d "${IMAGE_DIR}" ]]; then
@@ -54,13 +59,10 @@ function prepare_image_files() {
   local INCLUDE_OPENBAO_IMAGE=1
   export INCLUDE_OPENBAO_IMAGE
 
-  # KOTL is an Enterprise Edition component. Include it in the offline bundle
-  # only when building an XPack deployment.
-  if is_enterprise_edition; then
-    local INCLUDE_KOTL_IMAGE=1
-    export INCLUDE_KOTL_IMAGE
+  if ! pull_images; then
+    log_error "$(gettext 'Failed to pull Docker images')"
+    return 1
   fi
-  pull_images
 
   images=$(get_images)
   for image in ${images}; do
@@ -69,31 +71,57 @@ function prepare_image_files() {
     echo "${image}"
     
     image_path="${IMAGE_DIR}/${filename}"
-    md5_filename=$(basename "${image}").md5
-    md5_path="${IMAGE_DIR}/${md5_filename}"
+    sha256_filename=$(basename "${image}").sha256
+    sha256_path="${IMAGE_DIR}/${sha256_filename}"
 
     if ! image_id=$(docker image inspect -f "{{.ID}}" "${image}" 2>/dev/null); then
       log_error "$(gettext 'Image inspect failed'): ${image}"
       return 1
     fi
     saved_id=""
-    if [[ -f "${md5_path}" ]]; then
-      saved_id=$(cat "${md5_path}")
+    if [[ -f "${sha256_path}" ]]; then
+      saved_id=$(cat "${sha256_path}")
     fi
 
     if [[ -f "${image_path}" ]]; then
       if [[ "${image_id}" != "${saved_id}" ]]; then
-        rm -f "${image_path}" "${md5_path}"
+        rm -f "${image_path}" "${sha256_path}"
       else
         echo "$(gettext 'The image has been saved, skipping'): ${image}"
         continue
       fi
     fi
     echo "$(gettext 'Save image') ${image} -> ${image_path}"
-    docker save "${image}" | zstd -f -q -o "${image_path}" &
-    echo "${image_id}" >"${md5_path}" &
+    save_images+=("${image}")
+    save_paths+=("${image_path}")
+    save_sha256_paths+=("${sha256_path}")
+    save_ids+=("${image_id}")
   done
-  wait
+
+  for index in "${!save_images[@]}"; do
+    (
+      set -o pipefail
+      if ! docker save "${save_images[${index}]}" | zstd -f -q -o "${save_paths[${index}]}"; then
+        rm -f "${save_paths[${index}]}" "${save_sha256_paths[${index}]}"
+        exit 1
+      fi
+      if ! printf '%s\n' "${save_ids[${index}]}" >"${save_sha256_paths[${index}]}"; then
+        rm -f "${save_paths[${index}]}" "${save_sha256_paths[${index}]}"
+        exit 1
+      fi
+    ) &
+    save_pids+=("$!")
+  done
+
+  for index in "${!save_pids[@]}"; do
+    pid="${save_pids[${index}]}"
+    if ! wait "${pid}"; then
+      log_error "$(gettext 'Failed to save Docker image'): ${save_images[${index}]}"
+      save_failed=1
+    fi
+  done
+
+  return "${save_failed}"
 }
 
 function main() {

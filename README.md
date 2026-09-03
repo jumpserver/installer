@@ -36,24 +36,56 @@ $ ./jmsctl.sh tail
 
 ```
 
-## KOTL（企业版）
+## JDMC（企业版）
 
-KOTL 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设置
-`USE_XPACK=1`。它作为宿主机 systemd 服务安装，不加入 Docker Compose；企业版中
-默认启用，如需关闭可设置：
+JDMC 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设置
+`USE_XPACK=1`。它作为宿主机 systemd 服务安装，不加入 Docker Compose。社区版不
+下载或安装 JDMC；企业版必须安装 JDMC，不再提供单独的启用或禁用开关。
 
-```bash
-KOTL_ENABLED=0
+安装器默认根据 `IMAGE_PULL_PREFIX` 拉取 JDMC artifact 镜像（未配置时使用
+`jumpserver/jdmc:${VERSION}`），再按需标记为
+`${NAMESPACE:-jumpserver}/jdmc:${VERSION}`，从 `/dist` 提取并执行 JDMC 自带的
+`scripts/install.sh` 或 `scripts/upgrade.sh`。
+JDMC 与 Core 等自有组件使用相同的拉取和重标记规则，企业版离线包始终包含该镜像。
+服务跟随 `jmsctl.sh start/stop/restart/status` 管理，日志可通过
+`./jmsctl.sh tail jdmc` 查看。安装器会为 Core 配置
+`JDMC_SOCK_PATH=/opt/jumpserver/data/unshare/jdmc.sock`；Core 根据企业版自动启用
+JDMC 集成。
+
+安装或升级 JDMC 时，安装器会将当前 `VOLUME_DIR` 传递给 JDMC artifact
+脚本。JDMC 据此配置宿主机上的 Core Unix Socket、日志和备份路径，因此可以
+继续使用已有的自定义持久化目录，不需要为了升级迁移到 `/data/jumpserver`。
+JDMC 启动时也会直接读取 `/opt/jumpserver/config/config.txt` 中的
+`VOLUME_DIR`；配置变化后可通过 `systemctl restart jdmc` 重新加载 JDMC 路径。
+但修改已安装环境的 `VOLUME_DIR` 不会自动搬迁原有 JDMC 数据，必须先停服务并
+显式迁移对应的同级 `jdmc` 目录。
+
+从旧 KOTL 升级时，安装器会识别 `/opt/kotl` 和 `kotl.service`，并调用新
+JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。安装或升级成功后会清理旧的
+`KOTL_ENABLED`、`JDMC_HOST_ENABLED` 和 `JDMC_ENABLED` 配置，历史禁用值不再生效。
+命令行过渡期仍接受 `./jmsctl.sh tail kotl`，新部署应使用 `jdmc` 命令目标。
+`--skip-jdmc` 仅供 JDMC 发起 JumpServer 重启时避免停止自身，不是组件开关。
+
+## 离线镜像清单
+
+`scripts/gists/image.sh` 是离线镜像选择和重标记规则的唯一来源。调用
+`get_offline_image_manifest` 会逐行输出以 Tab 分隔的源镜像和离线包目标镜像：
+
+```text
+redis:7.4.10-bookworm<TAB>redis:7.4.10-bookworm
+registry.example.com/jumpserver/core:VERSION<TAB>jumpserver/core:VERSION
 ```
 
-安装器会拉取 `${NAMESPACE:-jumpserver}/kotl:${VERSION}` artifact 镜像，从
-`/dist` 提取并执行 KOTL 自带的 `scripts/install.sh` 或 `scripts/upgrade.sh`。
-离线包也会自动包含该镜像。服务跟随 `jmsctl.sh start/stop/restart/status`
-管理，日志可通过 `./jmsctl.sh tail kotl` 查看。启用时还会自动为 Core 配置
-`KOTL_ENABLED=1`、`JDMC_ENABLED=1` 和 `/opt/jumpserver/data/unshare/kotl.sock`。
+安装器的镜像拉取流程和外部 CI 打包流程都应消费该清单，不应分别维护 Redis、
+PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通过
+`OFFLINE_IMAGE_SERVICES` 传入逗号或空格分隔的服务范围；未设置时，清单使用安装器
+当前配置所启用的服务。
 
-当前 KOTL 的宿主机路径固定使用 `/data/jumpserver`，因此启用时
-`VOLUME_DIR` 也必须保持为 `/data/jumpserver`。
+`IMAGE_PULL_PREFIX` 只决定 JumpServer 自有镜像的拉取来源，`NAMESPACE` 只决定这些
+镜像拉取后的本地运行名称。Redis、数据库和 OpenBao 等基础镜像保留自己的 registry
+和 namespace，不使用 `NAMESPACE`；OpenBao 固定使用 `openbao/openbao:2.6.0`。
+`IMAGE_PULL_SCOPE` 默认为 `jumpserver`；设置为 `all` 时，基础镜像也从
+`IMAGE_PULL_PREFIX` 拉取，但拉取后仍恢复成各自的固定运行名称。
 
 ## 配置文件说明
 
@@ -82,6 +114,6 @@ KOTL_ENABLED=0
 
 ### config.txt 说明
 
-config.txt 文件是环境变量配置文件，会挂在到各个容器中，这样可以不必为 koko，core，lion 单独设置配置文件。
+config.txt 文件是环境变量配置文件，会挂载到各个容器中，这样可以不必为 koko、core 单独设置配置文件。
 
 具体可以参考： [JumpServer 参数说明文档](https://docs.jumpserver.org/zh/master/admin-guide/env/)

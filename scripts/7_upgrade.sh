@@ -92,13 +92,13 @@ function upgrade_config() {
   check_and_set_config "JUMPSERVER_ENABLE_FONT_SMOOTHING" "true"
   check_and_set_config "USE_LB" "1"
   check_and_set_config "VERIFY_EXTERNAL_SSL" "false"
-  if [[ "$(get_config DB_HOST)" == "postgresql" ]]; then
-    check_and_set_config "POSTGRESQL_EXPOSE_PORT" "127.0.0.1:5432"
-  fi
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
-    check_and_set_config "XRDP_PORT" "3390"
+    check_and_set_config "XRDP_ENABLED" "0"
+    if [[ "$(get_config_or_env XRDP_ENABLED)" == "1" ]]; then
+      check_and_set_config "XRDP_PORT" "3390"
+    fi
     check_and_set_config "MAGNUS_PORT" "5525"
   fi
 }
@@ -178,9 +178,14 @@ function migrate_data_folder() {
 }
 
 function migrate_config() {
+  local component
+
   prepare_jmsctl
   migrate_compat_config "KOKO_SSH_PORT" "SSH_PORT" "2222"
   migrate_compat_config "RAZOR_RDP_PORT" "RDP_PORT" "3389"
+  for component in CORE AI CELERY KOKO CHEN WEB MAGNUS RAZOR XRDP VIDEO NEC; do
+    migrate_compat_config "${component}_ENABLED" "${component}_ENABLE" ""
+  done
 }
 
 function update_config_if_need() {
@@ -190,7 +195,6 @@ function update_config_if_need() {
   migrate_config
   upgrade_config
   set_openbao || exit 1
-  configure_kotl || exit 1
   clean_file
 }
 
@@ -226,7 +230,7 @@ function db_migrations() {
      echo "Role is standby, skip database migrations"
      return 
   fi
-  if docker ps | grep -E "core|koko|lion"&>/dev/null; then
+  if docker ps | grep -E "core|koko"&>/dev/null; then
     confirm="y"
     read_from_input confirm "$(gettext 'Detected that the JumpServer container is running. Do you want to close the container and continue to upgrade')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
@@ -263,7 +267,8 @@ function clean_images() {
     return
   fi
 
-  namespace=${NAMESPACE:-jumpserver}
+  namespace=$(get_config_or_env NAMESPACE jumpserver)
+  namespace=${namespace%/}
   old_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${namespace}/" | grep "${current_version}" || true)
   if [[ -n "${old_images}" ]]; then
     confirm="y"
@@ -353,13 +358,20 @@ function main() {
   check_compose_install
 
   echo_yellow "\n2. $(gettext 'Loading Docker Image')"
-  bash "${BASE_DIR}/3_load_images.sh"
+  if ! bash "${BASE_DIR}/3_load_images.sh"; then
+    log_error "$(gettext 'Failed to load Docker images')"
+    exit 1
+  fi
 
   echo_yellow "\n3. $(gettext 'Backup database')"
   backup_db
 
   echo_yellow "\n4. $(gettext 'Backup Configuration File')"
   backup_config
+  configure_jdmc || {
+    log_error "Failed to configure JDMC"
+    exit 1
+  }
 
   echo_yellow "\n5. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
@@ -376,8 +388,8 @@ function main() {
     log_error "Failed to update /opt/current/installer"
     exit 1
   }
-  upgrade_kotl || {
-    log_error "Failed to upgrade KOTL"
+  upgrade_jdmc || {
+    log_error "Failed to upgrade JDMC"
     exit 1
   }
 

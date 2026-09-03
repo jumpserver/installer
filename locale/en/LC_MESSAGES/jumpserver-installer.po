@@ -261,6 +261,14 @@ msgstr ""
 msgid "Docker image not found"
 msgstr ""
 
+#: scripts/3_load_images.sh:30
+msgid "Docker image ID file not found"
+msgstr ""
+
+#: scripts/3_load_images.sh:39
+msgid "Docker image ID file is empty"
+msgstr ""
+
 #: scripts/3_load_images.sh:35
 msgid "Error loading image"
 msgstr ""

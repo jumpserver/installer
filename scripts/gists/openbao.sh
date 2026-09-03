@@ -1,25 +1,40 @@
 #!/usr/bin/env bash
 
-function is_internal_openbao_enabled() {
-  local vault_enabled vault_backend openbao_external
+function openbao_value_is_true() {
+  case "$1" in
+    1|true|True|TRUE|yes|Yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+function is_vault_openbao_enabled() {
+  local vault_enabled vault_backend
 
   vault_enabled=$(get_config_or_env VAULT_ENABLED)
   vault_backend=$(get_config_or_env VAULT_BACKEND)
-  openbao_external=$(get_config_or_env OPENBAO_EXTERNAL "false")
 
-  case "${vault_enabled}" in
-    1|true|True|TRUE) ;;
-    *) return 1 ;;
-  esac
+  openbao_value_is_true "${vault_enabled}" || return 1
   [[ "${vault_backend}" == "openbao" ]] || return 1
-  case "${openbao_external}" in
-    1|true|True|TRUE) return 1 ;;
-  esac
   return 0
 }
 
+function is_ssh_ca_enabled() {
+  openbao_value_is_true "$(get_config_or_env SSH_CA_ENABLED "false")"
+}
+
+function is_internal_openbao_enabled() {
+  local openbao_external
+
+  openbao_external=$(get_config_or_env OPENBAO_EXTERNAL "false")
+  openbao_value_is_true "${openbao_external}" && return 1
+
+  is_vault_openbao_enabled && return 0
+  is_ssh_ca_enabled && return 0
+  return 1
+}
+
 function get_openbao_image() {
-  get_config_or_env OPENBAO_IMAGE "openbao/openbao:2.6.0"
+  echo "openbao/openbao:2.6.0"
 }
 
 function should_include_openbao_image() {
@@ -30,49 +45,93 @@ function should_include_openbao_image() {
 }
 
 function set_openbao() {
-  local vault_enabled vault_backend openbao_external vault_addr vault_token
+  local vault_enabled vault_backend ssh_ca_enabled openbao_external
+  local vault_addr ssh_ca_addr vault_token ssh_ca_token
+  local vault_openbao_required="false" ssh_ca_required="false"
 
   vault_enabled=$(get_config VAULT_ENABLED "false")
   vault_backend=$(get_config VAULT_BACKEND "openbao")
+  ssh_ca_enabled=$(get_config SSH_CA_ENABLED "false")
   openbao_external=$(get_config OPENBAO_EXTERNAL "false")
 
   set_config VAULT_ENABLED "${vault_enabled}"
-  if [[ "${vault_enabled}" != "1" && "${vault_enabled}" != "true" && "${vault_enabled}" != "True" && "${vault_enabled}" != "TRUE" ]]; then
-    return
+  set_config SSH_CA_ENABLED "${ssh_ca_enabled}"
+  set_config OPENBAO_EXTERNAL "${openbao_external}"
+
+  if openbao_value_is_true "${vault_enabled}" && [[ "${vault_backend}" == "openbao" ]]; then
+    vault_openbao_required="true"
   fi
-  if [[ "${vault_backend}" != "openbao" ]]; then
-    return
+  if openbao_value_is_true "${ssh_ca_enabled}"; then
+    ssh_ca_required="true"
+  fi
+
+  if [[ "${vault_openbao_required}" != "true" && "${ssh_ca_required}" != "true" ]]; then
+    return 0
   fi
 
   vault_addr=$(get_config VAULT_OPENBAO_ADDR)
+  ssh_ca_addr=$(get_config SSH_CA_OPENBAO_ADDR)
   vault_token=$(get_config VAULT_OPENBAO_TOKEN)
+  ssh_ca_token=$(get_config SSH_CA_OPENBAO_TOKEN)
 
-  if [[ "${openbao_external}" == "1" || "${openbao_external}" == "true" || "${openbao_external}" == "True" || "${openbao_external}" == "TRUE" ]]; then
-    if [[ -z "${vault_token}" ]]; then
-      log_error "$(gettext 'VAULT_OPENBAO_TOKEN is required when using external OpenBao')"
-      return 1
-    fi
-    if [[ -z "${vault_addr}" || "${vault_addr}" == "http://openbao:8200" || "${vault_addr}" == "https://openbao:8200" ]]; then
+  if [[ -z "${vault_addr}" ]]; then
+    vault_addr="http://openbao:8200"
+  fi
+  # Preserve upgrades from versions where SSH CA reused VAULT_OPENBAO_ADDR.
+  if [[ -z "${ssh_ca_addr}" ]]; then
+    ssh_ca_addr="${vault_addr}"
+  fi
+
+  set_config VAULT_OPENBAO_ADDR "${vault_addr}"
+  set_config SSH_CA_OPENBAO_ADDR "${ssh_ca_addr}"
+  set_config SSH_CA_OPENBAO_MOUNT_POINT "$(get_config SSH_CA_OPENBAO_MOUNT_POINT ssh-client-signer)"
+  set_config SSH_CA_OPENBAO_ROLE "$(get_config SSH_CA_OPENBAO_ROLE jumpserver)"
+  set_config SSH_CA_OPENBAO_TTL "$(get_config SSH_CA_OPENBAO_TTL 300)"
+  set_config SSH_CA_OPENBAO_TIMEOUT "$(get_config SSH_CA_OPENBAO_TIMEOUT 10)"
+  set_config SSH_CA_OPENBAO_VERIFY_TLS "$(get_config SSH_CA_OPENBAO_VERIFY_TLS true)"
+  set_config SSH_CA_OPENBAO_SOURCE_ADDRESS "$(get_config SSH_CA_OPENBAO_SOURCE_ADDRESS)"
+
+  if openbao_value_is_true "${openbao_external}"; then
+    if [[ "${vault_openbao_required}" == "true" ]] && \
+        { [[ -z "${vault_addr}" ]] || [[ "${vault_addr}" == "http://openbao:8200" ]] || [[ "${vault_addr}" == "https://openbao:8200" ]]; }; then
       log_error "$(gettext 'Set VAULT_OPENBAO_ADDR to the external OpenBao address')"
       return 1
     fi
-  else
-    if [[ -z "${vault_addr}" ]]; then
-      vault_addr="http://openbao:8200"
+    if [[ "${ssh_ca_required}" == "true" ]] && \
+        { [[ -z "${ssh_ca_addr}" ]] || [[ "${ssh_ca_addr}" == "http://openbao:8200" ]] || [[ "${ssh_ca_addr}" == "https://openbao:8200" ]]; }; then
+      log_error "$(gettext 'Set SSH_CA_OPENBAO_ADDR to the external OpenBao address')"
+      return 1
     fi
-    if [[ -z "${vault_token}" ]]; then
+    if [[ "${vault_openbao_required}" == "true" && -z "${vault_token}" ]]; then
+      log_error "$(gettext 'VAULT_OPENBAO_TOKEN is required when using external OpenBao')"
+      return 1
+    fi
+    if [[ "${ssh_ca_required}" == "true" && -z "${ssh_ca_token}" ]]; then
+      log_error "$(gettext 'SSH_CA_OPENBAO_TOKEN is required when using external OpenBao')"
+      return 1
+    fi
+  else
+    if [[ "${vault_openbao_required}" == "true" && -z "${vault_token}" ]]; then
       vault_token=$(random_str 48)
       set_config VAULT_OPENBAO_TOKEN "${vault_token}"
     fi
+    if [[ "${ssh_ca_required}" == "true" && -z "${ssh_ca_token}" ]]; then
+      ssh_ca_token=$(random_str 48)
+      set_config SSH_CA_OPENBAO_TOKEN "${ssh_ca_token}"
+    fi
+    if [[ "${vault_openbao_required}" == "true" && "${ssh_ca_required}" == "true" && "${vault_token}" == "${ssh_ca_token}" ]]; then
+      ssh_ca_token=$(random_str 48)
+      set_config SSH_CA_OPENBAO_TOKEN "${ssh_ca_token}"
+    fi
   fi
 
-  set_config VAULT_BACKEND openbao
-  set_config VAULT_OPENBAO_ADDR "${vault_addr}"
-  set_config VAULT_OPENBAO_MOUNT_POINT "$(get_config VAULT_OPENBAO_MOUNT_POINT pam)"
-  set_config VAULT_OPENBAO_TIMEOUT "$(get_config VAULT_OPENBAO_TIMEOUT 10)"
-  set_config OPENBAO_EXTERNAL "${openbao_external}"
+  if [[ "${vault_openbao_required}" == "true" ]]; then
+    set_config VAULT_BACKEND openbao
+    set_config VAULT_OPENBAO_MOUNT_POINT "$(get_config VAULT_OPENBAO_MOUNT_POINT pam)"
+    set_config VAULT_OPENBAO_TIMEOUT "$(get_config VAULT_OPENBAO_TIMEOUT 10)"
+  fi
 
-  if [[ "${openbao_external}" == "1" || "${openbao_external}" == "true" || "${openbao_external}" == "True" || "${openbao_external}" == "TRUE" ]]; then
+  if openbao_value_is_true "${openbao_external}"; then
     return 0
   fi
 
