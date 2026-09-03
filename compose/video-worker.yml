@@ -1,8 +1,8 @@
 services:
-  video:
+  video-worker:
     image: ${NAMESPACE:-jumpserver}/video-worker:${VERSION}
-    container_name: jms_video
-    hostname: jms_video
+    container_name: jms_video-worker
+    hostname: jms_video-worker
     cpus: 2
     ulimits:
       core: 0
@@ -10,7 +10,7 @@ services:
     env_file:
       - ${CONFIG_SAFE_FILE}
     volumes:
-      - ${VOLUME_DIR}/video/data:/opt/video-worker/data
+      - ${VOLUME_DIR}/video-worker/data:/opt/video-worker/data
     healthcheck:
       test: "check http://localhost:9000/video-worker/health/"
       interval: 10s

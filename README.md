@@ -34,7 +34,14 @@ $ ./jmsctl.sh backup_db
 # 查看日志
 $ ./jmsctl.sh tail
 
+# 单独管理企业版 video-worker
+$ ./jmsctl.sh video-worker {start|stop|restart|status}
+
 ```
+
+`video-worker` 的 Compose service、容器名和配置键统一使用该名称；可通过
+`VIDEO_WORKER_ENABLED=0` 禁用。旧版本的 `VIDEO_ENABLED`、`VIDEO_ENABLE` 以及
+`${VOLUME_DIR}/video` 数据目录会在升级时迁移。
 
 ## JDMC（企业版）
 

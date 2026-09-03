@@ -32,7 +32,7 @@ services:
       - ${VOLUME_DIR}/nginx/data/logs:/var/log/nginx
       - /sys/fs/bpf:/sys/fs/bpf
     healthcheck:
-      test: "check http://localhost/web/health/"
+      test: "check http://localhost:51980/web/health/"
       interval: 10s
       timeout: 5s
       retries: 3

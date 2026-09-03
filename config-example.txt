@@ -33,6 +33,10 @@
 #
 # IMAGE_PULL_POLICY=Always
 
+# Optional infrastructure image override. Keep this pinned for reproducible
+# online and offline installations.
+# MINIO_IMAGE=minio/minio:RELEASE.2025-09-07T16-13-09Z
+
 ############################## Installation Configuration #############################
 #
 # JumpServer database persistence directory, by default, recordings, task logs are in this directory
@@ -146,6 +150,8 @@ DOMAINS=
 # KOKO_ENABLED=0
 # CHEN_ENABLED=0
 # WEB_ENABLED=0
+# VIDEO_WORKER_ENABLED=0
+# CELERY_PRIVILEGED=false
 
 # Chat AI runs in an independent container and reuses the Core image.
 #
@@ -185,6 +191,13 @@ USE_LB=1
 #
 TZ=Asia/Shanghai
 CURRENT_VERSION=
+
+# Maximum seconds to wait for an internal database or Redis container to become
+# healthy during installation, upgrade, backup, and restore.
+CONTAINER_HEALTH_TIMEOUT=300
+
+# Anonymous installation lifecycle telemetry. Set to false to disable it.
+INSTALLATION_TELEMETRY_ENABLED=true
 
 ################################ OpenBao Configuration ################################
 # Vault storage is disabled by default.

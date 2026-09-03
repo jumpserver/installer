@@ -194,21 +194,21 @@ function check_update() {
 function video-worker() {
   EXE=$(get_video_worker_cmd_line)
   if [[ ! "${EXE}" ]]; then
-    return
+    log_error "video-worker is only available in the enterprise edition"
+    return 1
   fi
-  if [[ "${target}" == "start" ]]; then
-    ${EXE} up -d
-  fi
-  if [[ "${target}" == "stop" ]]; then
-    ${EXE} down -v
-  fi
-  if [[ "${target}" == "restart" ]]; then
-    ${EXE} down -v
-    ${EXE} up -d
-  fi
-  if [[ "${target}" == "status" ]]; then
-    ${EXE} ps
-  fi
+  case "${target}" in
+    start) ${EXE} up -d ;;
+    stop) ${EXE} down -v ;;
+    restart)
+      ${EXE} down -v && ${EXE} up -d
+      ;;
+    status) ${EXE} ps ;;
+    *)
+      log_error "Usage: ./jmsctl.sh video-worker {start|stop|restart|status}"
+      return 2
+      ;;
+  esac
 }
 
 function check_os() {
@@ -219,13 +219,13 @@ function check_os() {
     echo
     echo "$(gettext 'Unsupported Operating System Error')"
     echo "$(gettext 'macOS installer please see'): https://github.com/jumpserver/Dockerfile"
-    exit 0
+    return 1
   fi
   if [[ "${OS}" =~ MINGW.* ]]; then
     echo
     echo "$(gettext 'Unsupported Operating System Error')"
     echo "$(gettext 'Windows installer please see'): https://github.com/jumpserver/Dockerfile"
-    exit 0
+    return 1
   fi
   return 0
 }
@@ -374,6 +374,7 @@ function main() {
   *)
     echo "No such command: ${action}"
     usage
+    return 2
     ;;
   esac
 }

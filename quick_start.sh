@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
 
-VERSION=dev
-DOWNLOAD_URL=https://github.com
+VERSION=${VERSION:-dev}
+DOWNLOAD_URL=${DOWNLOAD_URL:-https://github.com}
+OS=$(uname -s)
 
 function install_soft() {
     if command -v dnf &>/dev/null; then
@@ -28,30 +29,43 @@ function prepare_install() {
   for i in curl wget tar iptables gettext; do
     command -v $i &>/dev/null || install_soft $i
   done
+  command -v sha256sum &>/dev/null || install_soft coreutils
 }
 
 function get_installer() {
   echo "download install script to /opt/jumpserver-installer-${VERSION}"
   cd /opt || exit 1
   if [ ! -d "/opt/jumpserver-installer-${VERSION}" ]; then
-    timeout 60 wget -qO jumpserver-installer-${VERSION}.tar.gz ${DOWNLOAD_URL}/jumpserver/installer/releases/download/${VERSION}/jumpserver-installer-${VERSION}.tar.gz || {
+    archive="jumpserver-installer-${VERSION}.tar.gz"
+    checksum="${archive}.sha256"
+    timeout 60 wget -qO "${archive}" "${DOWNLOAD_URL}/jumpserver/installer/releases/download/${VERSION}/${archive}" || {
       rm -f /opt/jumpserver-installer-${VERSION}.tar.gz
       echo -e "[\033[31m ERROR \033[0m] Failed to download jumpserver-installer-${VERSION}"
       exit 1
     }
-    tar -xf /opt/jumpserver-installer-${VERSION}.tar.gz -C /opt || {
+    timeout 60 wget -qO "${checksum}" "${DOWNLOAD_URL}/jumpserver/installer/releases/download/${VERSION}/${checksum}" || {
+      rm -f "${archive}" "${checksum}"
+      echo -e "[\033[31m ERROR \033[0m] Failed to download installer checksum"
+      exit 1
+    }
+    if ! sha256sum -c "${checksum}"; then
+      rm -f "${archive}" "${checksum}"
+      echo -e "[\033[31m ERROR \033[0m] Installer checksum verification failed"
+      exit 1
+    fi
+    tar --no-same-owner -xf "/opt/${archive}" -C /opt || {
       rm -rf /opt/jumpserver-installer-${VERSION}
       echo -e "[\033[31m ERROR \033[0m] Failed to unzip jumpserver-installer-${VERSION}"
       exit 1
     }
-    rm -f /opt/jumpserver-installer-${VERSION}.tar.gz
+    rm -f "/opt/${archive}" "/opt/${checksum}"
   fi
 }
 
 function config_installer() {
   cd /opt/jumpserver-installer-${VERSION} || exit 1
-  ./jmsctl.sh install
-  ./jmsctl.sh start
+  ./jmsctl.sh install || exit 1
+  ./jmsctl.sh start || exit 1
 }
 
 function main(){
