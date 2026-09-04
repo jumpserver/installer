@@ -51,7 +51,7 @@ function get_image_mappings() {
 
   for service in ${enabled_services}; do
     case "${service}" in
-      "" | ai | celery | jdmc)
+      "" | celery | jdmc)
         ;;
       *)
         emit_image_mapping \
