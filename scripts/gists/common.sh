@@ -22,6 +22,20 @@ function random_str() {
   fi
 }
 
+function random_secret() {
+  local byte_length=${1:-32}
+
+  if ! [[ "${byte_length}" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'Secret byte length must be a positive integer\n' >&2
+    return 1
+  fi
+
+  # Hex keeps generated values safe for env files while /dev/urandom provides
+  # installation-specific entropy even when the installer runs as root.
+  od -An -N "${byte_length}" -tx1 /dev/urandom | tr -d '[:space:]'
+  printf '\n'
+}
+
 
 function read_from_input() {
   var=$1

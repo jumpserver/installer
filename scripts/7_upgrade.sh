@@ -96,6 +96,7 @@ function upgrade_config() {
   check_and_set_config "JUMPSERVER_ENABLE_FONT_SMOOTHING" "true"
   check_and_set_config "USE_LB" "1"
   check_and_set_config "VERIFY_EXTERNAL_SSL" "false"
+  ensure_config_secret CHAT_AI_DELEGATION_SECRET 32 || return 1
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then

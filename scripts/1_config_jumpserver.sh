@@ -18,6 +18,7 @@ function set_secret_key() {
     set_config BOOTSTRAP_TOKEN "${bootstrap_key}"
     echo_check "BOOTSTRAP_TOKEN generated"
   fi
+  ensure_config_secret CHAT_AI_DELEGATION_SECRET 32 || return 1
   if command -v hostname&>/dev/null; then
     SERVER_HOSTNAME=$(hostname)
     set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"

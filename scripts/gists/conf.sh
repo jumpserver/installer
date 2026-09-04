@@ -148,6 +148,21 @@ function set_config() {
   mv -f "${tmp_file}" "${CONFIG_FILE}"
 }
 
+function ensure_config_secret() {
+  local key=$1
+  local byte_length=${2:-32}
+  local value
+
+  value=$(get_config "${key}")
+  if [[ -n "${value}" ]]; then
+    return 0
+  fi
+
+  value=$(random_secret "${byte_length}") || return 1
+  set_config "${key}" "${value}" || return 1
+  echo_check "${key} generated"
+}
+
 function remove_config() {
   key=$1
 

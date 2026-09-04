@@ -17,6 +17,7 @@ printf '%s\n' \
   'LABEL=hello world' \
   'REDIS_SENTINEL_HOSTS=old' >"${CONFIG_FILE}"
 
+. "${TEST_ROOT}/scripts/gists/common.sh"
 . "${TEST_ROOT}/scripts/gists/conf.sh"
 
 assert_eq 'abc=def' "$(get_config PASSWORD)" 'get_config must preserve equals signs'
@@ -34,3 +35,12 @@ set_config EMPTY_VALUE ''
 assert_eq '1' "$(has_config EMPTY_VALUE)" 'set_config must create explicitly empty values'
 
 printf 'PASS: config round trips complex values\n'
+
+ensure_config_secret CHAT_AI_DELEGATION_SECRET 32
+delegation_secret=$(get_config CHAT_AI_DELEGATION_SECRET)
+[[ "${delegation_secret}" =~ ^[0-9a-f]{64}$ ]] ||
+  fail 'delegation secret must contain 32 bytes encoded as lowercase hex'
+ensure_config_secret CHAT_AI_DELEGATION_SECRET 32
+assert_eq "${delegation_secret}" "$(get_config CHAT_AI_DELEGATION_SECRET)" 'existing delegation secret must be preserved'
+
+printf 'PASS: config secrets are generated once and preserved\n'
