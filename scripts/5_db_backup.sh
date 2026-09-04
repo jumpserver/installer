@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #
+set -o pipefail
+
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/utils.sh"
@@ -57,22 +59,21 @@ function prepare_db_env() {
   db_images=$(get_db_images)
 
   if ! docker ps | grep -w "jms_core" &>/dev/null; then
-    create_db_ops_env
+    create_db_ops_env || return 1
     started_db_env=1
   fi
 
   case "${DB_HOST}" in
     mysql|postgresql)
-      while [[ "$(docker inspect -f '{{.State.Health.Status}}' "jms_${DB_HOST}")" != "healthy" ]]; do
-        sleep 5s
-      done
+      wait_container_healthy "jms_${DB_HOST}" || return 1
       ;;
   esac
 }
 
 function cleanup_db_env() {
-  if [[ "${started_db_env}" -eq 1 ]]; then
+  if [[ "${started_db_env:-0}" -eq 1 ]]; then
     down_db_ops_env
+    started_db_env=0
   fi
 }
 
@@ -213,11 +214,13 @@ function backup_audits_mysql() {
     "${SHARED_BACKUP_TABLES[@]}"
   )
 
-  docker run --rm \
-    -e MYSQL_PWD="${DB_PASSWORD}" \
-    -i --network=jms_net \
-    "${db_images}" \
-    "${dump_cmd[@]}" | gzip > "${backup_file}"
+  if ! docker run --rm \
+      -e MYSQL_PWD="${DB_PASSWORD}" \
+      -i --network=jms_net \
+      "${db_images}" \
+      "${dump_cmd[@]}" | gzip >"${backup_file}"; then
+    return 1
+  fi
 }
 
 function backup_audits_postgresql() {
@@ -258,7 +261,7 @@ function backup_audits() {
       if ! backup_audits_mysql "${AUDIT_FILE}"; then
         rm -f "${AUDIT_FILE}"
         log_error "$(gettext 'Backup failed')!"
-        exit 1
+        return 1
       fi
       ;;
     postgresql)
@@ -266,19 +269,19 @@ function backup_audits() {
         rm -f "${AUDIT_FILE}"
         rm -f "${AUDIT_FILE%.gz}"
         log_error "$(gettext 'Backup failed')!"
-        exit 1
+        return 1
       fi
       ;;
     *)
       log_error "$(gettext 'Invalid DB Engine selection')!"
-      exit 1
+      return 1
       ;;
   esac
 
   if [[ ! -s "${AUDIT_FILE}" ]]; then
     log_error "$(gettext 'Backup file is empty')!"
     rm -f "${AUDIT_FILE}"
-    exit 1
+    return 1
   fi
 
   return 0
@@ -289,7 +292,11 @@ function main() {
   ensure_backup_dir
 
   echo "$(gettext 'Backing up')..."
-  prepare_db_env
+  if ! prepare_db_env; then
+    cleanup_db_env
+    log_error "$(gettext 'Backup failed')!"
+    exit 1
+  fi
 
   case "${MODE}" in
     full|no_audit)
@@ -312,5 +319,6 @@ function main() {
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
+  trap cleanup_db_env EXIT
   main
 fi

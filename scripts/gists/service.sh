@@ -1,6 +1,6 @@
 
-common_services=(core ai celery koko chen web)
-xpack_services=(magnus razor xrdp video nec)
+common_services=(core kael celery koko chen web)
+xpack_services=(magnus razor xrdp video-worker nec)
 
 
 function get_enabled_services() {
@@ -16,9 +16,6 @@ function get_enabled_services() {
     key=$(echo "$service" | tr '[:lower:]' '[:upper:]')
     key="${key}_ENABLED"
     key=$(echo "$key" | sed 's/-/_/g')
-    if [[ "${service}" == "video-worker" ]]; then
-      key="VIDEO_ENABLED"
-    fi
     if [[ "$(get_config_or_env "${key}")" != "0" ]]; then
       enabled_services+=("${service}")
     fi
@@ -106,7 +103,7 @@ function get_db_info() {
 
 
 function get_docker_compose_services() {
-  ignore_db="$1"
+  ignore_db=${1-}
   db_engine=$(get_config DB_ENGINE "mysql")
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
@@ -142,13 +139,10 @@ function get_docker_compose_services() {
 }
 
 function get_docker_compose_cmd_line() {
-  ignore_db="$1"
+  ignore_db=${1-}
   use_ipv6=$(get_config USE_IPV6)
-  use_xpack=$(get_config_or_env USE_XPACK)
   https_port=$(get_config HTTPS_PORT)
-  use_lb=$(get_config USE_LB)
   http_port=$(get_config HTTP_PORT)
-  db_images_file=$(get_db_images_file)
   cap_addon=$(get_config CAP_ADDON)
 
   cmd="docker compose"
@@ -170,11 +164,11 @@ function get_docker_compose_cmd_line() {
     fi
   fi
 
-  if [[ -n "${https_port}" ]]; then
+  if [[ -n "${https_port}" && "${https_port}" != "0" ]]; then
     cmd+=" -f compose/web.https.yml"
   fi
 
-  if [[ -n "${http_port}" && "${http_port}" != "0" ]];then
+  if [[ -n "${http_port}" && "${http_port}" != "0" ]]; then
     cmd+=" -f compose/web.http.yml"
   fi
 
@@ -245,7 +239,7 @@ function get_db_compose_cmd() {
   use_xpack=$(get_config_or_env USE_XPACK)
 
   cmd="docker compose "
-  yml=$(get_db_compose_yml)
+  yml=$(get_db_compose_yml "${target}")
 
   if [[ -n "${yml}" ]]; then
     cmd+=" ${yml}"
@@ -268,7 +262,7 @@ function get_db_migrate_compose_cmd() {
 function create_db_ops_env() {
   cmd=$(get_db_migrate_compose_cmd)
   ${cmd} up -d || {
-    exit 1
+    return 1
   }
 }
 
@@ -281,7 +275,7 @@ function db_redis_start() {
   target=$1
   cmd=$(get_db_compose_cmd "${target}")
   ${cmd} up -d || {
-    exit 1
+    return 1
   }
 }
 
@@ -292,35 +286,57 @@ function db_redis_stop() {
 }
 
 function db_redis_restart() {
-  db_redis_stop
+  local target=$1
+  db_redis_stop "${target}" || return 1
   sleep 3
-  db_redis_start
+  db_redis_start "${target}"
+}
+
+function wait_container_healthy() {
+  local container=$1
+  local timeout=${2:-$(get_config CONTAINER_HEALTH_TIMEOUT 300)}
+  local interval=${3:-5}
+  local deadline status
+
+  [[ "${timeout}" =~ ^[0-9]+$ ]] || timeout=300
+  [[ "${interval}" =~ ^[0-9]+$ ]] || interval=5
+  deadline=$((SECONDS + timeout))
+
+  while ((SECONDS <= deadline)); do
+    status=$(docker inspect -f '{{.State.Health.Status}}' "${container}" 2>/dev/null || true)
+    if [[ "${status}" == "healthy" ]]; then
+      return 0
+    fi
+    if ((SECONDS >= deadline)); then
+      break
+    fi
+    echo "Waiting for ${container} to be healthy (${status:-not found})..."
+    sleep "${interval}"
+  done
+
+  log_error "Timed out waiting for ${container} to become healthy after ${timeout}s"
+  docker logs --tail 50 "${container}" >&2 2>/dev/null || true
+  return 1
 }
 
 function perform_db_migrations() {
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
 
-  create_db_ops_env
+  create_db_ops_env || return 1
   case "${db_host}" in
     mysql|postgresql)
-      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_${db_host})" != "healthy" ]]; do
-        echo "Waiting for database to be healthy..."
-        sleep 5s
-      done
+      wait_container_healthy "jms_${db_host}" || return 1
       ;;
   esac
 
   if [[ "${redis_host}" == "redis" ]]; then
-    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
-      echo "Waiting for redis to be healthy..."
-      sleep 5s
-    done
+    wait_container_healthy jms_redis || return 1
   fi
 
   docker exec -i jms_core bash -c './jms upgrade_db' || {
     log_error "$(gettext 'Failed to change the table structure')!"
-    exit 1
+    return 1
   }
 }
 
@@ -337,6 +353,11 @@ function get_current_version() {
 }
 
 function installation_log() {
+  local telemetry_enabled
+  telemetry_enabled=$(get_config INSTALLATION_TELEMETRY_ENABLED true)
+  case "${telemetry_enabled}" in
+    0|false|False|FALSE|no|No|NO) return 0 ;;
+  esac
   if [ -d "${BASE_DIR}/images" ]; then
     return
   fi
@@ -344,5 +365,5 @@ function installation_log() {
   install_type=$1
   version=$(get_current_version)
   url="https://community.fit2cloud.com/installation-analytics?product=${product}&type=${install_type}&version=${version}"
-  curl --connect-timeout 5 -m 10 -k $url &>/dev/null
+  curl -fsS --connect-timeout 5 -m 10 "${url}" &>/dev/null
 }

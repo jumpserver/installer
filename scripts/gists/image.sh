@@ -51,12 +51,7 @@ function get_image_mappings() {
 
   for service in ${enabled_services}; do
     case "${service}" in
-      video | video-worker)
-        emit_image_mapping \
-          "jumpserver/video-worker:${VERSION}" \
-          "${namespace}/video-worker:${VERSION}"
-        ;;
-      "" | ai | celery | jdmc)
+      "" | celery | jdmc)
         ;;
       *)
         emit_image_mapping \

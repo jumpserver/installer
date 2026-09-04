@@ -6,9 +6,35 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 IMAGE_DIR="${BASE_DIR}/images"
 
+function file_sha256() {
+  local file=$1
+  if command -v sha256sum &>/dev/null; then
+    sha256sum "${file}" | awk '{print $1}'
+  elif command -v shasum &>/dev/null; then
+    shasum -a 256 "${file}" | awk '{print $1}'
+  else
+    log_error "sha256sum or shasum is required to verify downloads"
+    return 1
+  fi
+}
+
+function verify_sha256() {
+  local file=$1 expected=$2 actual
+  if [[ -z "${expected}" ]]; then
+    log_error "No SHA-256 checksum is configured for ${file}"
+    return 1
+  fi
+  actual=$(file_sha256 "${file}") || return 1
+  if [[ "${actual}" != "${expected}" ]]; then
+    log_error "SHA-256 verification failed for ${file}"
+    return 1
+  fi
+}
+
 function download() {
   local url=$1
   local target_path=$2
+  local expected_sha256=$3
 
   parent_dir=$(dirname "${target_path}")
   if [[ ! -d "${parent_dir}" ]]; then
@@ -16,24 +42,33 @@ function download() {
   fi
 
   prepare_check_required_pkg
+  if [[ -f "${target_path}" ]] && ! verify_sha256 "${target_path}" "${expected_sha256}"; then
+    log_warn "Removing invalid cached download: ${target_path}"
+    rm -f "${target_path}"
+  fi
+
   if [[ ! -f "${target_path}" ]]; then
     echo "$(gettext 'Starting to download'): ${url}"
-    wget -q "${url}" -O "${target_path}" || {
+    wget -q --timeout=60 --tries=2 "${url}" -O "${target_path}" || {
       log_error "$(gettext 'Download fails, check the network is normal')"
       rm -f "${target_path}"
       exit 1
     }
+    if ! verify_sha256 "${target_path}" "${expected_sha256}"; then
+      rm -f "${target_path}"
+      exit 1
+    fi
   else
     echo "$(gettext 'Using cache'): ${target_path}"
   fi
 }
 
 function prepare_docker_bin() {
-  download "${DOCKER_BIN_URL}" "${BASE_DIR}/docker/docker.tar.gz"
+  download "${DOCKER_BIN_URL}" "${BASE_DIR}/docker/docker.tar.gz" "${DOCKER_BIN_SHA256}"
 }
 
 function prepare_compose_bin() {
-  download "${COMPOSE_BIN_URL}" "${BASE_DIR}/docker/docker-compose"
+  download "${COMPOSE_BIN_URL}" "${BASE_DIR}/docker/docker-compose" "${COMPOSE_BIN_SHA256}"
   chown -R root:root "${BASE_DIR}/docker/docker-compose"
   chmod +x "${BASE_DIR}/docker/docker-compose"
 }
@@ -125,10 +160,6 @@ function prepare_image_files() {
 }
 
 function main() {
-  config_path='/opt/jumpserver/config/config.txt' 
-  if [[ -f "${config_path}" ]];then
-      mv "${config_path}" "${config_path}.bak"
-  fi
   prepare_check_required_pkg
 
   gettext 'Preparing Docker offline package'

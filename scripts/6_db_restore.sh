@@ -13,13 +13,17 @@ DB_PORT=$(get_config DB_PORT)
 DB_USER=$(get_config DB_USER)
 DB_PASSWORD=$(get_config DB_PASSWORD)
 DB_NAME=$(get_config DB_NAME)
+RESTORE_TMP_FILE=""
+CORE_WAS_RUNNING=0
+CELERY_WAS_RUNNING=0
+started_db_env=0
 
 function restore_mysql() {
   local restore_cmd='
         if [[ "${DB_FILE}" == *.gz ]]; then
-          gzip -dc "${DB_FILE}" | mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}"
+          gzip -dc "${DB_FILE}" | MYSQL_PWD="${DB_PASSWORD}" mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" "${DB_NAME}"
         else
-          mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < "${DB_FILE}"
+          MYSQL_PWD="${DB_PASSWORD}" mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" "${DB_NAME}" < "${DB_FILE}"
         fi
       '
   local docker_env=(
@@ -35,15 +39,15 @@ function restore_mysql() {
 
 function restore_postgresql() {
   local restore_file="${DB_FILE}"
-  local tmp_restore_file=""
   if [[ "${DB_FILE}" == *.gz ]]; then
-    tmp_restore_file=$(mktemp "${BACKUP_DIR}/.pg_restore.XXXXXX")
-    if ! gzip -dc "${DB_FILE}" > "${tmp_restore_file}"; then
+    RESTORE_TMP_FILE=$(mktemp "${BACKUP_DIR}/.pg_restore.XXXXXX") || return 1
+    if ! gzip -dc "${DB_FILE}" > "${RESTORE_TMP_FILE}"; then
       log_error "$(gettext 'Failed to decompress backup file')!"
-      rm -f "${tmp_restore_file}"
+      rm -f "${RESTORE_TMP_FILE}"
+      RESTORE_TMP_FILE=""
       return 1
     fi
-    restore_file="${tmp_restore_file}"
+    restore_file="${RESTORE_TMP_FILE}"
   fi
 
   local pg_magic
@@ -82,7 +86,10 @@ function restore_postgresql() {
     "${db_images}" bash -c "${restore_cmd}"
   local restore_status=$?
 
-  [[ -n "${tmp_restore_file}" ]] && rm -f "${tmp_restore_file}"
+  if [[ -n "${RESTORE_TMP_FILE}" ]]; then
+    rm -f "${RESTORE_TMP_FILE}"
+    RESTORE_TMP_FILE=""
+  fi
   return ${restore_status}
 }
 
@@ -109,57 +116,82 @@ function main() {
     return 1
   fi
 
+  DB_FILE="$(cd "$(dirname "${DB_FILE}")" && pwd -P)/$(basename "${DB_FILE}")"
+  BACKUP_DIR=$(dirname "${DB_FILE}")
+
   db_images=$(get_db_images)
 
   echo "$(gettext 'Start restoring database'): $DB_FILE"
 
   if ! docker ps | grep -w "jms_core" &>/dev/null; then
-    create_db_ops_env
-    flag=1
+    create_db_ops_env || return 1
+    started_db_env=1
   fi
   case "${DB_HOST}" in
     mysql|postgresql)
-      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_${DB_HOST})" != "healthy" ]]; do
-        sleep 5s
-      done
+      wait_container_healthy "jms_${DB_HOST}" || return 1
       ;;
   esac
 
   if ! restore_database; then
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
-    if [[ -n "$flag" ]]; then
-      down_db_ops_env
-      unset flag
-    fi
     return 1
-  else
-    log_success "$(gettext 'Database recovered successfully')!"
-    run_post_restore
   fi
 
-  if [[ -n "$flag" ]]; then
-    down_db_ops_env
-    unset flag
+  if ! run_post_restore; then
+    return 1
   fi
+  log_success "$(gettext 'Database recovered successfully')!"
 }
 
 function run_post_restore() {
   echo "$(gettext 'Updating database schema')..."
   if ! perform_db_migrations; then
-    log_warn "$(gettext 'Failed to change the table structure')!"
+    log_error "$(gettext 'Failed to change the table structure')!"
+    return 1
   fi
 }
 
 function stop_jms_core() {
-  if docker ps | grep -w "jms_core" &>/dev/null; then
-    docker stop jms_core &>/dev/null || true
-    docker stop jms_celery &>/dev/null || true
+  if [[ "$(docker inspect -f '{{.State.Running}}' jms_core 2>/dev/null)" == "true" ]]; then
+    CORE_WAS_RUNNING=1
+    docker stop jms_core &>/dev/null || return 1
+  fi
+  if [[ "$(docker inspect -f '{{.State.Running}}' jms_celery 2>/dev/null)" == "true" ]]; then
+    CELERY_WAS_RUNNING=1
+    docker stop jms_celery &>/dev/null || return 1
   fi
 }
 
 function start_jms_core() {
-  docker start jms_core &>/dev/null || true
-  docker start jms_celery &>/dev/null || true
+  local cmd
+  local -a services=()
+
+  [[ "${CORE_WAS_RUNNING}" == "1" ]] && services+=(core)
+  [[ "${CELERY_WAS_RUNNING}" == "1" ]] && services+=(celery)
+  [[ ${#services[@]} -gt 0 ]] || return 0
+
+  cmd=$(get_docker_compose_cmd_line)
+  ${cmd} up -d "${services[@]}"
+}
+
+function cleanup_restore() {
+  local status=$?
+
+  if [[ -n "${RESTORE_TMP_FILE}" ]]; then
+    rm -f "${RESTORE_TMP_FILE}"
+    RESTORE_TMP_FILE=""
+  fi
+  if [[ "${started_db_env}" == "1" ]]; then
+    down_db_ops_env || true
+    started_db_env=0
+  fi
+  if ! start_jms_core; then
+    log_error "Failed to restore the services that were running before database recovery"
+    [[ "${status}" == "0" ]] && status=1
+  fi
+  trap - EXIT
+  exit "${status}"
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
@@ -171,9 +203,8 @@ if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
     echo "$(gettext 'The backup file does not exist'): $1"
     exit 1
   fi
-  stop_jms_core
+  trap cleanup_restore EXIT
+  stop_jms_core || exit 1
   main
-  restore_status=$?
-  start_jms_core
-  exit ${restore_status}
+  exit $?
 fi
