@@ -57,6 +57,13 @@ SECRET_KEY=
 #
 BOOTSTRAP_TOKEN=
 
+# Secret used to sign Kael user delegation requests to Core. The installer
+# generates this value once and preserves it during upgrades.
+# (*) Warning: Keep this value secret.
+# (*) Do not disclose CHAT_AI_DELEGATION_SECRET to anyone
+#
+CHAT_AI_DELEGATION_SECRET=
+
 # Log level INFO, WARN, ERROR
 #
 LOG_LEVEL=ERROR
