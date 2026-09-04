@@ -109,7 +109,7 @@ HTTP_PORT=80
 ################################# HTTPS Configuration #################################
 # Refer to https://docs.jumpserver.org/zh/v3/installation/proxy/ for configuration
 #
-# HTTPS_PORT=443
+HTTPS_PORT=443
 # SERVER_NAME=your_domain_name
 # SSL_CERTIFICATE=your_cert
 # SSL_CERTIFICATE_KEY=your_cert_key
