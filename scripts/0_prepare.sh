@@ -89,10 +89,9 @@ function prepare_image_files() {
   fi
   rm -f "${IMAGE_DIR}"/*
 
-  # The offline bundle must carry optional OpenBao even when it is disabled by
-  # default, so it can be enabled later without registry access.
-  local INCLUDE_OPENBAO_IMAGE=1
-  export INCLUDE_OPENBAO_IMAGE
+  # Include optional OpenBao and remote Panda images for later offline use.
+  local INCLUDE_OPENBAO_IMAGE=1 INCLUDE_PANDA_IMAGE=1
+  export INCLUDE_OPENBAO_IMAGE INCLUDE_PANDA_IMAGE
 
   if ! pull_images; then
     log_error "$(gettext 'Failed to pull Docker images')"
