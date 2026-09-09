@@ -196,6 +196,13 @@ function get_video_worker_cmd_line() {
 }
 
 
+function remove_stopped_openbao_init_container() {
+  # openbao-init is a one-shot dependency. Remove its completed container so it
+  # does not remain in `docker ps -a`; a still-running initializer is preserved.
+  docker container rm jms_openbao_init &>/dev/null || true
+}
+
+
 function get_latest_version() {
   curl -s 'https://api.github.com/repos/jumpserver/jumpserver/releases/latest' |
     grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' |

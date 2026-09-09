@@ -61,3 +61,12 @@ if [[ "${redis_only_cmd}" == *'compose/postgresql.yml'* ]]; then
   fail 'redis target must not include the database compose file'
 fi
 printf 'PASS: database management targets remain scoped\n'
+
+docker_calls=()
+docker() {
+  docker_calls+=("$*")
+  return 0
+}
+remove_stopped_openbao_init_container
+assert_eq 'container rm jms_openbao_init' "${docker_calls[0]}" 'completed OpenBao init container must be removed'
+printf 'PASS: completed OpenBao initializer is removed after startup\n'
