@@ -200,7 +200,7 @@ function main() (
     return 1
   fi
   local images_dir=$1 docker_file=$2 destination=$3 image=$4 docker_version=$5 docker_checksum=$6
-  local basename=${image##*/} panda_file id_file image_id details actual_id current_arch os extra
+  local basename=${image##*/} panda_file id_file image_id current_arch
   local panda_hash='' docker_hash='' docker_arch='' panda_arch='' separator='' manifest_tmp='' lock_dir
   local panda_entry='' docker_entry='' saved_panda_image='' saved_panda_id='' saved_docker_version=''
   local service_file="${BASE_DIR}/docker/docker.service" service_target="${destination}/docker.service" service_tmp=''
@@ -228,15 +228,9 @@ function main() (
     log_error 'Invalid virtual app resource manifest; keeping existing resources' >&2
     return 1
   fi
-  if [[ ! -f "${panda_file}" && -n "${panda_hash}" ]] &&
-    ! cached_archive_matches "${destination}/panda-${panda_hash}.zst" "${panda_hash}"; then
-    log_error "Invalid retained Panda archive: ${destination}/panda-${panda_hash}.zst" >&2
-    return 1
-  fi
-  if [[ ! -f "${docker_file}" && -n "${docker_hash}" ]] &&
-    ! cached_archive_matches "${destination}/docker-${docker_hash}.tar.gz" "${docker_hash}"; then
-    log_error "Invalid retained Docker archive: ${destination}/docker-${docker_hash}.tar.gz" >&2
-    return 1
+  # Read the current package's binary header, never the host Docker daemon.
+  if [[ -f "${docker_file}" ]]; then
+    docker_arch=$(docker_architecture "${docker_file}") || return 1
   fi
   if [[ -f "${panda_file}" ]]; then
     # Only fixed keys and validated scalar values enter the JSON manifest.
@@ -250,25 +244,19 @@ function main() (
       log_error "Invalid Docker image ID: ${id_file}" >&2
       return 1
     fi
-    details=$(docker image inspect --format '{{.Id}} {{.Architecture}} {{.Os}}' "${image}" 2>/dev/null) || details=''
-    if [[ "${details%% *}" != "${image_id}" ]]; then
-      docker load <"${panda_file}" || return 1
-      details=$(docker image inspect --format '{{.Id}} {{.Architecture}} {{.Os}}' "${image}") || return 1
-    fi
-    read -r actual_id current_arch os extra <<<"${details}" || return 1
-    if [[ "${actual_id}" != "${image_id}" || "${os}" != linux || -n "${extra}" ]]; then
-      log_error "Loaded Panda image does not match the offline package: ${image}" >&2
-      return 1
+    current_arch=${ARCH}
+    if [[ -f "${docker_file}" ]]; then
+      current_arch=${docker_arch}
     fi
     case "${current_arch}" in
+      x86_64) current_arch=amd64 ;;
+      aarch64) current_arch=arm64 ;;
+      loongarch64) current_arch=loong64 ;;
       amd64|arm64|s390x|ppc64le|ppc64|loong64) ;;
-      *) log_error "Unsupported Panda image architecture: ${current_arch}" >&2; return 1 ;;
+      *) log_error "Unsupported installer architecture: ${current_arch}" >&2; return 1 ;;
     esac
-    if [[ "${saved_panda_image}" != "${image}" || "${saved_panda_id}" != "${image_id}" ||
-      "${panda_arch}" != "${current_arch}" ]] ||
-      ! cached_archive_matches "${destination}/panda-${panda_hash}.zst" "${panda_hash}"; then
-      panda_hash=$(retain_archive "${panda_file}" panda) || return 1
-    fi
+    # Hash and retain the current installer archive even if the image ID is unchanged.
+    panda_hash=$(retain_archive "${panda_file}" panda) || return 1
     panda_arch=${current_arch}
     panda_entry=$(printf '"panda": {"image": "%s", "architecture": "%s", "image_id": "%s", "file": "panda-%s.zst", "sha256": "%s"}' \
       "${image}" "${panda_arch}" "${image_id}" "${panda_hash}" "${panda_hash}") || return 1
@@ -280,16 +268,7 @@ function main() (
       return 1
     fi
     docker_checksum=$(printf '%s' "${docker_checksum}" | tr 'A-F' 'a-f') || return 1
-    if [[ -z "${docker_checksum}" || "${docker_checksum}" != "${docker_hash}" ||
-      "${saved_docker_version}" != "${docker_version}" ]] ||
-      ! cached_archive_matches "${destination}/docker-${docker_hash}.tar.gz" "${docker_hash}"; then
-      docker_arch=$(docker_architecture "${docker_file}") || return 1
-      docker_hash=$(retain_archive "${docker_file}" docker "${docker_checksum}") || return 1
-    fi
-    if [[ -f "${panda_file}" && "${panda_arch}" != "${docker_arch}" ]]; then
-      log_error 'Panda image and Docker binary have different architectures' >&2
-      return 1
-    fi
+    docker_hash=$(retain_archive "${docker_file}" docker "${docker_checksum}") || return 1
     docker_entry=$(printf '"docker": {"architecture": "%s", "version": "%s", "file": "docker-%s.tar.gz", "sha256": "%s"}' \
       "${docker_arch}" "${docker_version}" "${docker_hash}" "${docker_hash}") || return 1
   fi
