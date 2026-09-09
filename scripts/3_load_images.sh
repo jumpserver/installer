@@ -59,6 +59,8 @@ function load_image_files() {
 }
 
 function main() {
+  # Panda belongs to remote publishers, even if packaging flags are inherited.
+  local INCLUDE_PANDA_IMAGE=0
   if [[ -d "${IMAGE_DIR}" && $(find "${IMAGE_DIR}" -type f -name "*.zst" -print -quit 2>/dev/null) ]]; then
     load_image_files || return 1
   else

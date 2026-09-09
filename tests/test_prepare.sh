@@ -51,7 +51,6 @@ fi
   done
 
   test_panda_id="sha256:$(printf '%064d' 0 | tr 0 a)"
-  test_panda_arch=amd64
   image='registry.internal/custom/panda:v5.0.0-ee'
   archive="${images}/panda:v5.0.0-ee.zst"
   docker_archive="${test_dir}/docker.tar.gz"
@@ -59,14 +58,7 @@ fi
   docker_checksum=''
   docker() {
     printf '%s\n' "$1" >>"${test_dir}/docker-calls"
-    case "$1" in
-      image)
-        [[ -f "${test_dir}/loaded-image" ]] || return 1
-        printf '%s %s linux\n' "${test_panda_id}" "${test_panda_arch}"
-        ;;
-      load) cat >"${test_dir}/loaded-image" ;;
-      *) fail "Unexpected Docker operation: $*" ;;
-    esac
+    fail "Resource preparation must not call Docker: $*"
   }
   prepare_resources() {
     main "${images}" "${docker_archive}" "${output}" "${image}" "${DOCKER_VERSION}" "${1-${docker_checksum}}" \
@@ -86,7 +78,7 @@ fi
   docker_checksum=$(file_sha256 "${docker_archive}")
   retained="${output}/panda-$(file_sha256 "${archive}").zst"
   prepare_resources
-  cmp -s "${archive}" "${test_dir}/loaded-image" || fail 'Docker must load the original zstd bytes'
+  [[ ! -e "${test_dir}/docker-calls" ]] || fail 'Resource preparation must not call Docker'
   cmp -s "${archive}" "${retained}" || fail 'Offline resources must preserve the original zstd bytes'
   cmp -s "${docker_archive}" "${output}/docker-${docker_checksum}.tar.gz" || fail 'Docker archive must be retained'
   cmp -s "${output}/docker.service" "${TEST_ROOT}/scripts/docker/docker.service" || fail 'Use the Installer Docker service'
@@ -96,30 +88,59 @@ fi
   ln "${retained}" "${test_dir}/staged-image"
   ln "${manifest}" "${test_dir}/previous-manifest"
   prepare_resources
-  assert_eq 1 "$(grep -c '^load$' "${test_dir}/docker-calls")" 'Matching images must not load again'
+  [[ ! -e "${test_dir}/docker-calls" ]] || fail 'Repeated preparation must not call Docker'
   [[ "${retained}" -ef "${test_dir}/staged-image" && "${manifest}" -ef "${test_dir}/previous-manifest" ]] ||
     fail 'Repeated preparation must reuse unchanged resources'
 
   cp "${manifest}" "${test_dir}/previous-manifest-copy"
-  if test_panda_arch=arm64 prepare_resources; then
-    fail 'Panda and Docker architectures must match'
-  fi
-  cmp -s "${manifest}" "${test_dir}/previous-manifest-copy" || fail 'Architecture failures must preserve published resources'
+  ARCH=aarch64 prepare_resources
+  assert_contains "$(cat "${manifest}")" '"architecture": "amd64"' 'Bundled Docker determines package architecture'
   if prepare_resources "$(printf '%064d' 0)"; then
     fail 'Docker archive checksum mismatches must fail'
   fi
   cmp -s "${manifest}" "${test_dir}/previous-manifest-copy" || fail 'Checksum failures must preserve published resources'
 
+  printf 'invalid ID\n' >"${images}/panda:v5.0.0-ee.sha256"
+  if prepare_resources; then
+    fail 'Invalid packaged image ID must fail'
+  fi
+  cmp -s "${manifest}" "${test_dir}/previous-manifest-copy" || fail 'Invalid ID must preserve published resources'
+  [[ ! -e "${test_dir}/docker-calls" ]] || fail 'Failure paths must not call Docker'
+
   test_panda_id="sha256:$(printf '%064d' 0 | tr 0 b)"
   printf '%s\n' "${test_panda_id}" >"${images}/panda:v5.0.0-ee.sha256"
   printf '\050\265\057\375\040\023\231\000\000updated Panda image' >"${archive}"
-  rm "${test_dir}/loaded-image"
   prepare_resources
   [[ ! -e "${retained}" && -s "${test_dir}/staged-image" ]] || fail 'Old archive cleanup must preserve running task links'
   retained="${output}/panda-$(file_sha256 "${archive}").zst"
   cmp -s "${archive}" "${retained}" || fail 'Updated resources must retain the new archive'
+  assert_contains "$(cat "${manifest}")" "\"image_id\": \"${test_panda_id}\"" 'Installer image ID must replace the previous ID'
+
+  # A repacked archive must replace the resource even when its image ID is unchanged.
+  printf 'repacked bytes\n' >>"${archive}"
+  prepare_resources
+  [[ ! -e "${retained}" ]] || fail 'Changed package bytes must replace the old resource'
+  retained="${output}/panda-$(file_sha256 "${archive}").zst"
+  cmp -s "${archive}" "${retained}" || fail 'Retain the current package bytes'
+
+  rm "${archive}"
+  DOCKER_VERSION=29.7.3 prepare_resources
+  assert_contains "$(cat "${manifest}")" '"version": "29.7.3"' 'Docker-only packages must update Docker'
+  assert_contains "$(cat "${manifest}")" "\"image_id\": \"${test_panda_id}\"" 'Missing Panda must preserve its entry'
+  [[ -f "${retained}" ]] || fail 'Missing Panda must preserve its resource'
+
+  rm "${docker_archive}"
+  image='registry.internal/custom/panda:v5.0.1-ee'
+  archive="${images}/panda:v5.0.1-ee.zst"
+  printf 'new installer Panda\n' >"${archive}"
+  printf '%s\n' "${test_panda_id}" >"${images}/panda:v5.0.1-ee.sha256"
+  ARCH=aarch64 prepare_resources
+  assert_contains "$(cat "${manifest}")" "\"image\": \"${image}\"" 'Use the current installer version'
+  assert_contains "$(cat "${manifest}")" '"architecture": "arm64"' 'Panda-only packages use installer ARCH'
+  assert_contains "$(cat "${manifest}")" '"version": "29.7.3"' 'Missing Docker must preserve its entry'
+  [[ ! -e "${test_dir}/docker-calls" ]] || fail 'Resource updates must never call Docker'
   cp "${manifest}" "${test_dir}/previous-manifest-copy"
-  rm "${archive}" "${docker_archive}"
+  rm "${archive}"
   prepare_resources
   cmp -s "${manifest}" "${test_dir}/previous-manifest-copy" || fail 'Online upgrades must preserve offline resources'
 )
@@ -130,14 +151,17 @@ printf 'PASS: Panda bundling, zstd retention, resource reuse and failed preparat
   IMAGE_DIR="${test_dir}/runtime-images"
   mkdir -p "${IMAGE_DIR}"
   printf 'main image fixture\n' >"${IMAGE_DIR}/core.zst"
-  load_image_files() { return "${IMAGE_STEP_FAILED:-0}"; }
+  load_image_files() {
+    [[ "${INCLUDE_PANDA_IMAGE}" == 0 ]] || fail 'Runtime must disable Panda packaging flags'
+    return "${IMAGE_STEP_FAILED:-0}"
+  }
   prepare_virtualapp_resources() { touch "${test_dir}/resources-called"; return 1; }
   echo_done() { printf 'installation continued\n'; }
   if IMAGE_STEP_FAILED=1 main >"${test_dir}/load-failed.log" 2>&1; then
     fail 'Main image load failures must still fail installation'
   fi
   [[ ! -e "${test_dir}/resources-called" ]] || fail 'Failed image loading must not prepare resources'
-  main >"${test_dir}/resource-warning.log" 2>&1
+  INCLUDE_PANDA_IMAGE=1 main >"${test_dir}/resource-warning.log" 2>&1
   assert_contains "$(cat "${test_dir}/resource-warning.log")" '[WARN] Virtual app offline resources could not be prepared'
   assert_contains "$(cat "${test_dir}/resource-warning.log")" 'installation continued'
 )
