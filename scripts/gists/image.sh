@@ -51,7 +51,7 @@ function get_image_mappings() {
 
   for service in ${enabled_services}; do
     case "${service}" in
-      "" | celery | jdmc)
+      "" | celery | jdmc | panda)
         ;;
       *)
         emit_image_mapping \
@@ -62,6 +62,10 @@ function get_image_mappings() {
   done
 
   if [[ "${use_xpack}" == "1" ]]; then
+    # Panda is distributed to Linux publishers; it is not a local Compose service.
+    if [[ "${INCLUDE_PANDA_IMAGE:-0}" == "1" ]]; then
+      emit_image_mapping "jumpserver/panda:${VERSION}" "${namespace}/panda:${VERSION}"
+    fi
     emit_image_mapping \
       "jumpserver/ansible-executor:latest" \
       "${namespace}/ansible-executor:latest"
@@ -101,6 +105,7 @@ function get_images() {
 
 function get_offline_image_manifest() {
   local source_image target_image exact_source resolved_source
+  local INCLUDE_PANDA_IMAGE=${INCLUDE_PANDA_IMAGE:-1}
 
   while IFS=$'\t' read -r source_image target_image exact_source; do
     [[ -n "${source_image}" && -n "${target_image}" ]] || continue
@@ -263,6 +268,7 @@ function pull_image() {
 
 function pull_images() {
   local source_image target_image pid
+  local INCLUDE_PANDA_IMAGE=${INCLUDE_PANDA_IMAGE:-0}
   local pull_failed=0
   local -a pids=()
 
@@ -281,4 +287,28 @@ function pull_images() {
 
   trap - SIGINT SIGTERM
   return "${pull_failed}"
+}
+
+function prepare_virtualapp_resources() {
+  local panda_image panda_filename volume_dir
+
+  [[ "$(get_config_or_env USE_XPACK)" == "1" ]] || return 0
+  panda_image="$(get_image_namespace)/panda:${VERSION}"
+
+  panda_filename="${panda_image##*/}.zst"
+  if [[ ! -f "${SCRIPT_DIR}/images/${panda_filename}" &&
+    ! -f "${SCRIPT_DIR}/images/${panda_filename/:/_}" &&
+    ! -f "${SCRIPT_DIR}/docker/docker.tar.gz" ]]; then
+    return 0
+  fi
+
+  volume_dir=$(get_config VOLUME_DIR)
+  if [[ -z "${volume_dir}" ]]; then
+    log_error "VOLUME_DIR is required for virtual app resources"
+    return 1
+  fi
+  bash "${SCRIPT_DIR}/virtualapp_resources.sh" \
+    "${SCRIPT_DIR}/images" "${SCRIPT_DIR}/docker/docker.tar.gz" \
+    "${volume_dir}/core/data/virtualapp" "${panda_image}" \
+    "${DOCKER_VERSION}" "${DOCKER_BIN_SHA256:-}"
 }

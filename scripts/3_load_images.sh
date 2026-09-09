@@ -64,6 +64,9 @@ function main() {
   else
     pull_images || return 1
   fi
+  if ! prepare_virtualapp_resources; then
+    log_warn 'Virtual app offline resources could not be prepared; installation will continue. Existing resources have been kept.'
+  fi
   echo_done
 }
 
