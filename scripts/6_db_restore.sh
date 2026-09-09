@@ -172,7 +172,8 @@ function start_jms_core() {
   [[ ${#services[@]} -gt 0 ]] || return 0
 
   cmd=$(get_docker_compose_cmd_line)
-  ${cmd} up -d "${services[@]}"
+  ${cmd} up -d "${services[@]}" || return 1
+  remove_stopped_openbao_init_container
 }
 
 function cleanup_restore() {

@@ -104,6 +104,7 @@ function start() {
   gen_safe_config >/dev/null
   EXE=$(get_docker_compose_cmd_line)
   ${EXE} up -d || return 1
+  remove_stopped_openbao_init_container
 
   ensure_current_installer_link || return 1
   if should_manage_jdmc; then
@@ -165,7 +166,8 @@ function restart() {
   echo -e "\n"
 
   if [[ -n "${target}" && "${target}" != "ignore_db" ]]; then
-    ${EXE} up -d "${target}"
+    ${EXE} up -d "${target}" || return 1
+    remove_stopped_openbao_init_container
     return
   fi
   start
