@@ -245,6 +245,10 @@ msgstr ""
 msgid "JumpServer web port"
 msgstr ""
 
+#: scripts/1_config_jumpserver.sh scripts/config.sh
+msgid "JumpServer web proxy port"
+msgstr ""
+
 #: scripts/1_config_jumpserver.sh:226
 msgid "JumpServer ssh port"
 msgstr ""

@@ -29,9 +29,22 @@ default_config=$(
 )
 assert_contains "${default_config}" 'jms_kael' 'rendered Compose config must contain Kael'
 assert_contains "${default_config}" "PLATFORM_DELEGATION_KEY: ${CHAT_AI_DELEGATION_SECRET}" 'Kael must receive the Core delegation secret'
+assert_contains "${default_config}" 'published: "5001"' 'Koko Web Proxy must publish the configured external port'
+assert_contains "${default_config}" 'target: 5001' 'Koko Web Proxy must use container port 5001'
+assert_contains "${default_config}" 'WEB_PROXY_BIND_HOST: 0.0.0.0' 'Koko Web Proxy must listen on the container network'
 if [[ "${default_config}" == *'jms_ai'* ]]; then
   fail 'rendered Compose config must not contain the removed AI service'
 fi
+
+custom_web_proxy_config=$(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${test_dir}"
+  export KOKO_WEB_PROXY_PORT=15001
+  . ./scripts/utils.sh
+  compose_cmd=$(get_docker_compose_cmd_line)
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config
+)
+assert_contains "${custom_web_proxy_config}" 'published: "15001"' 'KOKO_WEB_PROXY_PORT must override the published Web Proxy port'
 
 printf '%s\n' \
   'USE_XPACK=1' \

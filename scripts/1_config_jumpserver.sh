@@ -222,14 +222,21 @@ function set_redis() {
 function set_service() {
   echo_yellow "\n5. $(gettext 'Configure External Access')"
   http_port=$(get_config HTTP_PORT)
+  web_proxy_port=$(get_config KOKO_WEB_PROXY_PORT "5001")
   ssh_port=$(get_config KOKO_SSH_PORT)
   rdp_port=$(get_config RAZOR_RDP_PORT)
+  koko_enabled=$(get_config_or_env KOKO_ENABLED)
   use_xpack=$(get_config_or_env USE_XPACK)
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need to customize the JumpServer external port')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
     read_from_input http_port "$(gettext 'JumpServer web port')" "" "${http_port}"
     set_config HTTP_PORT "${http_port}"
+
+    if [[ "${koko_enabled}" != "0" ]]; then
+      read_from_input web_proxy_port "$(gettext 'JumpServer web proxy port')" "" "${web_proxy_port}"
+      set_config KOKO_WEB_PROXY_PORT "${web_proxy_port}"
+    fi
 
     if [[ "${use_xpack}" == "1" ]]; then
       read_from_input ssh_port "$(gettext 'JumpServer ssh port')" "" "${ssh_port}"

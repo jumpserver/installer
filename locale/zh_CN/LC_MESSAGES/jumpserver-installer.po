@@ -245,6 +245,10 @@ msgstr "是否需要配置 JumpServer 对外访问端口"
 msgid "JumpServer web port"
 msgstr "JumpServer web 端口"
 
+#: scripts/1_config_jumpserver.sh scripts/config.sh
+msgid "JumpServer web proxy port"
+msgstr "JumpServer Web 代理端口"
+
 #: scripts/1_config_jumpserver.sh:226
 msgid "JumpServer ssh port"
 msgstr "JumpServer ssh 端口"

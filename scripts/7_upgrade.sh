@@ -94,6 +94,8 @@ function upgrade_config() {
   check_and_set_config "CLIENT_MAX_BODY_SIZE" "4096m"
   check_and_set_config "SERVER_HOSTNAME" "${HOSTNAME}"
   check_and_set_config "JUMPSERVER_ENABLE_FONT_SMOOTHING" "true"
+  check_and_set_config "KOKO_WEB_PROXY_PORT" "5001"
+  check_and_set_config "WEB_PROXY_ALLOWED_HOSTS" "localhost,127.0.0.1"
   check_and_set_config "USE_LB" "1"
   check_and_set_config "VERIFY_EXTERNAL_SSL" "false"
   ensure_config_secret CHAT_AI_DELEGATION_SECRET 32 || return 1

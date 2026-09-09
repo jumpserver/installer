@@ -168,6 +168,13 @@ DOMAINS=
 #
 JUMPSERVER_ENABLE_FONT_SMOOTHING=true
 
+# Koko Web Proxy external port. Keep this value consistent with the Endpoint Web proxy port.
+# WEB_PROXY_ALLOWED_HOSTS is a comma-separated allowlist of Website asset hosts.
+# Keep localhost and 127.0.0.1 so Koko can access its Web session control API.
+#
+KOKO_WEB_PROXY_PORT=5001
+WEB_PROXY_ALLOWED_HOSTS=localhost,127.0.0.1
+
 ################################# XPack Configuration #################################
 # XPack package, invalid setting in open source version
 #

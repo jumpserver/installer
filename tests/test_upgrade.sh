@@ -11,6 +11,23 @@ cp "${TEST_ROOT}/config-example.txt" "${test_dir}/config.txt"
 
 . "${TEST_ROOT}/scripts/7_upgrade.sh" ''
 
+check_root() { return 1; }
+docker() {
+  [[ "${1:-}" == "ps" ]]
+}
+remove_config KOKO_WEB_PROXY_PORT
+remove_config WEB_PROXY_ALLOWED_HOSTS
+VERSION=v4.0.0-ce
+upgrade_config
+assert_eq '5001' "$(get_config KOKO_WEB_PROXY_PORT)" 'upgrade must add the default Koko Web Proxy port'
+assert_eq 'localhost,127.0.0.1' "$(get_config WEB_PROXY_ALLOWED_HOSTS)" 'upgrade must add the safe Web Proxy allowlist'
+set_config KOKO_WEB_PROXY_PORT 15001
+set_config WEB_PROXY_ALLOWED_HOSTS 'example.com,*.example.org,localhost,127.0.0.1'
+upgrade_config
+assert_eq '15001' "$(get_config KOKO_WEB_PROXY_PORT)" 'upgrade must preserve a custom Koko Web Proxy port'
+assert_eq 'example.com,*.example.org,localhost,127.0.0.1' "$(get_config WEB_PROXY_ALLOWED_HOSTS)" 'upgrade must preserve a custom Web Proxy allowlist'
+printf 'PASS: upgrade adds and preserves Koko Web Proxy configuration\n'
+
 current_version_under_test=v3.10.11
 get_config() {
   if [[ "$1" == "CURRENT_VERSION" ]]; then
