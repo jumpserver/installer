@@ -89,6 +89,15 @@ DB_USER=postgres
 DB_PASSWORD=
 DB_NAME=jumpserver
 
+# Host port bindings for the built-in database. The defaults only listen on
+# localhost. In a two-node HA deployment, set the corresponding EXPOSE_HOST
+# to each node's fixed HA IP. MYSQL_EXPOSE_* also applies to built-in MariaDB.
+#
+POSTGRESQL_EXPOSE_HOST=127.0.0.1
+POSTGRESQL_EXPOSE_PORT=5432
+MYSQL_EXPOSE_HOST=127.0.0.1
+MYSQL_EXPOSE_PORT=3306
+
 # If external MySQL needs to enable TLS/SSL connection, refer to https://docs.jumpserver.org/zh/v3/installation/security_setup/mysql_ssl/
 #
 # DB_USE_SSL=true

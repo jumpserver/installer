@@ -66,6 +66,25 @@ function migrate_compat_config() {
 
 }
 
+function migrate_database_expose_config() {
+  local legacy_value legacy_host legacy_port
+
+  legacy_value=$(get_config POSTGRESQL_EXPOSE_PORT)
+  if [[ "${legacy_value}" =~ ^(\[[^]]+\]|[^:]+):([0-9]+)$ ]]; then
+    legacy_host="${BASH_REMATCH[1]}"
+    legacy_port="${BASH_REMATCH[2]}"
+    if [[ -z "$(get_config POSTGRESQL_EXPOSE_HOST)" ]]; then
+      set_config POSTGRESQL_EXPOSE_HOST "${legacy_host}"
+    fi
+    set_config POSTGRESQL_EXPOSE_PORT "${legacy_port}"
+  fi
+
+  check_and_set_config "POSTGRESQL_EXPOSE_HOST" "127.0.0.1"
+  check_and_set_config "POSTGRESQL_EXPOSE_PORT" "5432"
+  check_and_set_config "MYSQL_EXPOSE_HOST" "127.0.0.1"
+  check_and_set_config "MYSQL_EXPOSE_PORT" "3306"
+}
+
 function upgrade_config() {
   if check_root; then
     check_docker_start
@@ -96,6 +115,7 @@ function upgrade_config() {
   check_and_set_config "JUMPSERVER_ENABLE_FONT_SMOOTHING" "true"
   check_and_set_config "KOKO_WEB_PROXY_PORT" "5001"
   check_and_set_config "WEB_PROXY_ALLOWED_HOSTS" "localhost,127.0.0.1"
+  migrate_database_expose_config
   check_and_set_config "USE_LB" "1"
   check_and_set_config "VERIFY_EXTERNAL_SSL" "false"
   ensure_config_secret CHAT_AI_DELEGATION_SECRET 32 || return 1
