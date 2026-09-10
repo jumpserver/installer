@@ -12,7 +12,7 @@ services:
     volumes:
       - ${VOLUME_DIR}/video-worker/data:/opt/video-worker/data
     healthcheck:
-      test: "check http://localhost:9000/video-worker/health/"
+      test: "curl -fsS http://localhost:9000/video-worker/health/ >/dev/null"
       interval: 10s
       timeout: 5s
       retries: 3

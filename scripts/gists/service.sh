@@ -195,6 +195,44 @@ function get_video_worker_cmd_line() {
   echo "${cmd}"
 }
 
+function prepare_video_worker_volume() {
+  local use_xpack enabled volume_dir data_dir image user_spec owner
+  use_xpack=$(get_config_or_env USE_XPACK)
+  enabled=$(get_config_or_env VIDEO_WORKER_ENABLED)
+  if [[ "${use_xpack}" != "1" || "${enabled}" == "0" ]]; then
+    return 0
+  fi
+
+  volume_dir=$(get_config VOLUME_DIR)
+  data_dir="${volume_dir}/video-worker/data"
+  mkdir -p "${data_dir}" || return 1
+
+  image="$(get_image_namespace)/video-worker:${VERSION}"
+  user_spec=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
+    log_error "Unable to inspect video-worker image user: ${image}"
+    return 1
+  }
+  if [[ "${user_spec}" =~ ^[0-9]+:[0-9]+$ ]]; then
+    owner=${user_spec}
+  else
+    owner=$(docker run --rm --entrypoint /bin/sh "${image}" -c \
+      'printf "%s:%s\n" "$(id -u)" "$(id -g)"') || {
+      log_error "Unable to resolve video-worker image user: ${image}"
+      return 1
+    }
+  fi
+  if [[ ! "${owner}" =~ ^[0-9]+:[0-9]+$ ]]; then
+    log_error "Invalid video-worker image user: ${owner}"
+    return 1
+  fi
+
+  # Docker creates a missing bind-mount source as root. Match the directory to
+  # the actual image user so image UID/GID changes do not break persistence.
+  if [[ "$(stat -c '%u:%g' "${data_dir}")" != "${owner}" ]]; then
+    chown -R "${owner}" "${data_dir}" || return 1
+  fi
+}
+
 
 function remove_stopped_openbao_init_container() {
   # openbao-init is a one-shot dependency. Remove its completed container so it

@@ -102,6 +102,7 @@ function start() {
   set_openbao || return 1
   configure_jdmc || return 1
   gen_safe_config >/dev/null
+  prepare_video_worker_volume || return 1
   EXE=$(get_docker_compose_cmd_line)
   ${EXE} up -d || return 1
   remove_stopped_openbao_init_container
@@ -200,10 +201,10 @@ function video-worker() {
     return 1
   fi
   case "${target}" in
-    start) ${EXE} up -d ;;
+    start) prepare_video_worker_volume && ${EXE} up -d ;;
     stop) ${EXE} down -v ;;
     restart)
-      ${EXE} down -v && ${EXE} up -d
+      ${EXE} down -v && prepare_video_worker_volume && ${EXE} up -d
       ;;
     status) ${EXE} ps ;;
     *)
