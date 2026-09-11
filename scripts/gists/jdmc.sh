@@ -8,6 +8,13 @@ JDMC_INSTALL_DIR=${JDMC_INSTALL_DIR:-/opt/jdmc}
 JDMC_LEGACY_SERVICE_NAME=${KOTL_SERVICE_NAME:-kotl.service}
 JDMC_LEGACY_INSTALL_DIR=${KOTL_INSTALL_DIR:-/opt/kotl}
 JDMC_LEGACY_CORE_SOCKET_PATH=${KOTL_CORE_SOCKET_PATH:-/opt/jumpserver/data/unshare/kotl.sock}
+JDMC_DOCKER_FIREWALL_SCRIPT=${JDMC_DOCKER_FIREWALL_SCRIPT:-${JDMC_INSTALL_DIR}/current/ha/scripts/firewall.sh}
+JDMC_LEGACY_DOCKER_FIREWALL_SCRIPT=${JDMC_LEGACY_DOCKER_FIREWALL_SCRIPT:-${JDMC_LEGACY_INSTALL_DIR}/current/ha/scripts/firewall.sh}
+JDMC_HA_FIREWALL_SERVICE_NAME=${JDMC_HA_FIREWALL_SERVICE_NAME:-jdmc-ha-firewall.service}
+JDMC_DOCKER_HA_DROPIN_NAME=${JDMC_DOCKER_HA_DROPIN_NAME:-jdmc-ha-firewall.conf}
+JDMC_HA_SYSTEMD_UNITS=${JDMC_HA_SYSTEMD_UNITS:-jdmc-ha-firewall.service jdmc-ha-filesync-heartbeat.service jdmc-ha-filesync-heartbeat.timer jdmc-ha-rejoin.service jdmc-ha-rejoin.timer jdmc-ha-source-recovery.service jdmc-ha-source-recovery.timer}
+JDMC_HA_SYSTEMD_DROPINS=${JDMC_HA_SYSTEMD_DROPINS:-docker.service.d/${JDMC_DOCKER_HA_DROPIN_NAME} keepalived.service.d/jdmc-ha.conf lsyncd.service.d/jdmc-ha.conf}
+JDMC_SYSTEMD_DIRS=${JDMC_SYSTEMD_DIRS:-/etc/systemd/system:/run/systemd/system:/usr/local/lib/systemd/system:/usr/lib/systemd/system:/lib/systemd/system}
 
 function is_enterprise_edition() {
   [[ "$(get_config_or_env USE_XPACK 0)" == "1" ]]
@@ -326,5 +333,238 @@ function disable_jdmc() {
   if [[ "${JDMC_LEGACY_SERVICE_NAME}" != "${JDMC_SERVICE_NAME}" ]]; then
     disable_jdmc_service "${JDMC_LEGACY_SERVICE_NAME}" || failed=1
   fi
+  return "${failed}"
+}
+
+function remove_jdmc_docker_hook_from_file() {
+  local unit_file=$1 hook_path=$2
+  local line tmp_file
+  local changed=0
+
+  grep -Fq "${hook_path}" "${unit_file}" 2>/dev/null || return 0
+  tmp_file=$(mktemp -t jdmc-docker-unit.XXXXXX) || return 1
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    if [[ "${line}" =~ ^[[:space:]]*ExecStart(Pre|Post)= ]] && [[ "${line}" == *"${hook_path}"* ]]; then
+      changed=1
+      continue
+    fi
+    printf '%s\n' "${line}"
+  done <"${unit_file}" >"${tmp_file}"
+
+  if [[ "${changed}" == "1" ]]; then
+    echo -e "$(gettext 'Cleaning up') JDMC Docker hook: ${unit_file}"
+    if ! cat "${tmp_file}" >"${unit_file}"; then
+      rm -f "${tmp_file}"
+      return 1
+    fi
+    JDMC_DOCKER_HOOK_CHANGED=1
+  fi
+  rm -f "${tmp_file}"
+}
+
+function remove_jdmc_docker_dependency_from_file() {
+  local unit_file=$1
+  local line tmp_file
+  local changed=0
+
+  grep -Fq "${JDMC_HA_FIREWALL_SERVICE_NAME}" "${unit_file}" 2>/dev/null || return 0
+  tmp_file=$(mktemp -t jdmc-docker-unit.XXXXXX) || return 1
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    if [[ "${line}" =~ ^[[:space:]]*(Requires|Wants|After|Before)= ]] && \
+      [[ "${line}" == *"${JDMC_HA_FIREWALL_SERVICE_NAME}"* ]]; then
+      changed=1
+      continue
+    fi
+    printf '%s\n' "${line}"
+  done <"${unit_file}" >"${tmp_file}"
+
+  if [[ "${changed}" == "1" ]]; then
+    echo -e "$(gettext 'Cleaning up') JDMC Docker dependency: ${unit_file}"
+    if ! cat "${tmp_file}" >"${unit_file}"; then
+      rm -f "${tmp_file}"
+      return 1
+    fi
+    JDMC_DOCKER_HOOK_CHANGED=1
+  fi
+  rm -f "${tmp_file}"
+}
+
+function remove_jdmc_docker_hooks() {
+  local systemd_dir unit_file hook_path hook_root unit_name relative_path target_name candidate unit_present
+  local failed=0
+  local remove_ha_service=0
+  local ha_service_present=0
+  local JDMC_DOCKER_HOOK_CHANGED=0
+  local -a systemd_dirs hook_paths hook_roots
+
+  IFS=: read -r -a systemd_dirs <<<"${JDMC_SYSTEMD_DIRS}"
+  if [[ "$#" -gt 0 ]]; then
+    hook_paths=("$@")
+  else
+    hook_paths=("${JDMC_DOCKER_FIREWALL_SCRIPT}" "${JDMC_LEGACY_DOCKER_FIREWALL_SCRIPT}")
+    remove_ha_service=1
+  fi
+  for hook_path in "${hook_paths[@]}"; do
+    hook_roots+=("${hook_path%/ha/scripts/firewall.sh}")
+  done
+
+  for systemd_dir in "${systemd_dirs[@]}"; do
+    for unit_name in ${JDMC_HA_SYSTEMD_UNITS}; do
+      candidate="${systemd_dir}/${unit_name}"
+      if [[ -f "${candidate}" ]]; then
+        ha_service_present=1
+      fi
+      [[ -f "${candidate}" ]] || continue
+      for hook_root in "${hook_roots[@]}"; do
+        if grep -Fq "${hook_root}/" "${candidate}" 2>/dev/null; then
+          remove_ha_service=1
+        fi
+      done
+    done
+    for relative_path in ${JDMC_HA_SYSTEMD_DROPINS}; do
+      candidate="${systemd_dir}/${relative_path}"
+      [[ -f "${candidate}" ]] || continue
+      ha_service_present=1
+      for hook_root in "${hook_roots[@]}"; do
+        if grep -Fq "${hook_root}/" "${candidate}" 2>/dev/null; then
+          remove_ha_service=1
+        fi
+      done
+    done
+  done
+
+  if [[ "${remove_ha_service}" == "1" && "${ha_service_present}" == "1" ]] && command -v systemctl &>/dev/null; then
+    for unit_name in ${JDMC_HA_SYSTEMD_UNITS}; do
+      unit_present=0
+      for systemd_dir in "${systemd_dirs[@]}"; do
+        [[ -f "${systemd_dir}/${unit_name}" ]] && unit_present=1
+      done
+      if [[ "${unit_present}" == "1" ]]; then
+        systemctl disable --now "${unit_name}" &>/dev/null || systemctl stop "${unit_name}" &>/dev/null || failed=1
+      fi
+    done
+  fi
+
+  for systemd_dir in "${systemd_dirs[@]}"; do
+    if [[ "${remove_ha_service}" == "1" ]]; then
+      for relative_path in ${JDMC_HA_SYSTEMD_DROPINS} ${JDMC_HA_SYSTEMD_UNITS}; do
+        candidate="${systemd_dir}/${relative_path}"
+        if [[ -e "${candidate}" || -L "${candidate}" ]]; then
+          echo -e "$(gettext 'Cleaning up') ${candidate}"
+          if rm -f "${candidate}"; then
+            JDMC_DOCKER_HOOK_CHANGED=1
+          else
+            failed=1
+          fi
+        fi
+      done
+      for target_name in multi-user.target.wants timers.target.wants; do
+        for unit_name in ${JDMC_HA_SYSTEMD_UNITS}; do
+          candidate="${systemd_dir}/${target_name}/${unit_name}"
+          if [[ -e "${candidate}" || -L "${candidate}" ]]; then
+            echo -e "$(gettext 'Cleaning up') ${candidate}"
+            if rm -f "${candidate}"; then
+              JDMC_DOCKER_HOOK_CHANGED=1
+            else
+              failed=1
+            fi
+          fi
+        done
+      done
+    fi
+    for unit_file in "${systemd_dir}/docker.service" "${systemd_dir}/docker.service.d/"*.conf; do
+      [[ -f "${unit_file}" ]] || continue
+      for hook_path in "${hook_paths[@]}"; do
+        remove_jdmc_docker_hook_from_file "${unit_file}" "${hook_path}" || failed=1
+      done
+      if [[ "${remove_ha_service}" == "1" ]]; then
+        remove_jdmc_docker_dependency_from_file "${unit_file}" || failed=1
+      fi
+    done
+  done
+
+  if [[ "${JDMC_DOCKER_HOOK_CHANGED}" == "1" ]] && command -v systemctl &>/dev/null; then
+    systemctl daemon-reload || failed=1
+    systemctl reset-failed docker &>/dev/null || true
+  fi
+  return "${failed}"
+}
+
+function remove_jdmc_main_service_unit() {
+  local service_name=$1 install_dir=$2
+  local systemd_dir candidate target_name
+  local failed=0
+  local changed=0
+  local present=0
+  local unit_file_present=0
+  local -a systemd_dirs
+
+  IFS=: read -r -a systemd_dirs <<<"${JDMC_SYSTEMD_DIRS}"
+  for systemd_dir in "${systemd_dirs[@]}"; do
+    if [[ -f "${systemd_dir}/${service_name}" ||
+      -e "${systemd_dir}/multi-user.target.wants/${service_name}" ||
+      -L "${systemd_dir}/multi-user.target.wants/${service_name}" ]]; then
+      present=1
+    fi
+    [[ -f "${systemd_dir}/${service_name}" ]] && unit_file_present=1
+  done
+  [[ "${present}" == "1" ]] || return 0
+
+  if [[ "${unit_file_present}" == "1" ]] && command -v systemctl &>/dev/null; then
+    systemctl disable --now "${service_name}" &>/dev/null || systemctl stop "${service_name}" &>/dev/null || failed=1
+  fi
+  for systemd_dir in "${systemd_dirs[@]}"; do
+    for target_name in "" multi-user.target.wants; do
+      if [[ -n "${target_name}" ]]; then
+        candidate="${systemd_dir}/${target_name}/${service_name}"
+      else
+        candidate="${systemd_dir}/${service_name}"
+      fi
+      if [[ -e "${candidate}" || -L "${candidate}" ]]; then
+        if [[ -f "${candidate}" ]] && ! grep -Fq "${install_dir}" "${candidate}" 2>/dev/null; then
+          continue
+        fi
+        echo -e "$(gettext 'Cleaning up') ${candidate}"
+        if rm -f "${candidate}"; then
+          changed=1
+        else
+          failed=1
+        fi
+      fi
+    done
+  done
+  if [[ "${changed}" == "1" ]] && command -v systemctl &>/dev/null; then
+    systemctl daemon-reload || failed=1
+  fi
+  return "${failed}"
+}
+
+function cleanup_stale_jdmc_docker_hooks() {
+  local failed=0
+  local -a stale_hooks=()
+
+  [[ -x "${JDMC_DOCKER_FIREWALL_SCRIPT}" ]] || stale_hooks+=("${JDMC_DOCKER_FIREWALL_SCRIPT}")
+  [[ -x "${JDMC_LEGACY_DOCKER_FIREWALL_SCRIPT}" ]] || stale_hooks+=("${JDMC_LEGACY_DOCKER_FIREWALL_SCRIPT}")
+  if [[ "${#stale_hooks[@]}" -gt 0 ]]; then
+    remove_jdmc_docker_hooks "${stale_hooks[@]}" || failed=1
+  fi
+  if [[ ! -x "${JDMC_INSTALL_DIR}/jdmc" ]]; then
+    remove_jdmc_main_service_unit "${JDMC_SERVICE_NAME}" "${JDMC_INSTALL_DIR}" || failed=1
+  fi
+  if [[ ! -x "${JDMC_LEGACY_INSTALL_DIR}/kotl" ]]; then
+    remove_jdmc_main_service_unit "${JDMC_LEGACY_SERVICE_NAME}" "${JDMC_LEGACY_INSTALL_DIR}" || failed=1
+  fi
+  return "${failed}"
+}
+
+function cleanup_jdmc_host_integration() {
+  local failed=0
+
+  if check_jdmc_service_installed; then
+    disable_jdmc || failed=1
+  fi
+  remove_jdmc_docker_hooks || failed=1
+  remove_jdmc_main_service_unit "${JDMC_SERVICE_NAME}" "${JDMC_INSTALL_DIR}" || failed=1
+  remove_jdmc_main_service_unit "${JDMC_LEGACY_SERVICE_NAME}" "${JDMC_LEGACY_INSTALL_DIR}" || failed=1
   return "${failed}"
 }

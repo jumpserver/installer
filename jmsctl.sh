@@ -238,7 +238,7 @@ function main() {
 
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""
-  elif [[ "${action}" == "install" || "${action}" == "config" || "${action}" == "reconfig" ]]; then
+  elif [[ "${action}" == "install" || "${action}" == "config" || "${action}" == "reconfig" || "${action}" == "uninstall" ]]; then
     echo ""
   else
     pre_check || return 3
