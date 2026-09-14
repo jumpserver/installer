@@ -5,14 +5,40 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 . "${BASE_DIR}/utils.sh"
 
 function stop_services() {
-  [[ -f "${CONFIG_FILE}" ]] || return 0
-  if ! docker compose version &>/dev/null; then
-    log_error "Docker Compose is unavailable; cannot safely stop JumpServer services"
+  local container_ids network_ids volume_ids resource_id failed=0
+
+  if [[ -f "${CONFIG_FILE}" ]]; then
+    if ! docker compose version &>/dev/null; then
+      log_error "Docker Compose is unavailable; cannot safely stop JumpServer services"
+      return 1
+    fi
+    cd "${PROJECT_DIR?}" || return 1
+    bash ./jmsctl.sh down || return 1
+    sleep 2s
+    echo
+    return 0
+  fi
+
+  command -v docker &>/dev/null || return 0
+  container_ids=$(docker ps -aq --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}") || return 1
+  network_ids=$(docker network ls -q --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}") || return 1
+  volume_ids=$(docker volume ls -q --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}") || return 1
+  if [[ -n "${container_ids}" ]]; then
+    echo_warn "JumpServer configuration is missing; removing containers by the exact Compose project label"
+  fi
+  for resource_id in ${container_ids}; do
+    docker rm -f "${resource_id}" >/dev/null || failed=1
+  done
+  for resource_id in ${network_ids}; do
+    docker network rm "${resource_id}" >/dev/null || failed=1
+  done
+  for resource_id in ${volume_ids}; do
+    docker volume rm "${resource_id}" >/dev/null || failed=1
+  done
+  if [[ "${failed}" != "0" ]]; then
+    log_error "Failed to remove one or more JumpServer Compose resources"
     return 1
   fi
-  cd "${PROJECT_DIR?}" || return 1
-  bash ./jmsctl.sh down || return 1
-  sleep 2s
   echo
 }
 
@@ -63,6 +89,15 @@ function validate_removal_dir() {
   }
 }
 
+function remove_managed_dir() {
+  local path=$1
+
+  [[ -e "${path}" || -L "${path}" ]] || return 0
+  validate_removal_dir "${path}" || return 1
+  echo -e "$(gettext 'Cleaning up') ${path}"
+  rm -rf -- "${path:?}"
+}
+
 function remove_compose() {
   if check_root && [ -f "/usr/local/libexec/docker/cli-plugins/docker-compose" ]; then
     echo
@@ -85,35 +120,37 @@ function remove_compose() {
 }
 
 function remove_jumpserver() {
-  local images volume_dir image
+  local images volume_dir jdmc_data_dir kotl_data_dir image
   local failed=0
 
-  if [ ! -f "${CONFIG_FILE}" ]; then
-    return
+  if [[ ! -f "${CONFIG_FILE}" ]]; then
+    echo_warn "JumpServer configuration is missing; using the configured environment or default data paths"
   fi
   echo
   echo_warn "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
   images=$(get_images)
-  volume_dir=$(get_config VOLUME_DIR)
+  volume_dir=$(get_config_or_env VOLUME_DIR /data/jumpserver)
+  jdmc_data_dir=$(get_current_jdmc_data_dir)
+  kotl_data_dir=$(get_legacy_kotl_data_dir)
   confirm="n"
   read_from_input confirm "$(gettext 'Are you clean up JumpServer files')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
-    if [[ -d "${volume_dir}" ]]; then
-      validate_removal_dir "${volume_dir}" || return 1
-      echo -e "$(gettext 'Cleaning up') ${volume_dir}"
-      rm -rf "${volume_dir:?}" || return 1
-    fi
-    if [[ -d "${CONFIG_DIR}" ]]; then
-      validate_removal_dir "${CONFIG_DIR}" || return 1
-      echo -e "$(gettext 'Cleaning up') ${CONFIG_DIR}"
-      rm -rf "${CONFIG_DIR:?}" || return 1
-    fi
+    remove_managed_dir "${volume_dir}" || return 1
+    remove_managed_dir "${jdmc_data_dir}" || return 1
+    remove_managed_dir "${kotl_data_dir}" || return 1
+    remove_managed_dir "${JDMC_INSTALL_DIR}" || return 1
+    remove_managed_dir "${JDMC_LEGACY_INSTALL_DIR}" || return 1
+    remove_managed_dir "${CONFIG_DIR}" || return 1
     rm -f "${PROJECT_DIR}/.env" "${PROJECT_DIR}/compose/.env" || return 1
   fi
   echo
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need to clean up the Docker image')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
+    if ! command -v docker &>/dev/null; then
+      log_error "Docker is unavailable; cannot remove JumpServer images"
+      return 1
+    fi
     for image in ${images}; do
       docker rmi "${image}" || failed=1
       echo
@@ -128,6 +165,10 @@ function remove_jumpserver() {
 
 function main() {
   echo_yellow "\n>>> $(gettext 'Uninstall JumpServer')"
+  prepare_jdmc_uninstall || {
+    log_error "Failed to safely retire JDMC HA"
+    return 1
+  }
   cleanup_stale_jdmc_docker_hooks || {
     log_error "Failed to remove stale JDMC Docker hooks"
     return 1

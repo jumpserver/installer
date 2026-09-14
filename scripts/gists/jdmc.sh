@@ -10,6 +10,7 @@ JDMC_LEGACY_INSTALL_DIR=${KOTL_INSTALL_DIR:-/opt/kotl}
 JDMC_LEGACY_CORE_SOCKET_PATH=${KOTL_CORE_SOCKET_PATH:-/opt/jumpserver/data/unshare/kotl.sock}
 JDMC_DOCKER_FIREWALL_SCRIPT=${JDMC_DOCKER_FIREWALL_SCRIPT:-${JDMC_INSTALL_DIR}/current/ha/scripts/firewall.sh}
 JDMC_LEGACY_DOCKER_FIREWALL_SCRIPT=${JDMC_LEGACY_DOCKER_FIREWALL_SCRIPT:-${JDMC_LEGACY_INSTALL_DIR}/current/ha/scripts/firewall.sh}
+JDMC_HA_CLI=${JDMC_HA_CLI:-${JDMC_INSTALL_DIR}/current/ha/ha.sh}
 JDMC_HA_FIREWALL_SERVICE_NAME=${JDMC_HA_FIREWALL_SERVICE_NAME:-jdmc-ha-firewall.service}
 JDMC_DOCKER_HA_DROPIN_NAME=${JDMC_DOCKER_HA_DROPIN_NAME:-jdmc-ha-firewall.conf}
 JDMC_HA_SYSTEMD_UNITS=${JDMC_HA_SYSTEMD_UNITS:-jdmc-ha-firewall.service jdmc-ha-filesync-heartbeat.service jdmc-ha-filesync-heartbeat.timer jdmc-ha-rejoin.service jdmc-ha-rejoin.timer jdmc-ha-source-recovery.service jdmc-ha-source-recovery.timer}
@@ -98,6 +99,36 @@ function get_current_jdmc_data_dir() {
 
 function get_legacy_kotl_data_dir() {
   echo "$(get_jdmc_storage_root)/kotl"
+}
+
+function jdmc_ha_lifecycle_present() {
+  local state_dir=$1 marker
+
+  for marker in installed rollback-terminal.json standalone-prepare standalone retired-safe; do
+    if jdmc_path_exists "${state_dir}/${marker}"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+function retire_jdmc_ha_lifecycle() {
+  local data_dir=$1 ha_cli=$2
+  local volume_dir
+
+  jdmc_ha_lifecycle_present "${data_dir}/ha" || return 0
+  if [[ ! -x "${ha_cli}" ]]; then
+    log_error "JDMC HA state exists, but the safe HA uninstall command is missing: ${ha_cli}"
+    log_error "Repair JDMC before uninstalling; refusing to remove an active or ambiguous HA node"
+    return 1
+  fi
+  volume_dir=$(get_config_or_env VOLUME_DIR /data/jumpserver)
+  echo_yellow "\n>>> Safely retiring JDMC HA"
+  JUMPSERVER_VOLUME_DIR="${volume_dir}" "${ha_cli}" uninstall
+}
+
+function prepare_jdmc_uninstall() {
+  retire_jdmc_ha_lifecycle "$(get_current_jdmc_data_dir)" "${JDMC_HA_CLI}"
 }
 
 function check_current_jdmc_installed() {
@@ -364,16 +395,32 @@ function remove_jdmc_docker_hook_from_file() {
 
 function remove_jdmc_docker_dependency_from_file() {
   local unit_file=$1
-  local line tmp_file
-  local changed=0
+  local line tmp_file dependency remaining_dependencies
+  local changed=0 removed=0
+  local -a dependencies
 
   grep -Fq "${JDMC_HA_FIREWALL_SERVICE_NAME}" "${unit_file}" 2>/dev/null || return 0
   tmp_file=$(mktemp -t jdmc-docker-unit.XXXXXX) || return 1
   while IFS= read -r line || [[ -n "${line}" ]]; do
     if [[ "${line}" =~ ^[[:space:]]*(Requires|Wants|After|Before)= ]] && \
       [[ "${line}" == *"${JDMC_HA_FIREWALL_SERVICE_NAME}"* ]]; then
-      changed=1
-      continue
+      removed=0
+      remaining_dependencies=""
+      IFS=$' \t' read -r -a dependencies <<<"${line#*=}"
+      for dependency in "${dependencies[@]}"; do
+        if [[ "${dependency}" == "${JDMC_HA_FIREWALL_SERVICE_NAME}" ]]; then
+          removed=1
+          continue
+        fi
+        remaining_dependencies="${remaining_dependencies}${remaining_dependencies:+ }${dependency}"
+      done
+      if [[ "${removed}" == "1" ]]; then
+        changed=1
+        if [[ -n "${remaining_dependencies}" ]]; then
+          printf '%s=%s\n' "${line%%=*}" "${remaining_dependencies}"
+        fi
+        continue
+      fi
     fi
     printf '%s\n' "${line}"
   done <"${unit_file}" >"${tmp_file}"
@@ -389,11 +436,66 @@ function remove_jdmc_docker_dependency_from_file() {
   rm -f "${tmp_file}"
 }
 
+function remove_jdmc_firewall_hook() {
+  local command_name=$1 parent=$2 child=$3
+
+  while "${command_name}" -C "${parent}" -j "${child}" &>/dev/null; do
+    "${command_name}" -D "${parent}" -j "${child}" &>/dev/null || return 1
+  done
+  ! "${command_name}" -C "${parent}" -j "${child}" &>/dev/null
+}
+
+function remove_jdmc_firewall_chain() {
+  local command_name=$1 chain=$2
+
+  if "${command_name}" -nL "${chain}" &>/dev/null; then
+    "${command_name}" -F "${chain}" &>/dev/null || return 1
+    "${command_name}" -X "${chain}" &>/dev/null || return 1
+  fi
+  ! "${command_name}" -nL "${chain}" &>/dev/null
+}
+
+function remove_jdmc_firewall_family() {
+  local command_name=$1 suffix chain
+
+  if ! command -v "${command_name}" &>/dev/null; then
+    echo_warn "Cannot verify stale JDMC HA firewall rules because ${command_name} is unavailable"
+    return 0
+  fi
+  remove_jdmc_firewall_hook "${command_name}" INPUT JDMC_HA_INPUT || return 1
+  remove_jdmc_firewall_hook "${command_name}" DOCKER-USER JDMC_HA_DOCKER || return 1
+  remove_jdmc_firewall_hook "${command_name}" FORWARD JDMC_HA_DOCKER || return 1
+  for suffix in A B C; do
+    remove_jdmc_firewall_hook "${command_name}" INPUT "JDMC_HA_GUARD_IN_${suffix}" || return 1
+    remove_jdmc_firewall_hook "${command_name}" DOCKER-USER "JDMC_HA_GUARD_FWD_${suffix}" || return 1
+    remove_jdmc_firewall_hook "${command_name}" FORWARD "JDMC_HA_GUARD_FWD_${suffix}" || return 1
+  done
+  for chain in JDMC_HA_INPUT JDMC_HA_DOCKER \
+    JDMC_HA_GUARD_IN_A JDMC_HA_GUARD_IN_B JDMC_HA_GUARD_IN_C \
+    JDMC_HA_GUARD_FWD_A JDMC_HA_GUARD_FWD_B JDMC_HA_GUARD_FWD_C; do
+    remove_jdmc_firewall_chain "${command_name}" "${chain}" || return 1
+  done
+}
+
+function remove_jdmc_firewall_rules() {
+  local failed=0
+
+  remove_jdmc_firewall_family iptables || failed=1
+  remove_jdmc_firewall_family ip6tables || failed=1
+  if [[ "${failed}" != "0" ]]; then
+    log_error "Failed to remove all JDMC HA firewall hooks and chains"
+    return 1
+  fi
+}
+
 function remove_jdmc_docker_hooks() {
   local systemd_dir unit_file hook_path hook_root unit_name relative_path target_name candidate unit_present
   local failed=0
   local remove_ha_service=0
+  local remove_firewall_rules=0
   local ha_service_present=0
+  local keepalived_dropin_present=0
+  local lsyncd_dropin_present=0
   local JDMC_DOCKER_HOOK_CHANGED=0
   local -a systemd_dirs hook_paths hook_roots
 
@@ -425,9 +527,19 @@ function remove_jdmc_docker_hooks() {
       candidate="${systemd_dir}/${relative_path}"
       [[ -f "${candidate}" ]] || continue
       ha_service_present=1
+      [[ "${relative_path}" == "keepalived.service.d/jdmc-ha.conf" ]] && keepalived_dropin_present=1
+      [[ "${relative_path}" == "lsyncd.service.d/jdmc-ha.conf" ]] && lsyncd_dropin_present=1
       for hook_root in "${hook_roots[@]}"; do
         if grep -Fq "${hook_root}/" "${candidate}" 2>/dev/null; then
           remove_ha_service=1
+        fi
+      done
+    done
+    for unit_file in "${systemd_dir}/docker.service" "${systemd_dir}/docker.service.d/"*.conf; do
+      [[ -f "${unit_file}" ]] || continue
+      for hook_path in "${hook_paths[@]}"; do
+        if grep -Fq "${hook_path}" "${unit_file}" 2>/dev/null; then
+          remove_firewall_rules=1
         fi
       done
     done
@@ -443,6 +555,20 @@ function remove_jdmc_docker_hooks() {
         systemctl disable --now "${unit_name}" &>/dev/null || systemctl stop "${unit_name}" &>/dev/null || failed=1
       fi
     done
+    if [[ "${keepalived_dropin_present}" == "1" ]]; then
+      systemctl stop keepalived.service &>/dev/null || failed=1
+    fi
+    if [[ "${lsyncd_dropin_present}" == "1" ]]; then
+      systemctl stop lsyncd.service &>/dev/null || failed=1
+    fi
+  fi
+
+  if [[ "${failed}" != "0" ]]; then
+    log_error "Failed to stop stale JDMC HA services; preserving their files for recovery"
+    return 1
+  fi
+  if [[ "${remove_ha_service}" == "1" || "${remove_firewall_rules}" == "1" ]]; then
+    remove_jdmc_firewall_rules || return 1
   fi
 
   for systemd_dir in "${systemd_dirs[@]}"; do
