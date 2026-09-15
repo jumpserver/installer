@@ -70,7 +70,7 @@ JDMC 启动时也会直接读取 `/opt/jumpserver/config/config.txt` 中的
 从旧 KOTL 升级时，安装器会识别 `/opt/kotl` 和 `kotl.service`，并调用新
 JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。安装或升级成功后会清理旧的
 `KOTL_ENABLED`、`JDMC_HOST_ENABLED` 和 `JDMC_ENABLED` 配置，历史禁用值不再生效。
-命令行过渡期仍接受 `./jmsctl.sh tail kotl`，新部署应使用 `jdmc` 命令目标。
+命令行使用 `jdmc` 作为 JDMC 服务目标。
 `--skip-jdmc` 仅供 JDMC 发起 JumpServer 重启时避免停止自身，不是组件开关。
 
 ## 离线镜像清单

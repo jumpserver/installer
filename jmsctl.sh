@@ -13,7 +13,7 @@ target=${2-}
 args=("$@")
 skip_jdmc=false
 
-if [[ "${target}" == "--skip-jdmc" || "${target}" == "--skip-kotl" ]]; then
+if [[ "${target}" == "--skip-jdmc" ]]; then
   case "${action}" in
   start|stop|restart|close|status|down)
     skip_jdmc=true
@@ -95,7 +95,7 @@ function should_manage_jdmc() {
 }
 
 function is_jdmc_target() {
-  [[ "${target}" == "jdmc" || "${target}" == "kotl" ]]
+  [[ "${target}" == "jdmc" ]]
 }
 
 function start() {

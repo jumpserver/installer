@@ -72,6 +72,17 @@ function check_jdmc_runtime() {
   fi
 }
 
+function ensure_jdmc_ha_dependencies() {
+  local dependency_installer="${JDMC_INSTALL_DIR}/current/ha/scripts/install-dependencies.sh"
+
+  if [[ ! -x "${dependency_installer}" ]]; then
+    log_error "JDMC HA dependency installer not found: ${dependency_installer}"
+    return 1
+  fi
+  echo_yellow "\n>>> Installing JDMC HA host dependencies"
+  "${dependency_installer}"
+}
+
 function jdmc_unit_exists() {
   local service_name=$1
 
@@ -241,6 +252,7 @@ function install_jdmc() {
 
   if check_current_jdmc_installed; then
     echo_check "JDMC is already installed"
+    ensure_jdmc_ha_dependencies || return 1
     cleanup_jdmc_legacy_switches
     return $?
   fi
@@ -252,6 +264,7 @@ function install_jdmc() {
       echo_yellow "\n>>> Repairing or upgrading JDMC"
     fi
     run_jdmc_package_action upgrade || return 1
+    ensure_jdmc_ha_dependencies || return 1
     configure_jdmc || return 1
     cleanup_jdmc_legacy_switches
     return $?
@@ -259,6 +272,7 @@ function install_jdmc() {
 
   echo_yellow "\n>>> Installing JDMC"
   run_jdmc_package_action install || return 1
+  ensure_jdmc_ha_dependencies || return 1
   configure_jdmc || return 1
   cleanup_jdmc_legacy_switches
 }
@@ -277,6 +291,7 @@ function upgrade_jdmc() {
   else
     run_jdmc_package_action install || return 1
   fi
+  ensure_jdmc_ha_dependencies || return 1
   configure_jdmc || return 1
   cleanup_jdmc_legacy_switches
 }
