@@ -171,10 +171,6 @@ function start_docker() {
 }
 
 function check_docker_start() {
-  cleanup_stale_jdmc_docker_hooks || {
-    log_error "Failed to remove stale JDMC Docker hooks"
-    exit 1
-  }
   prepare_set_redhat_firewalld
   if ! docker ps &>/dev/null; then
     start_docker
