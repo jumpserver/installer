@@ -169,10 +169,6 @@ function main() {
     log_error "Failed to safely retire JDMC HA"
     return 1
   }
-  cleanup_stale_jdmc_docker_hooks || {
-    log_error "Failed to remove stale JDMC Docker hooks"
-    return 1
-  }
   stop_services || return 1
   cleanup_jdmc_host_integration || {
     log_error "Failed to clean up JDMC host integration"
