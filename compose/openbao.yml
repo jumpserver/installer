@@ -2,12 +2,12 @@ services:
   core:
     depends_on:
       openbao-init:
-        condition: service_completed_successfully
+        condition: service_healthy
 
   celery:
     depends_on:
       openbao-init:
-        condition: service_completed_successfully
+        condition: service_healthy
 
   openbao:
     image: openbao/openbao:2.6.0
@@ -43,9 +43,10 @@ services:
     image: openbao/openbao:2.6.0
     container_name: jms_openbao_init
     hostname: openbao-init
-    # The one-shot initializer writes root-owned 0600 unseal material.
+    # The initializer writes root-owned 0600 unseal material and remains alive
+    # so Docker can restart it to unseal OpenBao after a host reboot.
     user: "0"
-    restart: "no"
+    restart: always
     command: sh /openbao/bootstrap/bootstrap.sh
     env_file:
       - ${CONFIG_FILE}
@@ -56,5 +57,11 @@ services:
       - ${CONFIG_DIR}/openbao:/openbao/bootstrap
     depends_on:
       - openbao
+    healthcheck:
+      test: "test -f /tmp/openbao-init-ready && bao status >/dev/null 2>&1"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
     networks:
       - net
