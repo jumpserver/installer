@@ -40,8 +40,12 @@ $ ./jmsctl.sh video-worker {start|stop|restart|status}
 ```
 
 `video-worker` 的 Compose service、容器名和配置键统一使用该名称；可通过
-`VIDEO_WORKER_ENABLED=0` 禁用。旧版本的 `VIDEO_ENABLED`、`VIDEO_ENABLE` 以及
-`${VOLUME_DIR}/video` 数据目录会在升级时迁移。
+`VIDEO_WORKER_ENABLED=0` 禁用本地容器，但不关闭 KoKo 的录像转码提交；需要同时设置
+`ENABLE_VIDEO_WORKER=true` 才会让 KoKo 提交录像。容器内默认地址为
+`VIDEO_WORKER_HOST=http://video-worker:9000`。如果 worker 独立部署，设置
+`VIDEO_WORKER_ENABLED=0`、`ENABLE_VIDEO_WORKER=true`，并将
+`VIDEO_WORKER_HOST` 设置为 KoKo 容器可访问的外部地址。旧版本的
+`VIDEO_ENABLED`、`VIDEO_ENABLE` 以及 `${VOLUME_DIR}/video` 数据目录会在升级时迁移。
 
 ## JDMC（企业版）
 
