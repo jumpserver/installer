@@ -20,6 +20,8 @@ KV_POLICY_FILE="/tmp/jumpserver-kv-policy.hcl"
 KV_SERVICE_TOKEN_FILE="/openbao/bootstrap/jumpserver-token.json"
 SSH_CA_POLICY_FILE="/tmp/jumpserver-ssh-ca-policy.hcl"
 SSH_CA_SERVICE_TOKEN_FILE="/openbao/bootstrap/jumpserver-ssh-ca-token.json"
+READY_FILE="/tmp/openbao-init-ready"
+rm -f "${READY_FILE}"
 
 wait_openbao() {
   i=0
@@ -102,6 +104,17 @@ unseal_openbao() {
     echo "OpenBao is still sealed after applying unseal keys from ${INIT_FILE}."
     exit 1
   fi
+}
+
+monitor_openbao() {
+  touch "${READY_FILE}"
+  while sleep 5; do
+    if is_sealed; then
+      rm -f "${READY_FILE}"
+      unseal_openbao
+      touch "${READY_FILE}"
+    fi
+  done
 }
 
 ensure_service_token() {
@@ -236,3 +249,5 @@ fi
 if is_true "${SSH_CA_ENABLED}"; then
   configure_ssh_ca
 fi
+
+monitor_openbao
