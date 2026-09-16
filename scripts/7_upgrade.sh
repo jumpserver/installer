@@ -85,6 +85,25 @@ function migrate_database_expose_config() {
   check_and_set_config "MYSQL_EXPOSE_PORT" "3306"
 }
 
+function remove_obsolete_containers() {
+  local container existing_containers
+  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_kael" "jms_magnus" "jms_video" "jms_lion" "jms_facelive" "jms_panda")
+
+  # XRDP is still supported when explicitly enabled in the enterprise edition.
+  if [[ "$(get_config_or_env USE_XPACK)" != "1" || "$(get_config_or_env XRDP_ENABLED)" != "1" ]]; then
+    containers+=("jms_xrdp")
+  fi
+  existing_containers=$(docker ps -a --format '{{.Names}}') || return 1
+  for container in "${containers[@]}"; do
+    if grep -Fxq "${container}" <<<"${existing_containers}"; then
+      if ! docker stop "${container}" >/dev/null || ! docker rm "${container}" >/dev/null; then
+        log_error "Failed to remove obsolete container: ${container}"
+        return 1
+      fi
+    fi
+  done
+}
+
 function upgrade_config() {
   if check_root; then
     check_docker_start
@@ -93,13 +112,7 @@ function upgrade_config() {
     log_error "$(gettext 'Docker is not running, please install and start')"
     exit 1
   fi
-  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_kael" "jms_magnus" "jms_video")
-  for container in "${containers[@]}"; do
-    if docker ps -a | grep ${container} &>/dev/null; then
-      docker stop ${container} &>/dev/null
-      docker rm ${container} &>/dev/null
-    fi
-  done
+  remove_obsolete_containers || return 1
   if docker ps -a | grep jms_xpack &>/dev/null; then
     docker volume rm jms_share-volume &>/dev/null
   fi
@@ -234,7 +247,7 @@ function update_config_if_need() {
   migrate_config_v2_0_to_v3_0
   migrate_coco_to_koko
   migrate_config
-  upgrade_config
+  upgrade_config || exit 1
   set_openbao || exit 1
   migrate_data_folder || exit 1
   clean_file
@@ -322,7 +335,10 @@ function db_migrations() {
     if [[ "${confirm}" == "y" ]]; then
       echo
       cd "${PROJECT_DIR}" || exit 1
-      bash ./jmsctl.sh stop
+      bash ./jmsctl.sh stop || {
+        log_error "Failed to stop JumpServer containers before database migration"
+        exit 1
+      }
       sleep 2s
       echo
     else
