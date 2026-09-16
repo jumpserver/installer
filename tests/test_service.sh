@@ -47,6 +47,7 @@ TEST_VIDEO_WORKER_ENABLED=0
 if video_worker_can_start; then
   fail 'VIDEO_WORKER_ENABLED=0 must block direct worker start'
 fi
+TEST_VIDEO_WORKER_ENABLED=''
 TEST_USE_XPACK=0
 if video_worker_can_start; then
   fail 'CE worker must not be startable'
@@ -85,12 +86,18 @@ docker() {
   docker_calls+=("$*")
   return 0
 }
+TEST_VIDEO_WORKER_ENABLED=0
 stop_disabled_video_worker
 assert_eq 'container rm -f old-video-worker-id' "${docker_calls[0]}" 'disabled worker must remove the stale Compose container'
 TEST_VIDEO_WORKER_ENABLED=''
 docker_calls=()
 stop_disabled_video_worker
 assert_eq '0' "${#docker_calls[@]}" 'enabled worker must not be removed'
+TEST_USE_XPACK=0
+stop_disabled_video_worker
+assert_eq 'container rm -f old-video-worker-id' "${docker_calls[0]}" 'CE mode must remove a stale worker container'
+TEST_USE_XPACK=1
+docker_calls=()
 printf 'PASS: disabling video-worker removes only the stale container\n'
 
 remove_stopped_openbao_init_container

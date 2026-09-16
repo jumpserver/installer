@@ -37,6 +37,30 @@ if [[ "${default_config}" == *'jms_ai'* ]]; then
   fail 'rendered Compose config must not contain the removed AI service'
 fi
 
+ce_dir="${TEST_TMP_ROOT}/compose-ce"
+mkdir -p "${ce_dir}"
+cp "${TEST_ROOT}/config-example.txt" "${ce_dir}/config.txt"
+printf '%s\n' \
+  'USE_XPACK=0' \
+  'ENABLE_VIDEO_WORKER=true' \
+  'VIDEO_WORKER_HOST=http://external-worker.example:9000' >>"${ce_dir}/config.txt"
+ce_config=$(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  gen_safe_config >/dev/null
+  compose_cmd=$(get_docker_compose_cmd_line)
+  if [[ "${compose_cmd}" == *'compose/video-worker.yml'* ]]; then
+    fail 'CE must exclude the local worker Compose service'
+  fi
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config
+)
+assert_contains "${ce_config}" 'ENABLE_VIDEO_WORKER: "false"' 'CE must disable KoKo worker submission even if the source config enables it'
+if [[ "${ce_config}" == *'jms_video-worker'* ]]; then
+  fail 'CE must not include a local video-worker container'
+fi
+printf 'PASS: CE excludes video-worker and disables KoKo submission\n'
+
 custom_web_proxy_config=$(
   cd "${TEST_ROOT}"
   export JS_CONFIG_DIR="${test_dir}"
@@ -91,6 +115,7 @@ external_worker_config=$(
   cd "${TEST_ROOT}"
   export JS_CONFIG_DIR="${test_dir}"
   . ./scripts/utils.sh
+  gen_safe_config >/dev/null
   compose_cmd=$(get_docker_compose_cmd_line)
   if [[ "${compose_cmd}" == *'compose/video-worker.yml'* ]]; then
     fail 'VIDEO_WORKER_ENABLED=0 must exclude the local worker Compose service'

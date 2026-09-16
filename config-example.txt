@@ -173,6 +173,8 @@ DOMAINS=
 # from KoKo to a worker, set ENABLE_VIDEO_WORKER=true. For the local container,
 # VIDEO_WORKER_HOST defaults to the Compose service URL below. For a separately
 # deployed worker, set VIDEO_WORKER_ENABLED=0 and use its reachable URL instead.
+# The installer enables this only with USE_XPACK=1. With USE_XPACK=0, KoKo
+# submission is forced off. USE_XPACK selects deployment mode, not licensing.
 # ENABLE_VIDEO_WORKER=true
 # VIDEO_WORKER_HOST=http://video-worker:9000
 

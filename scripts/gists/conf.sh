@@ -81,6 +81,12 @@ function gen_safe_config() {
     for excluded in ${CONFIG_SAFE_EXCLUDES}; do
       sed_in_place "/^[[:space:]]*${excluded}=/d" "${tmp_file}"
     done
+    if [[ "$(get_config_or_env USE_XPACK)" != "1" ]]; then
+      # CE cannot run the local worker. Do not let a stale EE setting make KoKo
+      # submit recordings to a worker when the installation is switched to CE.
+      sed_in_place '/^[[:space:]]*ENABLE_VIDEO_WORKER=/d' "${tmp_file}"
+      printf '%s\n' 'ENABLE_VIDEO_WORKER=false' >>"${tmp_file}"
+    fi
   else
     : >"${tmp_file}"
   fi
