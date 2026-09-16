@@ -102,6 +102,7 @@ function start() {
   set_openbao || return 1
   configure_jdmc || return 1
   gen_safe_config >/dev/null
+  stop_disabled_video_worker || return 1
   prepare_video_worker_volume || return 1
   EXE=$(get_docker_compose_cmd_line)
   ${EXE} up -d || return 1
@@ -201,9 +202,19 @@ function video-worker() {
     return 1
   fi
   case "${target}" in
-    start) prepare_video_worker_volume && ${EXE} up -d ;;
+    start)
+      if ! video_worker_can_start; then
+        log_error "video-worker is disabled by VIDEO_WORKER_ENABLED=0"
+        return 1
+      fi
+      prepare_video_worker_volume && ${EXE} up -d
+      ;;
     stop) ${EXE} down -v ;;
     restart)
+      if ! video_worker_can_start; then
+        log_error "video-worker is disabled by VIDEO_WORKER_ENABLED=0"
+        return 1
+      fi
       ${EXE} down -v && prepare_video_worker_volume && ${EXE} up -d
       ;;
     status) ${EXE} ps ;;

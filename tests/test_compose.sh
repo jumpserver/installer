@@ -32,9 +32,34 @@ assert_contains "${default_config}" "PLATFORM_DELEGATION_KEY: ${CHAT_AI_DELEGATI
 assert_contains "${default_config}" 'published: "5001"' 'Koko Web Proxy must publish the configured external port'
 assert_contains "${default_config}" 'target: 5001' 'Koko Web Proxy must use container port 5001'
 assert_contains "${default_config}" 'WEB_PROXY_BIND_HOST: 0.0.0.0' 'Koko Web Proxy must listen on the container network'
+assert_contains "${default_config}" 'VIDEO_WORKER_HOST: http://video-worker:9000' 'KoKo must use the actual worker Compose service name'
 if [[ "${default_config}" == *'jms_ai'* ]]; then
   fail 'rendered Compose config must not contain the removed AI service'
 fi
+
+ce_dir="${TEST_TMP_ROOT}/compose-ce"
+mkdir -p "${ce_dir}"
+cp "${TEST_ROOT}/config-example.txt" "${ce_dir}/config.txt"
+printf '%s\n' \
+  'USE_XPACK=0' \
+  'ENABLE_VIDEO_WORKER=true' \
+  'VIDEO_WORKER_HOST=http://external-worker.example:9000' >>"${ce_dir}/config.txt"
+ce_config=$(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  gen_safe_config >/dev/null
+  compose_cmd=$(get_docker_compose_cmd_line)
+  if [[ "${compose_cmd}" == *'compose/video-worker.yml'* ]]; then
+    fail 'CE must exclude the local worker Compose service'
+  fi
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config
+)
+assert_contains "${ce_config}" 'ENABLE_VIDEO_WORKER: "false"' 'CE must disable KoKo worker submission even if the source config enables it'
+if [[ "${ce_config}" == *'jms_video-worker'* ]]; then
+  fail 'CE must not include a local video-worker container'
+fi
+printf 'PASS: CE excludes video-worker and disables KoKo submission\n'
 
 custom_web_proxy_config=$(
   cd "${TEST_ROOT}"
@@ -80,3 +105,35 @@ done
 
 printf 'PASS: default and all-feature Compose configurations render\n'
 printf 'PASS: optional infrastructure images stay out of the offline manifest\n'
+
+printf '%s\n' \
+  'VIDEO_WORKER_ENABLED=0' \
+  'ENABLE_VIDEO_WORKER=true' \
+  'VIDEO_WORKER_HOST=http://external-worker.example:9000' >>"${test_dir}/config.txt"
+cp "${test_dir}/config.txt" "${test_dir}/config_safe.txt"
+external_worker_config=$(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${test_dir}"
+  . ./scripts/utils.sh
+  gen_safe_config >/dev/null
+  compose_cmd=$(get_docker_compose_cmd_line)
+  if [[ "${compose_cmd}" == *'compose/video-worker.yml'* ]]; then
+    fail 'VIDEO_WORKER_ENABLED=0 must exclude the local worker Compose service'
+  fi
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config
+)
+assert_contains "${external_worker_config}" 'ENABLE_VIDEO_WORKER: "true"' 'KoKo must receive the worker submission switch'
+assert_contains "${external_worker_config}" 'VIDEO_WORKER_HOST: http://external-worker.example:9000' 'KoKo must receive the external worker URL'
+if [[ "${external_worker_config}" == *'jms_video-worker'* ]]; then
+  fail 'disabled local worker must not appear in Compose configuration'
+fi
+external_worker_manifest=$(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${test_dir}"
+  . ./scripts/utils.sh
+  get_offline_image_manifest
+)
+if [[ "${external_worker_manifest}" == *'/video-worker:'* ]]; then
+  fail 'disabled local worker must not be packed into the offline image manifest'
+fi
+printf 'PASS: external worker routing disables only the local container and image\n'

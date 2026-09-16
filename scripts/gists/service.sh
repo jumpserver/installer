@@ -195,11 +195,29 @@ function get_video_worker_cmd_line() {
   echo "${cmd}"
 }
 
+function video_worker_can_start() {
+  [[ "$(get_config_or_env USE_XPACK)" == "1" && \
+     "$(get_config_or_env VIDEO_WORKER_ENABLED)" != "0" ]]
+}
+
+function stop_disabled_video_worker() {
+  local container_id
+  video_worker_can_start && return 0
+
+  # Compose does not remove services omitted from a later `up -d`. Remove only
+  # this installer's old video-worker container; keep its bind-mounted data.
+  container_id=$(docker ps -a -q \
+    --filter 'name=^/jms_video-worker$' \
+    --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-jms}" \
+    --filter 'label=com.docker.compose.service=video-worker') || return 1
+  if [[ -n "${container_id}" ]]; then
+    docker container rm -f "${container_id}" >/dev/null || return 1
+  fi
+}
+
 function prepare_video_worker_volume() {
-  local use_xpack enabled volume_dir data_dir image user_spec owner
-  use_xpack=$(get_config_or_env USE_XPACK)
-  enabled=$(get_config_or_env VIDEO_WORKER_ENABLED)
-  if [[ "${use_xpack}" != "1" || "${enabled}" == "0" ]]; then
+  local volume_dir data_dir image user_spec owner
+  if ! video_worker_can_start; then
     return 0
   fi
 

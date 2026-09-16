@@ -169,6 +169,15 @@ DOMAINS=
 # VIDEO_WORKER_ENABLED=0
 # CELERY_PRIVILEGED=false
 
+# VIDEO_WORKER_ENABLED only controls the local container. To send recordings
+# from KoKo to a worker, set ENABLE_VIDEO_WORKER=true. For the local container,
+# VIDEO_WORKER_HOST defaults to the Compose service URL below. For a separately
+# deployed worker, set VIDEO_WORKER_ENABLED=0 and use its reachable URL instead.
+# The installer enables this only with USE_XPACK=1. With USE_XPACK=0, KoKo
+# submission is forced off. USE_XPACK selects deployment mode, not licensing.
+# ENABLE_VIDEO_WORKER=true
+# VIDEO_WORKER_HOST=http://video-worker:9000
+
 # JDMC is installed as a mandatory host-side systemd service when USE_XPACK=1.
 # Community Edition does not download or install JDMC. JDMC inherits VOLUME_DIR
 # from the installer and has no separate enable/disable switch.
