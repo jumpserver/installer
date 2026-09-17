@@ -85,6 +85,57 @@ function migrate_database_expose_config() {
   check_and_set_config "MYSQL_EXPOSE_PORT" "3306"
 }
 
+function migrate_internal_mysql_business_account() {
+  local engine host user database old_password root_password business_password container_root
+  engine=$(get_config DB_ENGINE)
+  host=$(get_config DB_HOST)
+  [[ "${engine,,}" == "mysql" && "${host}" == "mysql" ]] || return 0
+
+  user=$(get_config DB_USER)
+  old_password=$(get_config DB_PASSWORD)
+  root_password=$(get_config MYSQL_ROOT_PASSWORD)
+  if [[ -z "${root_password}" ]]; then
+    container_root=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' jms_mysql 2>/dev/null |
+      awk -F= '$1 == "MYSQL_ROOT_PASSWORD" || $1 == "MARIADB_ROOT_PASSWORD" {sub(/^[^=]*=/, ""); print; exit}' || true)
+    root_password="${container_root:-${old_password}}"
+    [[ -n "${root_password}" ]] || {
+      log_error "Built-in MySQL root password is missing"
+      return 1
+    }
+    set_config MYSQL_ROOT_PASSWORD "${root_password}"
+  fi
+  [[ "${user,,}" == "root" ]] || return 0
+
+  database=$(get_config DB_NAME jumpserver)
+  [[ "${database}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || {
+    log_error "Built-in MySQL database name is not safe for automatic account migration"
+    return 1
+  }
+  docker inspect jms_mysql >/dev/null 2>&1 || {
+    log_error "Built-in MySQL container is unavailable for application-account migration"
+    return 1
+  }
+  business_password=$(random_str 32)
+  printf '%s\n%s\n' "${old_password}" "${business_password}" | docker exec -i \
+    -e JMS_MIGRATE_DB_NAME="${database}" jms_mysql bash -ceu '
+      IFS= read -r fallback_root_password
+      IFS= read -r business_password
+      root_password="${MARIADB_ROOT_PASSWORD:-${MYSQL_ROOT_PASSWORD:-${fallback_root_password}}}"
+      [ -n "${root_password}" ] && [ -n "${business_password}" ]
+      export MYSQL_PWD="${root_password}"
+      quote="$(printf "\\047")"
+      escaped_password="${business_password//${quote}/${quote}${quote}}"
+      sql="CREATE USER IF NOT EXISTS ${quote}jumpserver${quote}@${quote}%${quote} IDENTIFIED BY ${quote}${escaped_password}${quote}; ALTER USER ${quote}jumpserver${quote}@${quote}%${quote} IDENTIFIED BY ${quote}${escaped_password}${quote}; GRANT ALL PRIVILEGES ON \`${JMS_MIGRATE_DB_NAME}\`.* TO ${quote}jumpserver${quote}@${quote}%${quote}; FLUSH PRIVILEGES;"
+      printf "%s\n" "${sql}" | mysql -h 127.0.0.1 -u root --batch --skip-column-names >/dev/null 2>&1
+    ' || {
+      log_error "Failed to create the non-privileged built-in MySQL application account"
+      return 1
+    }
+  set_config DB_USER jumpserver
+  set_config DB_PASSWORD "${business_password}"
+  echo_check "Migrated built-in MySQL from the root login to a dedicated JumpServer account"
+}
+
 function remove_obsolete_containers() {
   local container existing_containers
   local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_kael" "jms_magnus" "jms_video" "jms_lion" "jms_facelive" "jms_panda")
@@ -129,6 +180,7 @@ function upgrade_config() {
   check_and_set_config "KOKO_WEB_PROXY_PORT" "5001"
   check_and_set_config "WEB_PROXY_ALLOWED_HOSTS" "localhost,127.0.0.1"
   migrate_database_expose_config
+  migrate_internal_mysql_business_account || return 1
   check_and_set_config "USE_LB" "1"
   check_and_set_config "VERIFY_EXTERNAL_SSL" "false"
   ensure_config_secret CHAT_AI_DELEGATION_SECRET 32 || return 1
