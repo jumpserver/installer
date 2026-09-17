@@ -1,6 +1,6 @@
 
-common_services=(core celery koko lion chen web)
-xpack_services=(magnus razor xrdp video panda nec facelive)
+common_services=(core kael celery koko chen web)
+xpack_services=(magnus razor xrdp video-worker nec)
 
 
 function get_enabled_services() {
@@ -16,9 +16,6 @@ function get_enabled_services() {
     key=$(echo "$service" | tr '[:lower:]' '[:upper:]')
     key="${key}_ENABLED"
     key=$(echo "$key" | sed 's/-/_/g')
-    if [[ "${service}" == "video-worker" ]]; then
-      key="VIDEO_ENABLED"
-    fi
     if [[ "$(get_config_or_env "${key}")" != "0" ]]; then
       enabled_services+=("${service}")
     fi
@@ -64,7 +61,6 @@ function get_db_info() {
     db_engine=$(get_config DB_ENGINE "postgresql")
   fi
 
-  postgresql_expose_port=$(get_config POSTGRESQL_EXPOSE_PORT)
   mysql_data_exists="0"
   mariadb_data_exists="0"
   postgres_data_exists="0"
@@ -93,15 +89,11 @@ function get_db_info() {
       ;;
     "file")
       if [[ "${mysql_data_exists}" == "1" ]]; then
-        echo "compose/mysql.yml"
+        echo "compose/mysql.yml -f compose/mysql.port.yml"
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
-        echo "compose/mariadb.yml"
+        echo "compose/mariadb.yml -f compose/mysql.port.yml"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        if [[ -n "${postgresql_expose_port}" ]]; then
-          echo "compose/postgresql.yml -f compose/postgresql.port.yml"
-        else
-          echo "compose/postgresql.yml"
-        fi
+        echo "compose/postgresql.yml -f compose/postgresql.port.yml"
       fi
       ;;
     *)
@@ -111,12 +103,11 @@ function get_db_info() {
 
 
 function get_docker_compose_services() {
-  ignore_db="$1"
+  ignore_db=${1-}
   db_engine=$(get_config DB_ENGINE "mysql")
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
   redis_expose_port=$(get_config REDIS_EXPOSE_PORT)
-  pg_expose_port=$(get_config POSTGRESQL_EXPOSE_PORT)
   use_es=$(get_config USE_ES)
   use_minio=$(get_config USE_MINIO)
   use_loki=$(get_config USE_LOKI)
@@ -131,7 +122,7 @@ function get_docker_compose_services() {
         [[ "${db_host}" == "mysql" || "${ha_mode}" == "1" ]] && services+=" mysql"
         ;;
       postgresql)
-        [[ "${db_host}" == "postgresql" || "${ha_mode}" == "1" || -n "${pg_expose_port}" ]] && services+=" postgresql"
+        [[ "${db_host}" == "postgresql" || "${ha_mode}" == "1" ]] && services+=" postgresql"
         ;;
     esac
     [[ "${redis_host}" == "redis" || "${ha_mode}" == "1" || -n "${redis_expose_port}" ]] && services+=" redis"
@@ -148,13 +139,10 @@ function get_docker_compose_services() {
 }
 
 function get_docker_compose_cmd_line() {
-  ignore_db="$1"
+  ignore_db=${1-}
   use_ipv6=$(get_config USE_IPV6)
-  use_xpack=$(get_config_or_env USE_XPACK)
   https_port=$(get_config HTTPS_PORT)
-  use_lb=$(get_config USE_LB)
   http_port=$(get_config HTTP_PORT)
-  db_images_file=$(get_db_images_file)
   cap_addon=$(get_config CAP_ADDON)
 
   cmd="docker compose"
@@ -176,11 +164,11 @@ function get_docker_compose_cmd_line() {
     fi
   fi
 
-  if [[ -n "${https_port}" ]]; then
+  if [[ -n "${https_port}" && "${https_port}" != "0" ]]; then
     cmd+=" -f compose/web.https.yml"
   fi
 
-  if [[ -n "${http_port}" && "${http_port}" != "0" ]];then
+  if [[ -n "${http_port}" && "${http_port}" != "0" ]]; then
     cmd+=" -f compose/web.http.yml"
   fi
 
@@ -205,6 +193,69 @@ function get_video_worker_cmd_line() {
   fi
   cmd+=" -f compose/video-worker.yml"
   echo "${cmd}"
+}
+
+function video_worker_can_start() {
+  [[ "$(get_config_or_env USE_XPACK)" == "1" && \
+     "$(get_config_or_env VIDEO_WORKER_ENABLED)" != "0" ]]
+}
+
+function stop_disabled_video_worker() {
+  local container_id
+  video_worker_can_start && return 0
+
+  # Compose does not remove services omitted from a later `up -d`. Remove only
+  # this installer's old video-worker container; keep its bind-mounted data.
+  container_id=$(docker ps -a -q \
+    --filter 'name=^/jms_video-worker$' \
+    --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-jms}" \
+    --filter 'label=com.docker.compose.service=video-worker') || return 1
+  if [[ -n "${container_id}" ]]; then
+    docker container rm -f "${container_id}" >/dev/null || return 1
+  fi
+}
+
+function prepare_video_worker_volume() {
+  local volume_dir data_dir image user_spec owner
+  if ! video_worker_can_start; then
+    return 0
+  fi
+
+  volume_dir=$(get_config VOLUME_DIR)
+  data_dir="${volume_dir}/video-worker/data"
+  mkdir -p "${data_dir}" || return 1
+
+  image="$(get_image_namespace)/video-worker:${VERSION}"
+  user_spec=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
+    log_error "Unable to inspect video-worker image user: ${image}"
+    return 1
+  }
+  if [[ "${user_spec}" =~ ^[0-9]+:[0-9]+$ ]]; then
+    owner=${user_spec}
+  else
+    owner=$(docker run --rm --entrypoint /bin/sh "${image}" -c \
+      'printf "%s:%s\n" "$(id -u)" "$(id -g)"') || {
+      log_error "Unable to resolve video-worker image user: ${image}"
+      return 1
+    }
+  fi
+  if [[ ! "${owner}" =~ ^[0-9]+:[0-9]+$ ]]; then
+    log_error "Invalid video-worker image user: ${owner}"
+    return 1
+  fi
+
+  # Docker creates a missing bind-mount source as root. Match the directory to
+  # the actual image user so image UID/GID changes do not break persistence.
+  if [[ "$(stat -c '%u:%g' "${data_dir}")" != "${owner}" ]]; then
+    chown -R "${owner}" "${data_dir}" || return 1
+  fi
+}
+
+
+function remove_stopped_openbao_init_container() {
+  # openbao-init is a one-shot dependency. Remove its completed container so it
+  # does not remain in `docker ps -a`; a still-running initializer is preserved.
+  docker container rm jms_openbao_init &>/dev/null || true
 }
 
 
@@ -251,7 +302,7 @@ function get_db_compose_cmd() {
   use_xpack=$(get_config_or_env USE_XPACK)
 
   cmd="docker compose "
-  yml=$(get_db_compose_yml)
+  yml=$(get_db_compose_yml "${target}")
 
   if [[ -n "${yml}" ]]; then
     cmd+=" ${yml}"
@@ -274,7 +325,7 @@ function get_db_migrate_compose_cmd() {
 function create_db_ops_env() {
   cmd=$(get_db_migrate_compose_cmd)
   ${cmd} up -d || {
-    exit 1
+    return 1
   }
 }
 
@@ -287,7 +338,7 @@ function db_redis_start() {
   target=$1
   cmd=$(get_db_compose_cmd "${target}")
   ${cmd} up -d || {
-    exit 1
+    return 1
   }
 }
 
@@ -298,35 +349,57 @@ function db_redis_stop() {
 }
 
 function db_redis_restart() {
-  db_redis_stop
+  local target=$1
+  db_redis_stop "${target}" || return 1
   sleep 3
-  db_redis_start
+  db_redis_start "${target}"
+}
+
+function wait_container_healthy() {
+  local container=$1
+  local timeout=${2:-$(get_config CONTAINER_HEALTH_TIMEOUT 300)}
+  local interval=${3:-5}
+  local deadline status
+
+  [[ "${timeout}" =~ ^[0-9]+$ ]] || timeout=300
+  [[ "${interval}" =~ ^[0-9]+$ ]] || interval=5
+  deadline=$((SECONDS + timeout))
+
+  while ((SECONDS <= deadline)); do
+    status=$(docker inspect -f '{{.State.Health.Status}}' "${container}" 2>/dev/null || true)
+    if [[ "${status}" == "healthy" ]]; then
+      return 0
+    fi
+    if ((SECONDS >= deadline)); then
+      break
+    fi
+    echo "Waiting for ${container} to be healthy (${status:-not found})..."
+    sleep "${interval}"
+  done
+
+  log_error "Timed out waiting for ${container} to become healthy after ${timeout}s"
+  docker logs --tail 50 "${container}" >&2 2>/dev/null || true
+  return 1
 }
 
 function perform_db_migrations() {
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
 
-  create_db_ops_env
+  create_db_ops_env || return 1
   case "${db_host}" in
     mysql|postgresql)
-      while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_${db_host})" != "healthy" ]]; do
-        echo "Waiting for database to be healthy..."
-        sleep 5s
-      done
+      wait_container_healthy "jms_${db_host}" || return 1
       ;;
   esac
 
   if [[ "${redis_host}" == "redis" ]]; then
-    while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_redis)" != "healthy" ]]; do
-      echo "Waiting for redis to be healthy..."
-      sleep 5s
-    done
+    wait_container_healthy jms_redis || return 1
   fi
 
   docker exec -i jms_core bash -c './jms upgrade_db' || {
     log_error "$(gettext 'Failed to change the table structure')!"
-    exit 1
+    return 1
   }
 }
 
@@ -343,6 +416,11 @@ function get_current_version() {
 }
 
 function installation_log() {
+  local telemetry_enabled
+  telemetry_enabled=$(get_config INSTALLATION_TELEMETRY_ENABLED true)
+  case "${telemetry_enabled}" in
+    0|false|False|FALSE|no|No|NO) return 0 ;;
+  esac
   if [ -d "${BASE_DIR}/images" ]; then
     return
   fi
@@ -350,5 +428,5 @@ function installation_log() {
   install_type=$1
   version=$(get_current_version)
   url="https://community.fit2cloud.com/installation-analytics?product=${product}&type=${install_type}&version=${version}"
-  curl --connect-timeout 5 -m 10 -k $url &>/dev/null
+  curl -fsS --connect-timeout 5 -m 10 "${url}" &>/dev/null
 }

@@ -245,6 +245,10 @@ msgstr ""
 msgid "JumpServer web port"
 msgstr ""
 
+#: scripts/1_config_jumpserver.sh scripts/config.sh
+msgid "JumpServer web proxy port"
+msgstr ""
+
 #: scripts/1_config_jumpserver.sh:226
 msgid "JumpServer ssh port"
 msgstr ""
@@ -259,6 +263,14 @@ msgstr ""
 
 #: scripts/3_load_images.sh:19
 msgid "Docker image not found"
+msgstr ""
+
+#: scripts/3_load_images.sh:30
+msgid "Docker image ID file not found"
+msgstr ""
+
+#: scripts/3_load_images.sh:39
+msgid "Docker image ID file is empty"
 msgstr ""
 
 #: scripts/3_load_images.sh:35

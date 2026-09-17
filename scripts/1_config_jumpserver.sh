@@ -10,14 +10,15 @@ function set_secret_key() {
   if [[ -z "${secret_key}" ]]; then
     secret_key=$(random_str 48)
     set_config SECRET_KEY "${secret_key}"
-    echo "SECRETE_KEY:     ${secret_key}"
+    echo_check "SECRET_KEY generated"
   fi
   bootstrap_key=$(get_config BOOTSTRAP_TOKEN)
   if [[ -z "${bootstrap_key}" ]]; then
     bootstrap_key=$(random_str 24)
     set_config BOOTSTRAP_TOKEN "${bootstrap_key}"
-    echo "BOOTSTRAP_TOKEN: ${bootstrap_key}"
+    echo_check "BOOTSTRAP_TOKEN generated"
   fi
+  ensure_config_secret CHAT_AI_DELEGATION_SECRET 32 || return 1
   if command -v hostname&>/dev/null; then
     SERVER_HOSTNAME=$(hostname)
     set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
@@ -41,13 +42,18 @@ function set_volume_dir() {
       echo_failed
       echo
       set_volume_dir
+      return $?
     fi
   fi
-  if [[ ! -d "${volume_dir}" ]]; then
-    mkdir -p ${volume_dir}
-    chmod 700 ${volume_dir}
+  if [[ "${volume_dir}" != /* || "${volume_dir}" == "/" ]]; then
+    log_error "Persistent storage directory must be an absolute, non-root path"
+    return 1
   fi
-  set_config VOLUME_DIR ${volume_dir}
+  if [[ ! -d "${volume_dir}" ]]; then
+    mkdir -p "${volume_dir}" || return 1
+    chmod 700 "${volume_dir}" || return 1
+  fi
+  set_config VOLUME_DIR "${volume_dir}"
 }
 
 function set_db_config() {
@@ -72,6 +78,7 @@ function set_external_db() {
   read_from_input db_host "$(gettext 'Please enter DB server IP')" "" "${db_host}"
   if [[ "${db_host}" == "127.0.0.1" || "${db_host}" == "localhost" ]]; then
     log_error "$(gettext 'Can not use localhost as DB server IP')"
+    return 1
   fi
   db_port=$(get_config DB_PORT)
   read_from_input db_port "$(gettext 'Please enter DB server port')" "" "${db_port}"
@@ -83,9 +90,6 @@ function set_external_db() {
   read_from_input db_password "$(gettext 'Please enter DB password')" "" "${db_password}"
 
   set_db_config "${db_engine}" "${db_host}" "${db_port}" "${db_user}" "${db_password}" "${db_name}"
-  if [[ "${db_engine}" == "postgresql" ]]; then
-    remove_config POSTGRESQL_EXPOSE_PORT
-  fi
 }
 
 function set_internal_db() {
@@ -103,9 +107,6 @@ function set_internal_db() {
   fi
 
   set_db_config "${db_engine}" "${db_host}" "${db_port}" "${db_user}" "${db_password}" "${db_name}"
-  if [[ "${db_engine}" == "postgresql" ]]; then
-    set_config POSTGRESQL_EXPOSE_PORT "127.0.0.1:5432"
-  fi
 }
 
 function set_db() {
@@ -150,6 +151,7 @@ function set_external_redis() {
   read_from_input redis_host "$(gettext 'Please enter Redis server IP')" "" "${redis_host}"
   if [[ "${redis_host}" == "127.0.0.1" || "${redis_host}" == "localhost" ]]; then
     log_error "$(gettext 'Can not use localhost as Redis server IP')"
+    return 1
   fi
   redis_port=$(get_config REDIS_PORT)
   read_from_input redis_port "$(gettext 'Please enter Redis server port')" "" "${redis_port}"
@@ -212,6 +214,7 @@ function set_redis() {
         ;;
     *)
         log_error "$(gettext 'Invalid Redis Engine selection')"
+        return 1
         ;;
   esac
 }
@@ -219,14 +222,21 @@ function set_redis() {
 function set_service() {
   echo_yellow "\n5. $(gettext 'Configure External Access')"
   http_port=$(get_config HTTP_PORT)
+  web_proxy_port=$(get_config KOKO_WEB_PROXY_PORT "5001")
   ssh_port=$(get_config KOKO_SSH_PORT)
   rdp_port=$(get_config RAZOR_RDP_PORT)
+  koko_enabled=$(get_config_or_env KOKO_ENABLED)
   use_xpack=$(get_config_or_env USE_XPACK)
   confirm="n"
   read_from_input confirm "$(gettext 'Do you need to customize the JumpServer external port')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
     read_from_input http_port "$(gettext 'JumpServer web port')" "" "${http_port}"
     set_config HTTP_PORT "${http_port}"
+
+    if [[ "${koko_enabled}" != "0" ]]; then
+      read_from_input web_proxy_port "$(gettext 'JumpServer web proxy port')" "" "${web_proxy_port}"
+      set_config KOKO_WEB_PROXY_PORT "${web_proxy_port}"
+    fi
 
     if [[ "${use_xpack}" == "1" ]]; then
       read_from_input ssh_port "$(gettext 'JumpServer ssh port')" "" "${ssh_port}"
@@ -252,25 +262,19 @@ function set_others() {
 }
 
 function main() {
-  if set_secret_key; then
-    echo_done
-  fi
-  if set_volume_dir; then
-    echo_done
-  fi
-  if set_db; then
-    echo_done
-  fi
-  if set_redis; then
-    echo_done
-  fi
+  set_secret_key || return 1
+  echo_done
+  set_volume_dir || return 1
+  echo_done
+  set_db || return 1
+  echo_done
+  set_redis || return 1
+  echo_done
   set_openbao || return 1
-  if set_service; then
-    echo_done
-  fi
-  if set_others; then
-    echo_done
-  fi
+  set_service || return 1
+  echo_done
+  set_others || return 1
+  echo_done
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then

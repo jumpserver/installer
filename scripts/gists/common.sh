@@ -22,6 +22,20 @@ function random_str() {
   fi
 }
 
+function random_secret() {
+  local byte_length=${1:-32}
+
+  if ! [[ "${byte_length}" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'Secret byte length must be a positive integer\n' >&2
+    return 1
+  fi
+
+  # Hex keeps generated values safe for env files while /dev/urandom provides
+  # installation-specific entropy even when the installer runs as root.
+  od -An -N "${byte_length}" -tx1 /dev/urandom | tr -d '[:space:]'
+  printf '\n'
+}
+
 
 function read_from_input() {
   var=$1
@@ -128,6 +142,79 @@ function log_warn() {
 
 function log_error() {
   echo_red "[ERROR] $1"
+}
+
+
+function get_package_manager() {
+  if command -v yum &>/dev/null; then
+    echo "yum"
+    return 0
+  fi
+  if command -v apt-get &>/dev/null; then
+    echo "apt"
+    return 0
+  fi
+  return 1
+}
+
+function update_package_index() {
+  local package_manager=$1
+  case "${package_manager}" in
+    yum)
+      yum -q -y makecache
+      ;;
+    apt)
+      apt-get -qq update
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+function install_package() {
+  local package_manager=$1 package=$2
+  case "${package_manager}" in
+    yum)
+      yum -q -y install "${package}"
+      ;;
+    apt)
+      apt-get -qq -y install "${package}"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+function ensure_iptables() {
+  local package_manager
+
+  if command -v iptables &>/dev/null; then
+    return 0
+  fi
+  if ! check_root; then
+    log_error "iptables is required and must be installed as root"
+    return 1
+  fi
+  if ! package_manager=$(get_package_manager); then
+    log_error "iptables command not found. No yum or apt package manager detected; please download and install iptables manually"
+    return 1
+  fi
+
+  echo_yellow "iptables command not found; installing with ${package_manager}"
+  if ! update_package_index "${package_manager}"; then
+    log_error "Failed to update package index with ${package_manager}"
+    return 1
+  fi
+  if ! install_package "${package_manager}" iptables; then
+    log_error "Failed to install iptables"
+    return 1
+  fi
+  if ! command -v iptables &>/dev/null; then
+    log_error "iptables command not found after installation"
+    return 1
+  fi
 }
 
 

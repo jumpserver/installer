@@ -1,7 +1,8 @@
 
 function has_config() {
-  key=$1
-  if grep "^[ \t]*${key}=" "${CONFIG_FILE}" &>/dev/null; then
+  local key=$1
+  if [[ "${key}" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] && \
+    grep -Eq "^[[:space:]]*${key}=" "${CONFIG_FILE}" 2>/dev/null; then
     echo "1"
   else
     echo "0"
@@ -9,11 +10,21 @@ function has_config() {
 }
 
 function get_config() {
-  key=$1
-  default=${2-''}
+  local key=$1
+  local default=${2-''}
+  local line value=''
+
+  if [[ ! "${key}" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+    printf '%s\n' "${default}"
+    return 1
+  fi
 
   if [[ -f "${CONFIG_FILE}" ]]; then
-    value=$(grep "^${key}=" "${CONFIG_FILE}" | awk -F= '{ print $2 }' | awk -F' ' '{ print $1 }' | tail -1)
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+      if [[ "${line}" =~ ^[[:space:]]*${key}= ]]; then
+        value=${line#*=}
+      fi
+    done <"${CONFIG_FILE}"
   fi
 
   if [[ -z "$value" ]];then
@@ -23,9 +34,9 @@ function get_config() {
 }
 
 function get_config_or_env() {
-  key=$1
-  value=''
-  default=${2-''}
+  local key=$1
+  local value=''
+  local default=${2-''}
 
   # Bash supports ${!key}, but zsh reports "bad substitution" when this
   # helper is called from an interactive shell. The installer only passes
@@ -44,7 +55,7 @@ function get_config_or_env() {
   echo "${value}"
 }
 
-CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD VAULT_OPENBAO_TOKEN"
+CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD VAULT_OPENBAO_TOKEN SSH_CA_OPENBAO_TOKEN"
 
 function is_config_excluded() {
   local key=$1
@@ -70,6 +81,12 @@ function gen_safe_config() {
     for excluded in ${CONFIG_SAFE_EXCLUDES}; do
       sed_in_place "/^[[:space:]]*${excluded}=/d" "${tmp_file}"
     done
+    if [[ "$(get_config_or_env USE_XPACK)" != "1" ]]; then
+      # CE cannot run the local worker. Do not let a stale EE setting make KoKo
+      # submit recordings to a worker when the installation is switched to CE.
+      sed_in_place '/^[[:space:]]*ENABLE_VIDEO_WORKER=/d' "${tmp_file}"
+      printf '%s\n' 'ENABLE_VIDEO_WORKER=false' >>"${tmp_file}"
+    fi
   else
     : >"${tmp_file}"
   fi
@@ -95,21 +112,61 @@ function sed_in_place() {
 }
 
 function set_config() {
-  key=$1
-  value=$2
+  local key=$1
+  local value=$2
+  local line origin_value tmp_file
+  local replaced=0
 
-  has=$(has_config "${key}")
-  if [[ ${has} == "0" ]]; then
-    echo "${key}=${value}" >>"${CONFIG_FILE}"
-    return
+  if [[ ! "${key}" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+    printf 'Invalid configuration key: %s\n' "${key}" >&2
+    return 1
+  fi
+  if [[ "${value}" == *$'\n'* || "${value}" == *$'\r'* ]]; then
+    printf 'Configuration values must be a single line: %s\n' "${key}" >&2
+    return 1
   fi
 
   origin_value=$(get_config "${key}")
-  if [[ "${value}" == "${origin_value}" ]]; then
+  if [[ "$(has_config "${key}")" == "1" && "${value}" == "${origin_value}" ]]; then
     return
   fi
 
-  sed_in_place "s,^[ \t]*${key}=.*$,${key}=${value},g" "${CONFIG_FILE}"
+  mkdir -p "$(dirname "${CONFIG_FILE}")" || return 1
+  tmp_file=$(mktemp "${CONFIG_FILE}.tmp.XXXXXX") || return 1
+
+  if [[ -f "${CONFIG_FILE}" ]]; then
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+      if [[ "${line}" =~ ^[[:space:]]*${key}= ]]; then
+        if [[ "${replaced}" == "0" ]]; then
+          printf '%s=%s\n' "${key}" "${value}"
+          replaced=1
+        fi
+      else
+        printf '%s\n' "${line}"
+      fi
+    done <"${CONFIG_FILE}" >"${tmp_file}"
+  fi
+
+  if [[ "${replaced}" == "0" ]]; then
+    printf '%s=%s\n' "${key}" "${value}" >>"${tmp_file}"
+  fi
+  chmod 600 "${tmp_file}" 2>/dev/null || true
+  mv -f "${tmp_file}" "${CONFIG_FILE}"
+}
+
+function ensure_config_secret() {
+  local key=$1
+  local byte_length=${2:-32}
+  local value
+
+  value=$(get_config "${key}")
+  if [[ -n "${value}" ]]; then
+    return 0
+  fi
+
+  value=$(random_secret "${byte_length}") || return 1
+  set_config "${key}" "${value}" || return 1
+  echo_check "${key} generated"
 }
 
 function remove_config() {

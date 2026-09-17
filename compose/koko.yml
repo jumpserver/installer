@@ -9,8 +9,14 @@ services:
     privileged: ${KOKO_PRIVILEGED:-true}
     env_file:
       - ${CONFIG_SAFE_FILE}
+    environment:
+      WEB_PROXY_BIND_HOST: 0.0.0.0
+      WEB_PROXY_PORT: 5001
+      WEB_PROXY_ALLOWED_HOSTS: ${WEB_PROXY_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      VIDEO_WORKER_HOST: ${VIDEO_WORKER_HOST:-http://video-worker:9000}
     ports:
       - ${KOKO_SSH_PORT:-2222}:2222
+      - ${KOKO_WEB_PROXY_PORT:-5001}:5001
     volumes:
       - ${CONFIG_DIR}/certs:/opt/koko/data/certs
       - ${VOLUME_DIR}/koko/data:/opt/koko/data

@@ -21,8 +21,7 @@ function pre_install() {
     }
   fi
 
-  if ! command -v iptables &>/dev/null; then 
-    log_error "$(gettext 'command not found, Please install it first') iptables"
+  if ! ensure_iptables; then
     exit 1
   fi
 
@@ -99,8 +98,8 @@ function main() {
   if ! bash "${BASE_DIR}/1_config_jumpserver.sh"; then
     exit 1
   fi
-  if ! configure_kotl; then
-    log_error "Failed to configure KOTL"
+  if ! configure_jdmc; then
+    log_error "Failed to configure JDMC"
     exit 1
   fi
 
@@ -120,8 +119,8 @@ function main() {
     log_error "Failed to update /opt/current/installer"
     exit 1
   }
-  install_kotl || {
-    log_error "Failed to install KOTL"
+  install_jdmc || {
+    log_error "Failed to install JDMC"
     exit 1
   }
  

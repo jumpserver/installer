@@ -1,0 +1,21 @@
+name: Installer quality checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Bash syntax
+        run: |
+          find . -type f -name '*.sh' -print0 | while IFS= read -r -d '' file; do
+            bash -n "${file}"
+          done
+      - name: Run regression tests
+        run: bash tests/run.sh

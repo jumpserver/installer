@@ -39,6 +39,7 @@ jobs:
           tar -czf build/jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz jumpserver-installer-${{ steps.get_version.outputs.TAG }}
           cd build
           md5sum jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz > jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz.md5
+          sha256sum jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz > jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz.sha256
           
       - name: Release Upload Assets
         run: |
