@@ -97,6 +97,15 @@ function set_internal_db() {
   local db_host=$2
   local db_port=$3
   local db_user=$4
+  local mysql_root_password
+  if [[ "${db_engine}" == "mysql" ]]; then
+    db_user="jumpserver"
+    mysql_root_password=$(get_config MYSQL_ROOT_PASSWORD)
+    if [[ -z "${mysql_root_password}" ]]; then
+      mysql_root_password=$(random_str 32)
+      set_config MYSQL_ROOT_PASSWORD "${mysql_root_password}"
+    fi
+  fi
   db_password=$(get_config DB_PASSWORD)
   if [[ -z "${db_password}" ]]; then
     db_password=$(random_str 26)
@@ -124,7 +133,7 @@ function set_db() {
       if [[ "${confirm}" == "y" ]]; then
         set_external_db "mysql"
       else
-        set_internal_db "mysql" "mysql" "3306" "root"
+        set_internal_db "mysql" "mysql" "3306" "jumpserver"
       fi
       ;;
     postgresql)

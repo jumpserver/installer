@@ -89,6 +89,11 @@ DB_USER=postgres
 DB_PASSWORD=
 DB_NAME=jumpserver
 
+# Root password for the built-in MySQL/MariaDB container. The installer
+# generates it independently from the non-privileged JumpServer DB account.
+# It is ignored when an external database or PostgreSQL is selected.
+MYSQL_ROOT_PASSWORD=
+
 # Host port bindings for the built-in database. The defaults only listen on
 # localhost. In a two-node HA deployment, set the corresponding EXPOSE_HOST
 # to each node's fixed HA IP. MYSQL_EXPOSE_* also applies to built-in MariaDB.
