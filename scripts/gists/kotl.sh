@@ -87,6 +87,18 @@ function run_kotl_package_action() {
       exit 1
     fi
 
+    # When VOLUME_DIR is directly under /opt, KOTL's persistent config
+    # directory resolves to /opt/kotl, which is also the package install
+    # directory. Older KOTL packages then try to replace each persistent file
+    # with a symlink to itself and abort with "are the same file". Guard those
+    # legacy link commands in the extracted package before running it.
+    sed -i \
+      -e 's#^  ln -sfn "\${CONFIG_FILE}" "\${INSTALL_CONFIG_LINK}"$#  [[ "${CONFIG_FILE}" == "${INSTALL_CONFIG_LINK}" ]] || ln -sfn "${CONFIG_FILE}" "${INSTALL_CONFIG_LINK}"#' \
+      -e 's#^  ln -sfn "\${AFTER_START_HOOK}" "\${INSTALL_AFTER_START_LINK}"$#  [[ "${AFTER_START_HOOK}" == "${INSTALL_AFTER_START_LINK}" ]] || ln -sfn "${AFTER_START_HOOK}" "${INSTALL_AFTER_START_LINK}"#' \
+      -e 's#^  ln -sfn "\${CONFIG_FILE}" "\${CONFIG_LINK}"$#  [[ "${CONFIG_FILE}" == "${CONFIG_LINK}" ]] || ln -sfn "${CONFIG_FILE}" "${CONFIG_LINK}"#' \
+      -e 's#^  ln -sfn "\${AFTER_START_HOOK_TARGET}" "\${AFTER_START_LINK}"$#  [[ "${AFTER_START_HOOK_TARGET}" == "${AFTER_START_LINK}" ]] || ln -sfn "${AFTER_START_HOOK_TARGET}" "${AFTER_START_LINK}"#' \
+      "${script_path}"
+
     chmod +x "${script_path}" || exit 1
     cd "${temp_dir}" || exit 1
     # KOTL runs on the host, so its package scripts need the host-side
