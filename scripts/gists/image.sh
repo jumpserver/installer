@@ -4,6 +4,25 @@ function get_db_images() {
   get_db_info "image"
 }
 
+function reuse_legacy_db_image() {
+  local image=$1
+
+  # New offline packages only bundle PostgreSQL. Existing MySQL/MariaDB
+  # installations retain their database image, including legacy tags.
+  case "${image}" in
+    mysql:8.0|mariadb:10.6) ;;
+    *) return 1 ;;
+  esac
+  if docker image inspect "${image}" &>/dev/null; then
+    return 0
+  fi
+  if docker image inspect "jumpserver/${image}" &>/dev/null; then
+    docker tag "jumpserver/${image}" "${image}"
+    return $?
+  fi
+  return 1
+}
+
 function get_image_namespace() {
   local namespace
 
