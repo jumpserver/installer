@@ -24,10 +24,11 @@ TimeoutStartSec=0
 Delegate=yes
 # kill only the docker process, not all processes in the cgroup
 KillMode=process
-# restart the docker process if it exits prematurely
-Restart=on-failure
-StartLimitBurst=3
-StartLimitInterval=60s
+# Restart Docker on exit unless explicitly stopped through systemd.
+Restart=always
+RestartSec=10s
+# Disable start rate limiting so transient failures do not exhaust retries.
+StartLimitInterval=0
 
 [Install]
 WantedBy=multi-user.target
