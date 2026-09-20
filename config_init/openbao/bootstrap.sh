@@ -189,6 +189,10 @@ configure_ssh_ca() {
     max_ttl=1h >/dev/null
 
   cat >"${SSH_CA_POLICY_FILE}" <<POLICY
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+
 path "${SSH_CA_MOUNT_POINT}/sign/${SSH_CA_ROLE}" {
   capabilities = ["create", "update"]
 }
