@@ -11,7 +11,6 @@ fi
 
 test_dir="${TEST_TMP_ROOT}/compose"
 export HOSTNAME=test-host
-export CHAT_AI_DELEGATION_SECRET=test-only-delegation-secret-00000000000000000000000000000000
 mkdir -p "${test_dir}"
 cp "${TEST_ROOT}/config-example.txt" "${test_dir}/config.txt"
 cp "${TEST_ROOT}/config-example.txt" "${test_dir}/config_safe.txt"
@@ -28,7 +27,6 @@ default_config=$(
   ${compose_cmd} --env-file "${CONFIG_FILE}" config
 )
 assert_contains "${default_config}" 'jms_kael' 'rendered Compose config must contain Kael'
-assert_contains "${default_config}" "PLATFORM_DELEGATION_KEY: ${CHAT_AI_DELEGATION_SECRET}" 'Kael must receive the Core delegation secret'
 assert_contains "${default_config}" 'published: "5001"' 'Koko Web Proxy must publish the configured external port'
 assert_contains "${default_config}" 'target: 5001' 'Koko Web Proxy must use container port 5001'
 assert_contains "${default_config}" 'WEB_PROXY_BIND_HOST: 0.0.0.0' 'Koko Web Proxy must listen on the container network'
