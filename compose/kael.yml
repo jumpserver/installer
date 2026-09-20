@@ -10,7 +10,6 @@ services:
       - ${CONFIG_SAFE_FILE}
     environment:
       PLATFORM_GATEWAY_ENABLED: "true"
-      PLATFORM_DELEGATION_KEY: ${CHAT_AI_DELEGATION_SECRET}
     volumes:
       - ${VOLUME_DIR}/kael/data:/opt/kael/data
     healthcheck:
