@@ -112,15 +112,15 @@ function set_openbao() {
     fi
   else
     if [[ "${vault_openbao_required}" == "true" && -z "${vault_token}" ]]; then
-      vault_token=$(random_str 48)
+      vault_token=$(random_secret 24) || return 1
       set_config VAULT_OPENBAO_TOKEN "${vault_token}"
     fi
     if [[ "${ssh_ca_required}" == "true" && -z "${ssh_ca_token}" ]]; then
-      ssh_ca_token=$(random_str 48)
+      ssh_ca_token=$(random_secret 24) || return 1
       set_config SSH_CA_OPENBAO_TOKEN "${ssh_ca_token}"
     fi
     if [[ "${vault_openbao_required}" == "true" && "${ssh_ca_required}" == "true" && "${vault_token}" == "${ssh_ca_token}" ]]; then
-      ssh_ca_token=$(random_str 48)
+      ssh_ca_token=$(random_secret 24) || return 1
       set_config SSH_CA_OPENBAO_TOKEN "${ssh_ca_token}"
     fi
   fi
