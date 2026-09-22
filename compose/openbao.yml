@@ -3,11 +3,15 @@ services:
     depends_on:
       openbao-init:
         condition: service_healthy
+    volumes:
+      - ${CONFIG_DIR}/openbao/tls/ca.crt:/opt/jumpserver/data/certs/openbao/ca.crt:ro
 
   celery:
     depends_on:
       openbao-init:
         condition: service_healthy
+    volumes:
+      - ${CONFIG_DIR}/openbao/tls/ca.crt:/opt/jumpserver/data/certs/openbao/ca.crt:ro
 
   openbao:
     image: openbao/openbao:2.6.0
@@ -19,19 +23,23 @@ services:
     restart: always
     command: server -config=/openbao/config/server.hcl
     environment:
-      BAO_ADDR: http://127.0.0.1:8200
-      VAULT_API_ADDR: ${OPENBAO_RAFT_API_ADDR:-http://openbao:8200}
-      VAULT_CLUSTER_ADDR: ${OPENBAO_RAFT_CLUSTER_ADDR:-http://openbao:8201}
+      BAO_ADDR: https://127.0.0.1:8200
+      BAO_CACERT: /openbao/tls/ca.crt
+      VAULT_API_ADDR: ${OPENBAO_RAFT_API_ADDR:-https://openbao:8200}
+      VAULT_CLUSTER_ADDR: ${OPENBAO_RAFT_CLUSTER_ADDR:-https://openbao:8201}
       VAULT_RAFT_NODE_ID: ${OPENBAO_RAFT_NODE_ID:-openbao}
       TZ: ${TZ:-Asia/Shanghai}
     volumes:
       - ${CONFIG_DIR}/openbao/server.hcl:/openbao/config/server.hcl:ro
+      - ${CONFIG_DIR}/openbao/tls/ca.crt:/openbao/tls/ca.crt:ro
+      - ${CONFIG_DIR}/openbao/tls/server.crt:/openbao/tls/server.crt:ro
+      - ${CONFIG_DIR}/openbao/tls/server.key:/openbao/tls/server.key:ro
       - ${VOLUME_DIR}/openbao/data:/openbao/file
     ports:
       - "${OPENBAO_UI_BIND:-127.0.0.1}:${OPENBAO_UI_PORT:-8200}:8200"
       - "${OPENBAO_CLUSTER_BIND:-127.0.0.1}:${OPENBAO_CLUSTER_PORT:-8201}:8201"
     healthcheck:
-      test: "bao status -address=http://127.0.0.1:8200"
+      test: "bao status -address=https://127.0.0.1:8200 -ca-cert=/openbao/tls/ca.crt"
       interval: 10s
       timeout: 5s
       retries: 3
@@ -51,7 +59,8 @@ services:
     env_file:
       - ${CONFIG_FILE}
     environment:
-      BAO_ADDR: http://openbao:8200
+      BAO_ADDR: https://openbao:8200
+      BAO_CACERT: /openbao/bootstrap/tls/ca.crt
       TZ: ${TZ:-Asia/Shanghai}
     volumes:
       - ${CONFIG_DIR}/openbao:/openbao/bootstrap
