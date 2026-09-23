@@ -1,0 +1,6 @@
+# Keep the MariaDB image's configuration directories included.
+[client-server]
+socket = /run/mysqld/mysqld.sock
+
+!includedir /etc/mysql/mariadb.conf.d/
+!includedir /etc/mysql/conf.d/

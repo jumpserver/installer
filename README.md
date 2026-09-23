@@ -102,6 +102,12 @@ PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通�
 
 ## 配置文件说明
 
+全新安装内置 MySQL 8.0 时，在 `config.txt` 中设置 `DB_ENGINE=mysql`、
+`DB_HOST=mysql` 和 `DB_IMAGE=mysql:8.0`；交互安装也会询问内置数据库镜像。
+不设置 `DB_IMAGE` 时，新安装沿用 MariaDB 10.6。已有的
+`VOLUME_DIR/mysql/data` 或 `VOLUME_DIR/mariadb/data` 决定继续使用原数据库，
+修改 `DB_IMAGE` 不会迁移已有数据。离线安装需自行提供所选数据库镜像。
+
 配置文件将会放在 /opt/jumpserver/config 中
 
 ```
