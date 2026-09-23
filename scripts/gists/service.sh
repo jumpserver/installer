@@ -52,9 +52,11 @@ function get_db_images_file() {
 }
 
 function get_db_info() {
+  local db_image
   info_type=$1
   db_engine=$(get_config DB_ENGINE "mysql")
   db_host=$(get_config DB_HOST)
+  db_image=$(get_config DB_IMAGE "mariadb:10.6")
   check_volume_dir=$(check_volume_dir)
 
   if [[ "${check_volume_dir}" == "0" ]]; then
@@ -69,8 +71,18 @@ function get_db_info() {
     "mysql")
       if [[ "${db_host}" == "mysql" ]]; then
         mysql_data_exists=$(check_db_data "mysql")
+        mariadb_data_exists=$(check_db_data "mariadb")
       fi
-      mariadb_data_exists="1"
+      if [[ "${mysql_data_exists}" != "1" && "${mariadb_data_exists}" != "1" ]]; then
+        case "${db_image}" in
+          mysql:8.0) mysql_data_exists="1" ;;
+          mariadb:10.6) mariadb_data_exists="1" ;;
+          *)
+            log_error "Unsupported built-in database image: ${db_image}"
+            return 1
+            ;;
+        esac
+      fi
       ;;
     "postgresql")
       postgres_data_exists="1"

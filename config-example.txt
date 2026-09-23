@@ -77,6 +77,9 @@ DOCKER_SUBNET_IPV6=fc00:1010:1111:200::/64
 #
 DB_ENGINE=postgresql
 DB_HOST=postgresql
+# For a new built-in DB_ENGINE=mysql installation, choose mysql:8.0 or
+# mariadb:10.6. Existing mysql/data or mariadb/data takes precedence.
+DB_IMAGE=mariadb:10.6
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=

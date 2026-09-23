@@ -117,6 +117,24 @@ function set_internal_db() {
   set_db_config "${db_engine}" "${db_host}" "${db_port}" "${db_user}" "${db_password}" "${db_name}"
 }
 
+function set_internal_mysql_image() {
+  local volume_dir db_image
+  volume_dir=$(get_config VOLUME_DIR)
+  if [[ -d "${volume_dir}/mysql/data" || -d "${volume_dir}/mariadb/data" ]]; then
+    return 0
+  fi
+
+  db_image=$(get_config DB_IMAGE "mariadb:10.6")
+  read_from_input db_image "$(gettext 'Built-in database image')" "mariadb:10.6/mysql:8.0" "${db_image}"
+  case "${db_image}" in
+    mariadb:10.6|mysql:8.0) set_config DB_IMAGE "${db_image}" ;;
+    *)
+      log_error "Unsupported built-in database image: ${db_image}"
+      return 1
+      ;;
+  esac
+}
+
 function set_db() {
   echo_yellow "\n3. $(gettext 'Configure DB')"
   db_engine=$(get_config DB_ENGINE "mysql")
@@ -132,6 +150,7 @@ function set_db() {
       if [[ "${confirm}" == "y" ]]; then
         set_external_db "mysql"
       else
+        set_internal_mysql_image || return 1
         set_internal_db "mysql" "mysql" "3306" "jumpserver"
       fi
       ;;
