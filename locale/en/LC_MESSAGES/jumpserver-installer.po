@@ -686,3 +686,9 @@ msgstr ""
 #: jmsctl.sh:162
 msgid "Windows installer please see"
 msgstr ""
+
+msgid "OpenBao TLS certificate files are incomplete"
+msgstr ""
+
+msgid "OpenSSL is required to generate the OpenBao certificate"
+msgstr ""
