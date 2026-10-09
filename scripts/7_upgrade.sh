@@ -550,8 +550,14 @@ function main() {
     exit 1
   }
   upgrade_jdmc || {
-    log_error "Failed to upgrade JDMC"
-    exit 1
+    jdmc_status=$?
+    if [[ "${jdmc_status}" == "20" ]]; then
+      log_error "JDMC package update completed, but required HA host dependencies are incomplete"
+      log_error "Resolve the dependency error above, then rerun ./jmsctl.sh upgrade"
+    else
+      log_error "Failed to upgrade JDMC"
+    fi
+    exit "${jdmc_status}"
   }
 
   persist_installer_version || {
