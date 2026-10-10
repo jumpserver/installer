@@ -3,15 +3,11 @@ services:
     depends_on:
       openbao-init:
         condition: service_healthy
-    volumes:
-      - ${CONFIG_DIR}/openbao/tls/ca.crt:/opt/jumpserver/data/certs/openbao/ca.crt:ro
 
   celery:
     depends_on:
       openbao-init:
         condition: service_healthy
-    volumes:
-      - ${CONFIG_DIR}/openbao/tls/ca.crt:/opt/jumpserver/data/certs/openbao/ca.crt:ro
 
   openbao:
     image: openbao/openbao:2.6.0
