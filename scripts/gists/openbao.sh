@@ -164,8 +164,26 @@ function set_openbao() {
   set_config OPENBAO_UNSEAL_KEY_SHARES "$(get_config OPENBAO_UNSEAL_KEY_SHARES 5)"
   set_config OPENBAO_UNSEAL_KEY_THRESHOLD "$(get_config OPENBAO_UNSEAL_KEY_THRESHOLD 3)"
   set_openbao_tls || return 1
+  set_openbao_ca_cert || return 1
   set_openbao_bootstrap_script
   set_openbao_server_config
+}
+
+function set_openbao_ca_cert() {
+  local source_file="${CONFIG_DIR}/openbao/tls/ca.crt"
+  local target_dir="${CONFIG_DIR}/certs/openbao"
+  local target_file="${target_dir}/ca.crt"
+  local tmp_file="${target_file}.tmp.$$"
+
+  # Core and Celery already mount CONFIG_DIR/certs. Prepare the CA before
+  # either starts, so no nested file mountpoint needs to be created.
+  mkdir -p "${target_dir}" || return 1
+  if ! cp "${source_file}" "${tmp_file}" || \
+      ! chmod 644 "${tmp_file}" || \
+      ! mv -f "${tmp_file}" "${target_file}"; then
+    rm -f "${tmp_file}"
+    return 1
+  fi
 }
 
 function set_openbao_tls() {

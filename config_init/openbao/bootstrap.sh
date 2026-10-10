@@ -88,6 +88,22 @@ wait_unsealed() {
   return 1
 }
 
+wait_active() {
+  # An unsealed Raft node may still be electing or setting up its leader.
+  # Listing mounts also verifies that requests can reach the active node.
+  i=0
+  while [ "$i" -lt 60 ]; do
+    if bao secrets list -format=json >/dev/null 2>/tmp/openbao-active-error; then
+      return 0
+    fi
+    i=$((i + 1))
+    sleep 1
+  done
+  cat /tmp/openbao-active-error >&2
+  echo "OpenBao active node is not ready." >&2
+  exit 1
+}
+
 unseal_openbao() {
   if ! is_sealed; then
     return 0
@@ -113,6 +129,7 @@ monitor_openbao() {
     if is_sealed; then
       rm -f "${READY_FILE}"
       unseal_openbao
+      wait_active
       touch "${READY_FILE}"
     fi
   done
@@ -137,12 +154,30 @@ ensure_service_token() {
   chmod 600 "${token_file}" 2>/dev/null || true
 }
 
+write_kv_config() {
+  # A newly enabled KV v2 mount briefly rejects requests while upgrading.
+  i=0
+  while [ "$i" -lt 60 ]; do
+    if bao write "${KV_MOUNT_POINT}/config" max_versions=20 >/tmp/openbao-kv-config-output 2>&1; then
+      return 0
+    fi
+    if ! grep -Fq "Upgrading from non-versioned to versioned data" /tmp/openbao-kv-config-output; then
+      break
+    fi
+    i=$((i + 1))
+    sleep 1
+  done
+  cat /tmp/openbao-kv-config-output >&2
+  echo "Failed to configure OpenBao KV backend at ${KV_MOUNT_POINT}." >&2
+  exit 1
+}
+
 configure_kv_backend() {
   if ! bao secrets list -format=json | grep -q "\"${KV_MOUNT_POINT}/\""; then
     bao secrets enable -path="${KV_MOUNT_POINT}" -version=2 kv
   fi
 
-  bao write "${KV_MOUNT_POINT}/config" max_versions=20 >/dev/null
+  write_kv_config
 
   cat >"${KV_POLICY_FILE}" <<POLICY
 path "${KV_MOUNT_POINT}/data/*" {
@@ -246,6 +281,8 @@ fi
 unseal_openbao
 
 export BAO_TOKEN="${ROOT_TOKEN}"
+
+wait_active
 
 if is_true "${VAULT_ENABLED}" && [ "${VAULT_BACKEND}" = "openbao" ]; then
   configure_kv_backend
