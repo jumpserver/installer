@@ -54,6 +54,32 @@ function get_db_images_file() {
   get_db_info "file"
 }
 
+function get_postgresql_schema() {
+  local schema
+  # Resolve the migration table using the application's connection search_path.
+  if ! schema=$(docker run --rm \
+    --env PGPASSWORD="${DB_PASSWORD}" \
+    -i --network=jms_net \
+    "${db_images}" \
+    psql -X -qAt -v ON_ERROR_STOP=1 \
+      -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" \
+      -c "
+        SELECT COALESCE(
+          (SELECT n.nspname FROM pg_class c
+           JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE c.oid = to_regclass('django_migrations')),
+          current_schema()
+        );"); then
+    return 1
+  fi
+  if [[ -z "${schema}" ]]; then
+    log_error "$(gettext 'Database schema does not exist')!" >&2
+    return 1
+  fi
+
+  printf '%s\n' "${schema}"
+}
+
 function get_db_info() {
   info_type=$1
   db_engine=$(get_config DB_ENGINE "mysql")

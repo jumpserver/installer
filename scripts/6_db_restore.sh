@@ -14,7 +14,60 @@ DB_USER=$(get_config DB_USER)
 DB_PASSWORD=$(get_config DB_PASSWORD)
 DB_NAME=$(get_config DB_NAME)
 
+function get_postgresql_reset_sql() {
+  cat <<'SQL'
+SELECT set_config('jumpserver.restore_schema', :'restore_schema', true);
+DO $reset_schema$
+DECLARE
+  schema_oid oid;
+  item record;
+BEGIN
+  SELECT oid INTO STRICT schema_oid FROM pg_catalog.pg_namespace
+  WHERE nspname = current_setting('jumpserver.restore_schema');
+
+  -- Drop all objects of each kind together so internal foreign keys and
+  -- view dependencies are handled by PostgreSQL. RESTRICT protects objects
+  -- outside this schema; an error rolls back the entire restore transaction.
+  FOR item IN
+    SELECT kind, string_agg(identity, ', ') AS identities
+    FROM (
+      SELECT CASE c.relkind
+               WHEN 'v' THEN 'VIEW' WHEN 'm' THEN 'MATERIALIZED VIEW'
+               WHEN 'S' THEN 'SEQUENCE' WHEN 'f' THEN 'FOREIGN TABLE' ELSE 'TABLE'
+             END AS kind, format('%I.%I', n.nspname, c.relname) AS identity
+      FROM pg_catalog.pg_class c
+      JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+      WHERE c.relnamespace = schema_oid AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+      UNION ALL
+      SELECT CASE p.prokind WHEN 'a' THEN 'AGGREGATE'
+               WHEN 'p' THEN 'PROCEDURE' ELSE 'FUNCTION' END,
+             format('%I.%I(%s)', n.nspname, p.proname,
+                    pg_catalog.pg_get_function_identity_arguments(p.oid))
+      FROM pg_catalog.pg_proc p
+      JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+      WHERE p.pronamespace = schema_oid
+      UNION ALL
+      SELECT 'TYPE', format('%I.%I', n.nspname, t.typname)
+      FROM pg_catalog.pg_type t
+      JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+      LEFT JOIN pg_catalog.pg_class c ON c.oid = t.typrelid
+      WHERE t.typnamespace = schema_oid
+        AND (t.typtype IN ('d', 'e', 'r', 'm') OR c.relkind = 'c'
+             OR (t.typtype = 'b' AND t.typelem = 0))
+    ) objects
+    GROUP BY kind
+    ORDER BY array_position(ARRAY['VIEW', 'MATERIALIZED VIEW', 'TABLE', 'FOREIGN TABLE', 'SEQUENCE',
+                                  'AGGREGATE', 'PROCEDURE', 'FUNCTION', 'TYPE'], kind)
+  LOOP
+    EXECUTE format('DROP %s IF EXISTS %s RESTRICT', item.kind, item.identities);
+  END LOOP;
+END
+$reset_schema$;
+SQL
+}
+
 function main() {
+  local reset_sql=""
   echo_warn "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
 
   if [[ ! -f "${DB_FILE}" ]]; then
@@ -63,23 +116,26 @@ function main() {
 
       pg_magic=$(dd if="${restore_file}" bs=1 count=5 2>/dev/null)
       if [[ "${pg_magic}" == "PGDMP" ]]; then
-        echo "$(gettext 'Resetting database schema before restore')..."
+        if ! restore_schema=$(get_postgresql_schema) ||
+          ! reset_sql=$(get_postgresql_reset_sql); then
+          [[ -n "${tmp_restore_file}" ]] && rm -f "${tmp_restore_file}"
+          exit 1
+        fi
       fi
 
       restore_cmd='
-        reset_pg_public_schema() {
-          PGPASSWORD="${DB_PASSWORD}" psql -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" \
-            -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();" \
-            -c "DROP SCHEMA IF EXISTS public CASCADE;" \
-            -c "CREATE SCHEMA public;" \
-            -c "GRANT ALL ON SCHEMA public TO public;" \
-            -c "GRANT ALL ON SCHEMA public TO \"${DB_USER}\";"
-        }
-
         magic=$(dd if="${RESTORE_FILE}" bs=1 count=5 2>/dev/null)
         if [[ "${magic}" == "PGDMP" ]]; then
-          reset_pg_public_schema
-          PGPASSWORD="${DB_PASSWORD}" pg_restore --disable-triggers --no-owner --exit-on-error -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" "${RESTORE_FILE}"
+          umask 077
+          restore_dir=$(mktemp -d) || exit 1
+          trap '\''rm -rf "${restore_dir}"'\'' EXIT
+          # Finish extracting the selected schema before touching the database.
+          pg_restore --schema="${RESTORE_SCHEMA}" --strict-names --no-owner \
+            --file="${restore_dir}/restore.sql" "${RESTORE_FILE}" || exit 1
+          PGPASSWORD="${DB_PASSWORD}" psql -X -v ON_ERROR_STOP=1 \
+            --single-transaction -v restore_schema="${RESTORE_SCHEMA}" \
+            -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" \
+            -f - -f "${restore_dir}/restore.sql"
         else
           PGPASSWORD="${DB_PASSWORD}" psql -q -v ON_ERROR_STOP=1 -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" < "${RESTORE_FILE}" >/dev/null
         fi
@@ -96,13 +152,13 @@ function main() {
     --env "DB_PASSWORD=${DB_PASSWORD}" --env "DB_NAME=${DB_NAME}" --env "DB_FILE=${DB_FILE}"
   )
   if [[ "${DB_ENGINE}" == "postgresql" ]]; then
-    docker_env+=(--env "RESTORE_FILE=${restore_file}")
+    docker_env+=(--env "RESTORE_FILE=${restore_file}" --env "RESTORE_SCHEMA=${restore_schema}")
   fi
 
   if ! docker run --rm "${docker_env[@]}" \
     -i --network=jms_net \
     -v "${BACKUP_DIR}:${BACKUP_DIR}" \
-    "${db_images}" bash -c "${restore_cmd}"; then
+    "${db_images}" bash -c "${restore_cmd}" <<< "${reset_sql}"; then
     [[ -n "${tmp_restore_file}" ]] && rm -f "${tmp_restore_file}"
     log_error "$(gettext 'Database recovery failed. Please check whether the database file is complete or try to recover manually')!"
     exit 1

@@ -130,18 +130,24 @@ function backup_main_db() {
       fi
       ;;
     postgresql)
+      local schema
+      schema=$(get_postgresql_schema) || return 1
+      # pg_dump accepts patterns; quote the schema name to match it literally.
+      schema="\"${schema//\"/\"\"}\""
       DB_FILE="${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).dump"
       local dump_cmd=(
         pg_dump
         --format=custom
         --no-owner
+        --schema="${schema}"
+        --strict-names
         -U "${DB_USER}"
         -h "${DB_HOST}"
         -p "${DB_PORT}"
         -d "${DB_NAME}"
       )
       for table in "${FULL_IGNORE_TABLES[@]}"; do
-        dump_cmd+=("--exclude-table-data=${table}")
+        dump_cmd+=("--exclude-table-data=${schema}.\"${table}\"")
       done
 
       if ! docker run --rm \
@@ -197,14 +203,17 @@ function backup_audits_mysql() {
 function backup_audits_postgresql() {
   local backup_file=$1
   local sql_file=${backup_file%.gz}
+  local schema
+  schema=$(get_postgresql_schema) || return 1
+  schema="\"${schema//\"/\"\"}\""
 
   local table_args=()
   local table
   for table in "${AUDITS_TABLES[@]}"; do
-    table_args+=("-t" "${table}")
+    table_args+=("-t" "${schema}.\"${table}\"")
   done
   for table in "${SHARED_BACKUP_TABLES[@]}"; do
-    table_args+=("-t" "${table}")
+    table_args+=("-t" "${schema}.\"${table}\"")
   done
 
   docker run --rm \
