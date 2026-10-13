@@ -200,6 +200,15 @@ function check_os() {
 function main() {
   check_os || return 3
 
+  if [[ -e /data/ha-toolkit/detaching ]]; then
+    case "${action}" in
+      start|restart|restart_db|upgrade|install|reconfig|config|down|uninstall)
+        echo "HA detach owns service state; continue or cancel the recorded task" >&2
+        return 1
+        ;;
+    esac
+  fi
+
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""
   elif [[ "${action}" == "install" || "${action}" == "config" || "${action}" == "reconfig" ]]; then
@@ -209,6 +218,9 @@ function main() {
     EXE=$(get_docker_compose_cmd_line)
   fi
   case "${action}" in
+  ha_business)
+    python3 "${SCRIPT_DIR}/ha-business.py" "${args[@]:1}"
+    ;;
   install)
     bash "${SCRIPT_DIR}/4_install_jumpserver.sh"
     ;;
