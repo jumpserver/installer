@@ -60,6 +60,9 @@ JDMC 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设�
 `${NAMESPACE:-jumpserver}/jdmc:${VERSION}`，从 `/dist` 提取并执行 JDMC 自带的
 `scripts/install.sh` 或 `scripts/upgrade.sh`。
 JDMC 与 Core 等自有组件使用相同的拉取和重标记规则，企业版离线包始终包含该镜像。
+安装或升级时会尝试安装 JDMC 的 HA 宿主机依赖；依赖安装失败或依赖脚本缺失时，
+仅输出警告，单机安装或升级继续。启用 HA 前必须补齐依赖；JDMC 的 HA
+`setup`、`prepare` 和 `install` 流程会再次检查并安装依赖，失败时中止 HA 部署。
 服务跟随 `jmsctl.sh start/stop/restart/status` 管理，日志可通过
 `./jmsctl.sh tail jdmc` 查看。安装器会为 Core 配置
 `JDMC_SOCK_PATH=/opt/jumpserver/data/unshare/jdmc.sock`；Core 根据企业版自动启用

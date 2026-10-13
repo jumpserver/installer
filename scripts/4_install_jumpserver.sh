@@ -121,12 +121,7 @@ function main() {
   }
   install_jdmc || {
     jdmc_status=$?
-    if [[ "${jdmc_status}" == "20" ]]; then
-      log_error "JDMC is installed, but required HA host dependencies are incomplete"
-      log_error "Resolve the dependency error above, then rerun ./jmsctl.sh install"
-    else
-      log_error "Failed to install JDMC"
-    fi
+    log_error "Failed to install JDMC"
     exit "${jdmc_status}"
   }
  
