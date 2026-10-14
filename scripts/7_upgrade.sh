@@ -337,22 +337,44 @@ function persist_installer_version() {
   mv -f "${tmp_file}" "${STATIC_ENV}"
 }
 
+function write_upgrade_recovery_state() {
+  local state=$1 tmp_file
+  [[ -n "${JDMC_UPGRADE_LOG_DIR:-}" ]] || return 0
+
+  tmp_file=$(mktemp "${JDMC_UPGRADE_LOG_DIR}/installer-recovery.XXXXXX") || return 1
+  if ! printf '%s\n' "${state}" >"${tmp_file}" || ! sync "${tmp_file}" || \
+    ! mv -f "${tmp_file}" "${JDMC_UPGRADE_LOG_DIR}/installer-recovery" || \
+    ! sync "${JDMC_UPGRADE_LOG_DIR}"; then
+    rm -f "${tmp_file}"
+    return 1
+  fi
+}
+
 function cleanup_failed_upgrade() {
-  local status=$?
+  local status=$? safe_to_restore=1
 
   if [[ "${status}" != "0" && "${UPGRADE_COMMITTED}" != "1" ]]; then
     if [[ "${UPGRADE_CONFIG_CHANGED}" == "1" && \
       "${UPGRADE_DATABASE_MIGRATION_STARTED}" == "0" && \
       -f "${backup_config_file:-}" ]]; then
-      if cp "${backup_config_file}" "${CONFIG_FILE}"; then
-        gen_safe_config >/dev/null
+      if cp "${backup_config_file}" "${CONFIG_FILE}" && gen_safe_config >/dev/null; then
         log_warn "Upgrade failed before database migration; restored ${CONFIG_FILE}"
       else
+        safe_to_restore=0
         log_error "Upgrade failed and ${CONFIG_FILE} could not be restored from ${backup_config_file}"
       fi
     elif [[ "${UPGRADE_DATABASE_MIGRATION_STARTED}" == "1" ]]; then
+      safe_to_restore=0
       log_warn "Upgrade stopped after database migration began; keep the upgraded configuration and retry the upgrade"
       log_warn "Pre-upgrade configuration backup: ${backup_config_file:-unknown}"
+    elif [[ "${UPGRADE_CONFIG_CHANGED}" == "1" ]]; then
+      safe_to_restore=0
+      log_error "Pre-upgrade configuration backup is missing; manual recovery is required"
+    fi
+    if [[ "${safe_to_restore}" == "1" ]]; then
+      write_upgrade_recovery_state safe_to_restore || log_error "Failed to persist upgrade recovery state"
+    else
+      write_upgrade_recovery_state recovery_required || log_error "Failed to persist upgrade recovery state"
     fi
   fi
 
@@ -472,6 +494,8 @@ function upgrade_compose() {
 
 function main() {
   local installer_version_before_upgrade target_version
+  trap cleanup_failed_upgrade EXIT
+  write_upgrade_recovery_state running || exit 1
   cd "${PROJECT_DIR}" || exit 1
 
   confirm="y"
@@ -517,16 +541,16 @@ function main() {
     log_error "Failed to back up the configuration file"
     exit 1
   fi
-  trap cleanup_failed_upgrade EXIT
-
-  echo_yellow "\n3. $(gettext 'Backup database')"
-  backup_db
-
-  echo_yellow "\n4. $(gettext 'Loading Docker Image')"
+  # Database backup starts a Core container using the target version.
+  # Load the offline images before that container is created.
+  echo_yellow "\n3. $(gettext 'Loading Docker Image')"
   if ! bash "${BASE_DIR}/3_load_images.sh"; then
     log_error "$(gettext 'Failed to load Docker images')"
     exit 1
   fi
+
+  echo_yellow "\n4. $(gettext 'Backup database')"
+  backup_db
 
   echo_yellow "\n5. $(gettext 'Update Configuration File')"
   UPGRADE_CONFIG_CHANGED=1
@@ -538,6 +562,7 @@ function main() {
 
   echo_yellow "\n6. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
+  write_upgrade_recovery_state recovery_required || exit 1
   UPGRADE_DATABASE_MIGRATION_STARTED=1
   db_migrations
 
