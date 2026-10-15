@@ -236,6 +236,11 @@ path "${SSH_CA_MOUNT_POINT}/sign/${SSH_CA_ROLE}" {
 path "${SSH_CA_MOUNT_POINT}/public_key" {
   capabilities = ["read"]
 }
+
+# Core checks the existing signing role when testing or saving SSH CA settings.
+path "${SSH_CA_MOUNT_POINT}/roles/${SSH_CA_ROLE}" {
+  capabilities = ["read"]
+}
 POLICY
 
   bao policy write jumpserver-ssh-ca "${SSH_CA_POLICY_FILE}" >/dev/null
