@@ -120,8 +120,9 @@ function main() {
     exit 1
   }
   install_jdmc || {
+    jdmc_status=$?
     log_error "Failed to install JDMC"
-    exit 1
+    exit "${jdmc_status}"
   }
  
   installation_log "install"

@@ -55,7 +55,7 @@ function get_config_or_env() {
   echo "${value}"
 }
 
-CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD VAULT_OPENBAO_TOKEN SSH_CA_OPENBAO_TOKEN"
+CONFIG_SAFE_EXCLUDES="DB_HOST DB_PORT DB_PASSWORD MYSQL_ROOT_PASSWORD MARIADB_ROOT_PASSWORD VAULT_OPENBAO_TOKEN SSH_CA_OPENBAO_TOKEN"
 
 function is_config_excluded() {
   local key=$1
@@ -154,21 +154,6 @@ function set_config() {
   mv -f "${tmp_file}" "${CONFIG_FILE}"
 }
 
-function ensure_config_secret() {
-  local key=$1
-  local byte_length=${2:-32}
-  local value
-
-  value=$(get_config "${key}")
-  if [[ -n "${value}" ]]; then
-    return 0
-  fi
-
-  value=$(random_secret "${byte_length}") || return 1
-  set_config "${key}" "${value}" || return 1
-  echo_check "${key} generated"
-}
-
 function remove_config() {
   key=$1
 
@@ -210,6 +195,7 @@ function prepare_jmsctl() {
 
 
 function prepare_config() {
+  local database_config database_config_name
   cd "${PROJECT_DIR}" || exit 1
   prepare_jmsctl
 
@@ -230,6 +216,24 @@ function prepare_config() {
   if [[ ! -f "./compose/.env" ]]; then
     ln -s "${CONFIG_FILE}" ./compose/.env
   fi
+
+  # Docker may have created a directory for a missing bind-mounted file.
+  # Replace only an empty placeholder; keep anything else for inspection.
+  for database_config_name in mariadb/mariadb.cnf mysql/my.cnf; do
+    database_config="${CONFIG_DIR}/${database_config_name}"
+    if [[ -L "${database_config}" ]]; then
+      log_error "Database configuration must not be a symlink: ${database_config}"
+      exit 1
+    elif [[ -d "${database_config}" ]]; then
+      if ! rmdir "${database_config}"; then
+        log_error "Database configuration path is a non-empty directory: ${database_config}"
+        exit 1
+      fi
+    elif [[ -e "${database_config}" && ! -f "${database_config}" ]]; then
+      log_error "Database configuration path is not a regular file: ${database_config}"
+      exit 1
+    fi
+  done
 
   # shellcheck disable=SC2045
   for d in $(ls "${PROJECT_DIR}/config_init"); do
@@ -273,6 +277,14 @@ function prepare_config() {
   find "${CONFIG_DIR}" -type d -exec chmod 700 {} \;
   find "${CONFIG_DIR}" -type f -exec chmod 600 {} \;
   chmod 644 "${CONFIG_DIR}/redis/redis.conf"
+  for database_config_name in mariadb/mariadb.cnf mysql/my.cnf; do
+    database_config="${CONFIG_DIR}/${database_config_name}"
+    if [[ ! -f "${database_config}" || -L "${database_config}" ]]; then
+      log_error "Database configuration file is missing or invalid: ${database_config}"
+      exit 1
+    fi
+    chmod 644 "${database_config}"
+  done
   if [[ -f "${CONFIG_DIR}/openbao/server.hcl" ]]; then
     chmod 644 "${CONFIG_DIR}/openbao/server.hcl"
   fi

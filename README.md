@@ -60,6 +60,9 @@ JDMC 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设�
 `${NAMESPACE:-jumpserver}/jdmc:${VERSION}`，从 `/dist` 提取并执行 JDMC 自带的
 `scripts/install.sh` 或 `scripts/upgrade.sh`。
 JDMC 与 Core 等自有组件使用相同的拉取和重标记规则，企业版离线包始终包含该镜像。
+安装或升级时会尝试安装 JDMC 的 HA 宿主机依赖；依赖安装失败或依赖脚本缺失时，
+仅输出警告，单机安装或升级继续。启用 HA 前必须补齐依赖；JDMC 的 HA
+`setup`、`prepare` 和 `install` 流程会再次检查并安装依赖，失败时中止 HA 部署。
 服务跟随 `jmsctl.sh start/stop/restart/status` 管理，日志可通过
 `./jmsctl.sh tail jdmc` 查看。安装器会为 Core 配置
 `JDMC_SOCK_PATH=/opt/jumpserver/data/unshare/jdmc.sock`；Core 根据企业版自动启用
@@ -102,6 +105,12 @@ PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通�
 
 ## 配置文件说明
 
+全新安装内置 MySQL 8.0 时，在 `config.txt` 中设置 `DB_ENGINE=mysql`、
+`DB_HOST=mysql` 和 `DB_IMAGE=mysql:8.0`；交互安装也会询问内置数据库镜像。
+不设置 `DB_IMAGE` 时，新安装沿用 MariaDB 10.6。已有的
+`VOLUME_DIR/mysql/data` 或 `VOLUME_DIR/mariadb/data` 决定继续使用原数据库，
+修改 `DB_IMAGE` 不会迁移已有数据。离线安装需自行提供所选数据库镜像。
+
 配置文件将会放在 /opt/jumpserver/config 中
 
 ```
@@ -130,3 +139,7 @@ PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通�
 config.txt 文件是环境变量配置文件，会挂载到各个容器中，这样可以不必为 koko、core 单独设置配置文件。
 
 具体可以参考： [JumpServer 参数说明文档](https://docs.jumpserver.org/zh/master/admin-guide/env/)
+
+## 许可证
+
+本项目采用 GNU General Public License version 3（GPLv3），与 [JumpServer 主库](https://github.com/jumpserver/jumpserver)保持一致。完整许可条款见 [LICENSE](LICENSE)。

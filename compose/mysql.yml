@@ -7,8 +7,10 @@ services:
     environment:
       TZ: ${TZ:-Asia/Shanghai}
       DB_PORT: $DB_PORT
-      MYSQL_ROOT_PASSWORD: $DB_PASSWORD
+      MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
       MYSQL_DATABASE: $DB_NAME
+      MYSQL_USER: $DB_USER
+      MYSQL_PASSWORD: $DB_PASSWORD
     volumes:
       - ${CONFIG_DIR}/mysql/my.cnf:/etc/mysql/my.cnf
       - ${VOLUME_DIR}/mysql/data:/var/lib/mysql

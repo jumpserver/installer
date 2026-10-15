@@ -69,12 +69,20 @@ function check_jdmc_runtime() {
 function ensure_jdmc_ha_dependencies() {
   local dependency_installer="${JDMC_INSTALL_DIR}/current/ha/scripts/install-dependencies.sh"
 
+  # HA dependencies are optional for standalone install/upgrade. HA setup,
+  # prepare and install enforce them again before deploying the cluster.
   if [[ ! -x "${dependency_installer}" ]]; then
-    log_error "JDMC HA dependency installer not found: ${dependency_installer}"
-    return 1
+    log_warn "JDMC HA dependency installer is missing: ${dependency_installer}; continuing standalone install/upgrade"
+    log_warn "Repair the JDMC package before enabling HA; HA deployment requires complete host dependencies"
+    return 0
   fi
   echo_yellow "\n>>> Installing JDMC HA host dependencies"
-  "${dependency_installer}"
+  if ! "${dependency_installer}"; then
+    log_warn "JDMC HA host dependencies are incomplete; continuing standalone install/upgrade"
+    log_warn "Before enabling HA, resolve the dependency error above and retry as root: \"${dependency_installer}\""
+    log_warn "HA deployment will check dependencies again and fail if they are still incomplete"
+  fi
+  return 0
 }
 
 function jdmc_unit_exists() {
@@ -260,7 +268,7 @@ function install_jdmc() {
 
   if check_current_jdmc_installed; then
     echo_check "JDMC is already installed"
-    ensure_jdmc_ha_dependencies || return 1
+    ensure_jdmc_ha_dependencies
     cleanup_jdmc_legacy_switches
     return $?
   fi
@@ -272,7 +280,7 @@ function install_jdmc() {
       echo_yellow "\n>>> Repairing or upgrading JDMC"
     fi
     run_jdmc_package_action upgrade || return 1
-    ensure_jdmc_ha_dependencies || return 1
+    ensure_jdmc_ha_dependencies
     configure_jdmc || return 1
     cleanup_jdmc_legacy_switches
     return $?
@@ -280,7 +288,7 @@ function install_jdmc() {
 
   echo_yellow "\n>>> Installing JDMC"
   run_jdmc_package_action install || return 1
-  ensure_jdmc_ha_dependencies || return 1
+  ensure_jdmc_ha_dependencies
   configure_jdmc || return 1
   cleanup_jdmc_legacy_switches
 }
@@ -299,7 +307,7 @@ function upgrade_jdmc() {
   else
     run_jdmc_package_action install || return 1
   fi
-  ensure_jdmc_ha_dependencies || return 1
+  ensure_jdmc_ha_dependencies
   configure_jdmc || return 1
   cleanup_jdmc_legacy_switches
 }

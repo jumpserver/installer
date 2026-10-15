@@ -18,7 +18,6 @@ function set_secret_key() {
     set_config BOOTSTRAP_TOKEN "${bootstrap_key}"
     echo_check "BOOTSTRAP_TOKEN generated"
   fi
-  ensure_config_secret CHAT_AI_DELEGATION_SECRET 32 || return 1
   if command -v hostname&>/dev/null; then
     SERVER_HOSTNAME=$(hostname)
     set_config SERVER_HOSTNAME "${SERVER_HOSTNAME}"
@@ -97,6 +96,15 @@ function set_internal_db() {
   local db_host=$2
   local db_port=$3
   local db_user=$4
+  local mysql_root_password
+  if [[ "${db_engine}" == "mysql" ]]; then
+    db_user="jumpserver"
+    mysql_root_password=$(get_config MYSQL_ROOT_PASSWORD)
+    if [[ -z "${mysql_root_password}" ]]; then
+      mysql_root_password=$(random_str 32)
+      set_config MYSQL_ROOT_PASSWORD "${mysql_root_password}"
+    fi
+  fi
   db_password=$(get_config DB_PASSWORD)
   if [[ -z "${db_password}" ]]; then
     db_password=$(random_str 26)
@@ -107,6 +115,24 @@ function set_internal_db() {
   fi
 
   set_db_config "${db_engine}" "${db_host}" "${db_port}" "${db_user}" "${db_password}" "${db_name}"
+}
+
+function set_internal_mysql_image() {
+  local volume_dir db_image
+  volume_dir=$(get_config VOLUME_DIR)
+  if [[ -d "${volume_dir}/mysql/data" || -d "${volume_dir}/mariadb/data" ]]; then
+    return 0
+  fi
+
+  db_image=$(get_config DB_IMAGE "mariadb:10.6")
+  read_from_input db_image "$(gettext 'Built-in database image')" "mariadb:10.6/mysql:8.0" "${db_image}"
+  case "${db_image}" in
+    mariadb:10.6|mysql:8.0) set_config DB_IMAGE "${db_image}" ;;
+    *)
+      log_error "Unsupported built-in database image: ${db_image}"
+      return 1
+      ;;
+  esac
 }
 
 function set_db() {
@@ -124,7 +150,8 @@ function set_db() {
       if [[ "${confirm}" == "y" ]]; then
         set_external_db "mysql"
       else
-        set_internal_db "mysql" "mysql" "3306" "root"
+        set_internal_mysql_image || return 1
+        set_internal_db "mysql" "mysql" "3306" "jumpserver"
       fi
       ;;
     postgresql)

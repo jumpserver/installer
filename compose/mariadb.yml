@@ -7,8 +7,10 @@ services:
     environment:
       TZ: ${TZ:-Asia/Shanghai}
       DB_PORT: $DB_PORT
-      MARIADB_ROOT_PASSWORD: $DB_PASSWORD
+      MARIADB_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
       MARIADB_DATABASE: $DB_NAME
+      MARIADB_USER: $DB_USER
+      MARIADB_PASSWORD: $DB_PASSWORD
     volumes:
       - ${CONFIG_DIR}/mariadb/mariadb.cnf:/etc/mysql/mariadb.cnf
       - ${VOLUME_DIR}/mariadb/data:/var/lib/mysql

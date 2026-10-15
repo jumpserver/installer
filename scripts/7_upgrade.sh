@@ -85,6 +85,57 @@ function migrate_database_expose_config() {
   check_and_set_config "MYSQL_EXPOSE_PORT" "3306"
 }
 
+function migrate_internal_mysql_business_account() {
+  local engine host user database old_password root_password business_password container_root
+  engine=$(get_config DB_ENGINE)
+  host=$(get_config DB_HOST)
+  [[ "${engine,,}" == "mysql" && "${host}" == "mysql" ]] || return 0
+
+  user=$(get_config DB_USER)
+  old_password=$(get_config DB_PASSWORD)
+  root_password=$(get_config MYSQL_ROOT_PASSWORD)
+  if [[ -z "${root_password}" ]]; then
+    container_root=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' jms_mysql 2>/dev/null |
+      awk -F= '$1 == "MYSQL_ROOT_PASSWORD" || $1 == "MARIADB_ROOT_PASSWORD" {sub(/^[^=]*=/, ""); print; exit}' || true)
+    root_password="${container_root:-${old_password}}"
+    [[ -n "${root_password}" ]] || {
+      log_error "Built-in MySQL root password is missing"
+      return 1
+    }
+    set_config MYSQL_ROOT_PASSWORD "${root_password}"
+  fi
+  [[ "${user,,}" == "root" ]] || return 0
+
+  database=$(get_config DB_NAME jumpserver)
+  [[ "${database}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || {
+    log_error "Built-in MySQL database name is not safe for automatic account migration"
+    return 1
+  }
+  docker inspect jms_mysql >/dev/null 2>&1 || {
+    log_error "Built-in MySQL container is unavailable for application-account migration"
+    return 1
+  }
+  business_password=$(random_str 32)
+  printf '%s\n%s\n' "${old_password}" "${business_password}" | docker exec -i \
+    -e JMS_MIGRATE_DB_NAME="${database}" jms_mysql bash -ceu '
+      IFS= read -r fallback_root_password
+      IFS= read -r business_password
+      root_password="${MARIADB_ROOT_PASSWORD:-${MYSQL_ROOT_PASSWORD:-${fallback_root_password}}}"
+      [ -n "${root_password}" ] && [ -n "${business_password}" ]
+      export MYSQL_PWD="${root_password}"
+      quote="$(printf "\\047")"
+      escaped_password="${business_password//${quote}/${quote}${quote}}"
+      sql="CREATE USER IF NOT EXISTS ${quote}jumpserver${quote}@${quote}%${quote} IDENTIFIED BY ${quote}${escaped_password}${quote}; ALTER USER ${quote}jumpserver${quote}@${quote}%${quote} IDENTIFIED BY ${quote}${escaped_password}${quote}; GRANT ALL PRIVILEGES ON \`${JMS_MIGRATE_DB_NAME}\`.* TO ${quote}jumpserver${quote}@${quote}%${quote}; FLUSH PRIVILEGES;"
+      printf "%s\n" "${sql}" | mysql -h 127.0.0.1 -u root --batch --skip-column-names >/dev/null 2>&1
+    ' || {
+      log_error "Failed to create the non-privileged built-in MySQL application account"
+      return 1
+    }
+  set_config DB_USER jumpserver
+  set_config DB_PASSWORD "${business_password}"
+  echo_check "Migrated built-in MySQL from the root login to a dedicated JumpServer account"
+}
+
 function remove_obsolete_containers() {
   local container existing_containers
   local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_kael" "jms_magnus" "jms_video" "jms_lion" "jms_facelive" "jms_panda")
@@ -129,9 +180,9 @@ function upgrade_config() {
   check_and_set_config "KOKO_WEB_PROXY_PORT" "5001"
   check_and_set_config "WEB_PROXY_ALLOWED_HOSTS" "localhost,127.0.0.1"
   migrate_database_expose_config
+  migrate_internal_mysql_business_account || return 1
   check_and_set_config "USE_LB" "1"
   check_and_set_config "VERIFY_EXTERNAL_SSL" "false"
-  ensure_config_secret CHAT_AI_DELEGATION_SECRET 32 || return 1
   # XPACK
   use_xpack=$(get_config_or_env USE_XPACK)
   if [[ "${use_xpack}" == "1" ]]; then
@@ -286,22 +337,44 @@ function persist_installer_version() {
   mv -f "${tmp_file}" "${STATIC_ENV}"
 }
 
+function write_upgrade_recovery_state() {
+  local state=$1 tmp_file
+  [[ -n "${JDMC_UPGRADE_LOG_DIR:-}" ]] || return 0
+
+  tmp_file=$(mktemp "${JDMC_UPGRADE_LOG_DIR}/installer-recovery.XXXXXX") || return 1
+  if ! printf '%s\n' "${state}" >"${tmp_file}" || ! sync "${tmp_file}" || \
+    ! mv -f "${tmp_file}" "${JDMC_UPGRADE_LOG_DIR}/installer-recovery" || \
+    ! sync "${JDMC_UPGRADE_LOG_DIR}"; then
+    rm -f "${tmp_file}"
+    return 1
+  fi
+}
+
 function cleanup_failed_upgrade() {
-  local status=$?
+  local status=$? safe_to_restore=1
 
   if [[ "${status}" != "0" && "${UPGRADE_COMMITTED}" != "1" ]]; then
     if [[ "${UPGRADE_CONFIG_CHANGED}" == "1" && \
       "${UPGRADE_DATABASE_MIGRATION_STARTED}" == "0" && \
       -f "${backup_config_file:-}" ]]; then
-      if cp "${backup_config_file}" "${CONFIG_FILE}"; then
-        gen_safe_config >/dev/null
+      if cp "${backup_config_file}" "${CONFIG_FILE}" && gen_safe_config >/dev/null; then
         log_warn "Upgrade failed before database migration; restored ${CONFIG_FILE}"
       else
+        safe_to_restore=0
         log_error "Upgrade failed and ${CONFIG_FILE} could not be restored from ${backup_config_file}"
       fi
     elif [[ "${UPGRADE_DATABASE_MIGRATION_STARTED}" == "1" ]]; then
+      safe_to_restore=0
       log_warn "Upgrade stopped after database migration began; keep the upgraded configuration and retry the upgrade"
       log_warn "Pre-upgrade configuration backup: ${backup_config_file:-unknown}"
+    elif [[ "${UPGRADE_CONFIG_CHANGED}" == "1" ]]; then
+      safe_to_restore=0
+      log_error "Pre-upgrade configuration backup is missing; manual recovery is required"
+    fi
+    if [[ "${safe_to_restore}" == "1" ]]; then
+      write_upgrade_recovery_state safe_to_restore || log_error "Failed to persist upgrade recovery state"
+    else
+      write_upgrade_recovery_state recovery_required || log_error "Failed to persist upgrade recovery state"
     fi
   fi
 
@@ -421,6 +494,8 @@ function upgrade_compose() {
 
 function main() {
   local installer_version_before_upgrade target_version
+  trap cleanup_failed_upgrade EXIT
+  write_upgrade_recovery_state running || exit 1
   cd "${PROJECT_DIR}" || exit 1
 
   confirm="y"
@@ -466,16 +541,16 @@ function main() {
     log_error "Failed to back up the configuration file"
     exit 1
   fi
-  trap cleanup_failed_upgrade EXIT
-
-  echo_yellow "\n3. $(gettext 'Backup database')"
-  backup_db
-
-  echo_yellow "\n4. $(gettext 'Loading Docker Image')"
+  # Database backup starts a Core container using the target version.
+  # Load the offline images before that container is created.
+  echo_yellow "\n3. $(gettext 'Loading Docker Image')"
   if ! bash "${BASE_DIR}/3_load_images.sh"; then
     log_error "$(gettext 'Failed to load Docker images')"
     exit 1
   fi
+
+  echo_yellow "\n4. $(gettext 'Backup database')"
+  backup_db
 
   echo_yellow "\n5. $(gettext 'Update Configuration File')"
   UPGRADE_CONFIG_CHANGED=1
@@ -487,6 +562,7 @@ function main() {
 
   echo_yellow "\n6. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
+  write_upgrade_recovery_state recovery_required || exit 1
   UPGRADE_DATABASE_MIGRATION_STARTED=1
   db_migrations
 
@@ -499,8 +575,9 @@ function main() {
     exit 1
   }
   upgrade_jdmc || {
+    jdmc_status=$?
     log_error "Failed to upgrade JDMC"
-    exit 1
+    exit "${jdmc_status}"
   }
 
   persist_installer_version || {
