@@ -4,23 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       docker_version:
-        description: 'Docker version to sync and write to const.sh (blank: keep current)'
-        required: false
+        description: 'Docker version (blank: keep current)'
         type: string
       docker_compose_version:
         description: 'Compose version, with or without v (blank: keep current)'
-        required: false
         type: string
   push:
     branches: [dev, master, main, 'v*']
-    paths:
-      - scripts/const.sh
-      - utils/prepare_docker_mirror.sh
-      - utils/update_docker_versions.py
-      - .github/workflows/oss-sync.yml
+    paths: [scripts/const.sh, .github/workflows/oss-sync.yml]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: docker-binaries-oss
@@ -36,92 +30,89 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[docker-mirror-synced]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    permissions:
-      contents: write
     steps:
-      - name: Check update target
-        if: github.event_name == 'workflow_dispatch' && (inputs.docker_version != '' || inputs.docker_compose_version != '')
-        env:
-          REF_TYPE: ${{ github.ref_type }}
-        run: |
-          if [[ "${REF_TYPE}" != branch ]]; then
-            echo '::error::Select a branch to update const.sh; tags cannot be updated.'
-            exit 1
-          fi
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PRIVATE_TOKEN || github.token }}
 
-      - name: Check OSS credentials
+      - name: Download binaries and update const.sh
         env:
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          DOCKER_INPUT: ${{ inputs.docker_version }}
+          COMPOSE_INPUT: ${{ inputs.docker_compose_version }}
         run: |
           set -euo pipefail
-          if [[ -z "${OSS_ACCESS_KEY_ID}" || -z "${OSS_ACCESS_KEY_SECRET}" ]]; then
-            echo '::error::Set OSS_ACCESS_KEY_ID and OSS_ACCESS_KEY_SECRET in repository Actions secrets.'
+          unset DOCKER_BIN_HOST DOCKER_IMAGE_MIRROR
+          . scripts/const.sh
+          docker_version=${DOCKER_INPUT:-${DOCKER_VERSION}}
+          docker_version=${docker_version#v}
+          compose_version=${COMPOSE_INPUT:-${DOCKER_COMPOSE_VERSION}}
+          compose_version=${compose_version#v}
+          for version in "${docker_version}" "${compose_version}"; do
+            [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9][a-zA-Z0-9.-]*)?$ ]] || { echo "Invalid version: ${version}"; exit 1; }
+          done
+          compose_version="v${compose_version}"
+          if [[ ( -n "${DOCKER_INPUT}" || -n "${COMPOSE_INPUT}" ) && "${GITHUB_REF_TYPE}" != branch ]]; then
+            echo 'Select a branch to update const.sh.'
             exit 1
           fi
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Download installer dependencies and generate checksums
-        env:
-          DOCKER_VERSION_INPUT: ${{ inputs.docker_version }}
-          COMPOSE_VERSION_INPUT: ${{ inputs.docker_compose_version }}
-        run: |
-          bash utils/prepare_docker_mirror.sh "${RUNNER_TEMP}/docker-mirror" \
-            "${DOCKER_VERSION_INPUT}" "${COMPOSE_VERSION_INPUT}"
+          for arch in x86_64 aarch64; do
+            export BUILD_ARCH=${arch}
+            . scripts/const.sh
+            for component in docker compose; do
+              if [[ "${component}" == docker ]]; then
+                version=${docker_version} current=${DOCKER_VERSION}
+                key=DOCKER_BIN_SHA256 expected=${DOCKER_BIN_SHA256}
+                url="https://download.docker.com/linux/static/stable/${arch}/docker-${version}.tgz"
+              else
+                version=${compose_version} current=${DOCKER_COMPOSE_VERSION}
+                key=COMPOSE_BIN_SHA256 expected=${COMPOSE_BIN_SHA256}
+                url="https://github.com/docker/compose/releases/download/${version}/docker-compose-linux-${arch}"
+              fi
+              path=${url#https://}
+              file="${RUNNER_TEMP}/docker-mirror/${path#*/}"
+              mkdir -p "$(dirname "${file}")"
+              curl -fsSL --retry 3 --connect-timeout 20 --max-time 600 "${url}" -o "${file}"
+              sha=$(sha256sum "${file}" | awk '{print $1}')
+              if [[ "${version}" == "${current}" && "${sha}" != "${expected}" ]]; then
+                echo "SHA-256 verification failed: ${url}"
+                exit 1
+              fi
+              echo "${sha}" > "${file}.sha256"
+              md5sum "${file}" | awk '{print $1}' > "${file}.md5"
+              sed -i -E "s/^  [^:]+:${arch}\) ${key}=.* ;;/  ${version}:${arch}) ${key}=${sha} ;;/" scripts/const.sh
+            done
+          done
+          sed -i -E "s/^export DOCKER_VERSION=.*/export DOCKER_VERSION=${docker_version}/; s/^export DOCKER_COMPOSE_VERSION=.*/export DOCKER_COMPOSE_VERSION=${compose_version}/" scripts/const.sh
+          bash -n scripts/const.sh
 
       - name: Install ossutil
         run: |
           set -euo pipefail
           archive="${RUNNER_TEMP}/ossutil.zip"
-          curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 300 \
-            https://gosspublic.alicdn.com/ossutil/v2/2.4.0/ossutil-2.4.0-linux-amd64.zip \
-            -o "${archive}"
+          curl -fsSL --retry 3 --max-time 300 \
+            https://gosspublic.alicdn.com/ossutil/v2/2.4.0/ossutil-2.4.0-linux-amd64.zip -o "${archive}"
           echo "85edf66b2fb7238f5c7e25cab820cf29312319fe4935b7c86a6b8485eb434f3c  ${archive}" | sha256sum --check
           unzip -q "${archive}" -d "${RUNNER_TEMP}/ossutil"
           chmod +x "${RUNNER_TEMP}/ossutil/ossutil-2.4.0-linux-amd64/ossutil"
           echo "${RUNNER_TEMP}/ossutil/ossutil-2.4.0-linux-amd64" >> "${GITHUB_PATH}"
 
-      - name: Upload verified files to OSS
+      - name: Upload to OSS
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         run: |
-          set -euo pipefail
-          cd "${RUNNER_TEMP}/docker-mirror"
-          while IFS= read -r -d '' file; do
-            ossutil cp "${file}" "oss://${OSS_BUCKET}/${file#./}" --force
-          done < <(find linux docker -type f -print0)
+          : "${OSS_ACCESS_KEY_ID:?Set OSS_ACCESS_KEY_ID in repository secrets}"
+          : "${OSS_ACCESS_KEY_SECRET:?Set OSS_ACCESS_KEY_SECRET in repository secrets}"
+          ossutil cp -rf "${RUNNER_TEMP}/docker-mirror/" "oss://${OSS_BUCKET}/"
 
-      - name: Commit versions and checksums to selected branch
+      - name: Commit versions to selected branch
         if: github.event_name == 'workflow_dispatch' && (inputs.docker_version != '' || inputs.docker_compose_version != '')
-        env:
-          GH_TOKEN: ${{ secrets.PRIVATE_TOKEN || github.token }}
-          TARGET_BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          cp "${RUNNER_TEMP}/docker-mirror/const.sh" scripts/const.sh
-          bash -n scripts/const.sh
-          git diff --check
-          if git diff --quiet -- scripts/const.sh; then
-            echo 'OSS sync completed. const.sh is already up to date.' >> "${GITHUB_STEP_SUMMARY}"
-            exit 0
-          fi
+          git diff --quiet -- scripts/const.sh && exit 0
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- scripts/const.sh
           git commit -m 'chore: update Docker and Compose versions [docker-mirror-synced]'
-          gh auth setup-git
-          if ! git push origin "HEAD:refs/heads/${TARGET_BRANCH}"; then
-            echo '::error::OSS upload succeeded, but const.sh could not be pushed. Check token write access, branch protection, and concurrent branch updates.'
-            exit 1
-          fi
-          {
-            printf 'Updated `scripts/const.sh` on `%s` after successful OSS upload.\n\n' "${TARGET_BRANCH}"
-            echo '```diff'
-            git show --format= -- scripts/const.sh
-            echo '```'
-          } >> "${GITHUB_STEP_SUMMARY}"
+          git push origin "HEAD:refs/heads/${GITHUB_REF_NAME}"
