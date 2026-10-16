@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: docker-binaries-oss
@@ -106,13 +107,21 @@ jobs:
           : "${OSS_ACCESS_KEY_SECRET:?Set OSS_ACCESS_KEY_SECRET in repository secrets}"
           ossutil cp -rf "${RUNNER_TEMP}/docker-mirror/" "oss://${OSS_BUCKET}/"
 
-      - name: Commit versions to selected branch
+      - name: Create version update PR
         if: github.event_name == 'workflow_dispatch' && (inputs.docker_version != '' || inputs.docker_compose_version != '')
+        env:
+          GH_TOKEN: ${{ secrets.PRIVATE_TOKEN || github.token }}
         run: |
           set -euo pipefail
           git diff --quiet -- scripts/const.sh && exit 0
+          branch="pr@${GITHUB_REF_NAME}@docker-versions-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git switch -c "${branch}"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- scripts/const.sh
           git commit -m 'chore: update Docker and Compose versions [docker-mirror-synced]'
-          git push origin "HEAD:refs/heads/${GITHUB_REF_NAME}"
+          git push -u origin "${branch}"
+          gh pr create --base "${GITHUB_REF_NAME}" --head "${branch}" \
+            --title 'chore: update Docker and Compose versions' \
+            --body 'Update the versions and SHA-256 in const.sh after successfully uploading the binaries to OSS.' \
+            || gh pr view "${branch}" --json url --jq .url
