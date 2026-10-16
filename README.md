@@ -6,6 +6,43 @@ JumpServer Installer 用来安装和管理 JumpServer。
   - Linux x86_64
   - Kernel 大于 4.0
 
+## Docker / Compose 下载与 OSS 同步
+
+二进制下载地址直接在 `scripts/const.sh` 中定义。环境变量 `DOCKER_IMAGE_MIRROR=1`
+会将 Docker 和 Compose 的下载域名切换为 `https://download.jumpserver.org`；
+未启用该开关时，可通过环境变量 `DOCKER_BIN_HOST` 指定其他下载域名。
+安装器始终使用 `scripts/const.sh` 中固定的 SHA-256 校验下载内容。
+
+GitHub Actions 的 **Sync Docker Binaries to OSS** 自动读取该文件的版本号及
+两种架构（`x86_64`、`aarch64`）的 SHA-256，从官方源下载并校验全部文件后，
+上传二进制及 `.sha256`、`.md5` 文件到北京地域的 `jms-pkg` bucket。
+对象路径保留官方 URL 去掉域名后的部分：
+
+```text
+oss://jms-pkg/linux/static/stable/<arch>/docker-<version>.tgz
+oss://jms-pkg/docker/compose/releases/download/<version>/docker-compose-linux-<arch>
+```
+
+在 installer 仓库的 **Settings → Secrets and variables → Actions** 中添加：
+
+- `OSS_ACCESS_KEY_ID`
+- `OSS_ACCESS_KEY_SECRET`
+
+凭证通过 ossutil 环境变量传入，不写入仓库或配置文件。RAM 授权范围应覆盖
+`jms-pkg/linux/static/stable/*` 和 `jms-pkg/docker/compose/releases/download/*`
+的对象写入及上传所需权限。
+
+向 `dev`、`master`、`main` 或 `v*` 分支推送版本配置、同步脚本或 Workflow
+的变更时自动同步，也可在 Actions 页面手动 **Run workflow**，同步所选分支
+声明的版本。升级版本时需一并更新两种架构的 SHA-256，无需修改 Workflow。
+上传逐文件执行，不删除历史版本或 bucket 中的其他对象。
+
+本地仅下载和校验、不上传的检查方式：
+
+```bash
+bash utils/prepare_docker_mirror.sh /tmp/docker-mirror
+```
+
 ## 安装部署
 
 ```bash
