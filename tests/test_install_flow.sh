@@ -20,7 +20,6 @@ function prepare_case() {
   export CONFIG_FILE="${JS_CONFIG_DIR}/config.txt"
   export INSTALL_FLOW_EVENTS="${case_dir}/events"
   export FAIL_STAGE=''
-  export UPGRADE_STATUS=0
   mkdir -p "${installer_dir}/scripts" "${installer_dir}/compose" "${case_dir}/bin" \
     "${JS_CONFIG_DIR}" "${case_dir}/volume"
   : >"${INSTALL_FLOW_EVENTS}"
@@ -94,11 +93,8 @@ record_stage images
 EOF
   cat >"${installer_dir}/scripts/7_upgrade.sh" <<'EOF'
 #!/usr/bin/env bash
-. "$(dirname "$0")/utils.sh"
-[[ -L "${PROJECT_DIR}/.env" && "${PROJECT_DIR}/.env" -ef "${CONFIG_FILE}" ]] || exit 97
-[[ -L "${PROJECT_DIR}/compose/.env" && "${PROJECT_DIR}/compose/.env" -ef "${CONFIG_FILE}" ]] || exit 97
-record_stage upgrade
-exit "${UPGRADE_STATUS}"
+printf 'Install must not automatically switch to upgrade\n' >&2
+exit 99
 EOF
 
   # The bootstrap scripts target Linux and /opt. Keep those operations inside
@@ -126,25 +122,39 @@ EOF
 for quick_script in quick_start.sh cn-quick_start.sh; do
   prepare_case "${quick_script}"
   printf 'CURRENT_VERSION=v5.0.0-ce\n' >>"${CONFIG_FILE}"
-  cp "${CONFIG_FILE}" "${case_dir}/original.conf"
+  mkdir -p "${case_dir}/volume/mariadb/data"
+  set_config DB_PORT 4406
   sed "s@/opt@${case_dir}/opt@g" "${TEST_ROOT}/${quick_script}" >"${case_dir}/quick.sh"
   VERSION=regression bash "${case_dir}/quick.sh" >"${case_dir}/output.log" 2>&1
-  assert_eq $'upgrade:v5.0.0-ce\nstart:v5.0.0-ce' "$(cat "${INSTALL_FLOW_EVENTS}")" \
-    "${quick_script} must upgrade an existing installation before starting it"
-  cmp -s "${CONFIG_FILE}" "${case_dir}/original.conf" || fail 'bootstrap must not reconfigure the old installation'
+  assert_eq $'prepare:v5.0.0-ce\ndocker-prepare:v5.0.0-ce\nimages:v5.0.0-ce\nmigrations:v5.0.0-ce\njdmc:v5.0.0-ce\nsuccess-install:v5.1.0-ce\nstart:v5.1.0-ce' \
+    "$(cat "${INSTALL_FLOW_EVENTS}")" "${quick_script} must preserve the install entry point when a version marker exists"
+  assert_eq root "$(get_config DB_USER)" 'bootstrap must preserve the existing database user'
+  assert_eq legacy-password "$(get_config DB_PASSWORD)" 'bootstrap must preserve the existing database password'
+  assert_eq 4406 "$(get_config DB_PORT)" 'bootstrap must preserve the existing database port'
+  assert_eq '' "$(get_config MYSQL_ROOT_PASSWORD)" 'bootstrap must not invent a root password for existing data'
 done
-printf 'PASS: both bootstrap scripts route existing installations through upgrade\n'
+printf 'PASS: both bootstrap scripts preserve existing credentials without automatic upgrade dispatch\n'
 
-prepare_case failed-upgrade
-printf 'CURRENT_VERSION=v5.0.0-ce\n' >>"${CONFIG_FILE}"
-cp "${CONFIG_FILE}" "${case_dir}/original.conf"
-export UPGRADE_STATUS=23
+prepare_case resume-failed-install
+printf 'CURRENT_VERSION=v5.1.0-ce\n' >>"${CONFIG_FILE}"
+mkdir -p "${case_dir}/volume/mysql/data"
+export FAIL_STAGE=images
 status=0
 bash "${installer_dir}/jmsctl.sh" install >"${case_dir}/output.log" 2>&1 || status=$?
-assert_eq 23 "${status}" 'direct install must propagate upgrade failure'
-cmp -s "${CONFIG_FILE}" "${case_dir}/original.conf" || fail 'failed upgrade dispatch must preserve the original configuration'
-assert_eq 'upgrade:v5.0.0-ce' "$(cat "${INSTALL_FLOW_EVENTS}")" 'failed upgrade must not run installation stages'
-printf 'PASS: direct install preserves the old version and credentials on upgrade failure\n'
+assert_eq 1 "${status}" 'direct install must propagate installation failure'
+assert_eq v5.1.0-ce "$(get_config CURRENT_VERSION)" 'failed installation must preserve an existing version marker'
+assert_eq root "$(get_config DB_USER)" 'failed installation must preserve existing database credentials'
+assert_eq legacy-password "$(get_config DB_PASSWORD)" 'failed installation must preserve the existing password'
+assert_eq $'prepare:v5.1.0-ce\ndocker-prepare:v5.1.0-ce\nimages:v5.1.0-ce' \
+  "$(cat "${INSTALL_FLOW_EVENTS}")" 'an existing version marker must not redirect a failed installation to upgrade'
+export FAIL_STAGE=''
+: >"${INSTALL_FLOW_EVENTS}"
+bash "${installer_dir}/jmsctl.sh" install >"${case_dir}/output.log" 2>&1
+assert_eq v5.1.0-ce "$(get_config CURRENT_VERSION)" 'resumed installation must update the version after success'
+assert_eq root "$(get_config DB_USER)" 'resumed installation must preserve the database user'
+assert_eq legacy-password "$(get_config DB_PASSWORD)" 'resumed installation must preserve the database password'
+assert_eq '' "$(get_config MYSQL_ROOT_PASSWORD)" 'resumed installation must not invent a root password'
+printf 'PASS: failed installations with existing version markers can resume without losing credentials\n'
 
 for db_user in root jumpserver_existing; do
   prepare_case "reconfigure-${db_user}"

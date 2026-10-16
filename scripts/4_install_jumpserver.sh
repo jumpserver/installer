@@ -84,13 +84,6 @@ function post_install() {
 }
 
 function main() {
-  local current_version
-  current_version=$(get_config CURRENT_VERSION)
-  if [[ -n "${current_version}" ]]; then
-    echo_yellow "$(gettext 'Existing installation detected, switching to upgrade'): ${current_version}"
-    exec bash "${PROJECT_DIR}/jmsctl.sh" upgrade
-  fi
-
   echo_logo
   pre_install
   prepare_config
