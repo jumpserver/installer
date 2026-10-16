@@ -31,11 +31,17 @@ printf 'PASS: const.sh official and mirror URLs, arm64 alias and custom host\n'
 fixture="${test_dir}/fixture"
 mkdir -p "${fixture}/scripts" "${fixture}/utils" "${test_dir}/bin"
 cp "${TEST_ROOT}/utils/prepare_docker_mirror.sh" "${fixture}/utils/"
+cp "${TEST_ROOT}/utils/update_docker_versions.py" "${fixture}/utils/"
 cp "${TEST_ROOT}/scripts/const.sh" "${fixture}/scripts/"
 cp "${TEST_ROOT}/static.env" "${fixture}/"
 fixture_sha=$(printf 'mirror fixture\n' | shasum -a 256 | awk '{print $1}')
-printf '\nexport DOCKER_BIN_SHA256=%s COMPOSE_BIN_SHA256=%s\n' \
-  "${fixture_sha}" "${fixture_sha}" >>"${fixture}/scripts/const.sh"
+python3 - "${fixture}/scripts/const.sh" "${fixture_sha}" <<'PY'
+from pathlib import Path
+import re
+import sys
+const = Path(sys.argv[1])
+const.write_text(re.sub(r'(?<==)[a-f0-9]{64}(?= ;;)', sys.argv[2], const.read_text()))
+PY
 
 cat >"${test_dir}/bin/curl" <<'MOCK'
 #!/usr/bin/env bash
@@ -82,3 +88,49 @@ fi
 assert_contains "$(cat "${test_dir}/bad.log")" 'SHA-256 verification failed'
 assert_eq 0 "$(find "${test_dir}/bad" -type f | wc -l | tr -d ' ')"
 printf 'PASS: official-source staging, exact OSS paths, checksums and corrupt-download rejection\n'
+
+cp "${fixture}/scripts/const.sh" "${test_dir}/original-const.sh"
+bash "${fixture}/utils/prepare_docker_mirror.sh" "${test_dir}/new-versions" v30.0.1 2.41.1
+bash -n "${test_dir}/new-versions/const.sh"
+cmp -s "${fixture}/scripts/const.sh" "${test_dir}/original-const.sh" || fail 'Staging must not change source const.sh'
+cp "${test_dir}/new-versions/const.sh" "${fixture}/scripts/const.sh"
+(
+  unset DOCKER_BIN_HOST DOCKER_IMAGE_MIRROR
+  for arch in x86_64 aarch64; do
+    export BUILD_ARCH=${arch}
+    . "${fixture}/scripts/const.sh"
+    assert_eq 30.0.1 "${DOCKER_VERSION}"
+    assert_eq v2.41.1 "${DOCKER_COMPOSE_VERSION}"
+    assert_eq "${fixture_sha}" "${DOCKER_BIN_SHA256}"
+    assert_eq "${fixture_sha}" "${COMPOSE_BIN_SHA256}"
+  done
+)
+
+# One input preserves the other component and its pinned checksums.
+bash "${fixture}/utils/prepare_docker_mirror.sh" "${test_dir}/compose-only" '' v2.42.0
+grep -q '^export DOCKER_VERSION=30.0.1$' "${test_dir}/compose-only/const.sh" || fail 'Keep Docker when input is blank'
+grep -q '^export DOCKER_COMPOSE_VERSION=v2.42.0$' "${test_dir}/compose-only/const.sh" || fail 'Update Compose'
+bash "${fixture}/utils/prepare_docker_mirror.sh" "${test_dir}/docker-only" 30.0.2 ''
+grep -q '^export DOCKER_VERSION=30.0.2$' "${test_dir}/docker-only/const.sh" || fail 'Update Docker'
+grep -q '^export DOCKER_COMPOSE_VERSION=v2.41.1$' "${test_dir}/docker-only/const.sh" || fail 'Keep Compose when input is blank'
+bash "${fixture}/utils/prepare_docker_mirror.sh" "${test_dir}/unchanged" 30.0.1 2.41.1
+cmp -s "${fixture}/scripts/const.sh" "${test_dir}/unchanged/const.sh" || fail 'Repeated versions must be a no-op'
+
+cp "${MOCK_CURL_LOG}" "${test_dir}/calls-before-invalid"
+if bash "${fixture}/utils/prepare_docker_mirror.sh" "${test_dir}/invalid" '30.0.1; touch unwanted' '' >"${test_dir}/invalid.log" 2>&1; then
+  fail 'Malformed version inputs must fail'
+fi
+cmp -s "${MOCK_CURL_LOG}" "${test_dir}/calls-before-invalid" || fail 'Validate versions before downloading'
+assert_contains "$(cat "${test_dir}/invalid.log")" 'Invalid version'
+
+if MOCK_CORRUPT=1 bash "${fixture}/utils/prepare_docker_mirror.sh" "${test_dir}/corrupt-unchanged" '' v2.42.0 >"${test_dir}/corrupt-unchanged.log" 2>&1; then
+  fail 'Updating Compose must still verify the unchanged Docker binary'
+fi
+[[ ! -e "${test_dir}/corrupt-unchanged/const.sh" ]] || fail 'Failed downloads must not generate a candidate'
+printf 'tampered\n' >>"${test_dir}/new-versions/linux/static/stable/x86_64/docker-30.0.1.tgz"
+rm "${test_dir}/new-versions/const.sh"
+if python3 "${fixture}/utils/update_docker_versions.py" "${fixture}/scripts/const.sh" "${test_dir}/new-versions" 30.0.1 v2.41.1 >"${test_dir}/tampered.log" 2>&1; then
+  fail 'Candidate generation must reject changed staged files'
+fi
+[[ ! -e "${test_dir}/new-versions/const.sh" ]] || fail 'Checksum failures must not generate a candidate'
+printf 'PASS: optional version inputs, candidate updates, repeat runs and failure isolation\n'

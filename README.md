@@ -13,7 +13,7 @@ JumpServer Installer 用来安装和管理 JumpServer。
 未启用该开关时，可通过环境变量 `DOCKER_BIN_HOST` 指定其他下载域名。
 安装器始终使用 `scripts/const.sh` 中固定的 SHA-256 校验下载内容。
 
-GitHub Actions 的 **Sync Docker Binaries to OSS** 自动读取该文件的版本号及
+GitHub Actions 的 **Sync Docker Binaries to OSS** 默认读取该文件的版本号及
 两种架构（`x86_64`、`aarch64`）的 SHA-256，从官方源下载并校验全部文件后，
 上传二进制及 `.sha256`、`.md5` 文件到北京地域的 `jms-pkg` bucket。
 对象路径保留官方 URL 去掉域名后的部分：
@@ -33,14 +33,31 @@ oss://jms-pkg/docker/compose/releases/download/<version>/docker-compose-linux-<a
 的对象写入及上传所需权限。
 
 向 `dev`、`master`、`main` 或 `v*` 分支推送版本配置、同步脚本或 Workflow
-的变更时自动同步，也可在 Actions 页面手动 **Run workflow**，同步所选分支
-声明的版本。升级版本时需一并更新两种架构的 SHA-256，无需修改 Workflow。
+的变更时自动同步，也可在 Actions 页面手动 **Run workflow**。
 上传逐文件执行，不删除历史版本或 bucket 中的其他对象。
+
+手动运行时，先选择要更新的分支，再按需填写：
+
+- `docker_version`：例如 `29.7.2`，留空沿用所选分支的版本。
+- `docker_compose_version`：例如 `2.40.3` 或 `v2.40.3`，留空沿用所选分支的版本。
+
+指定新版本时，从官方 HTTPS 地址下载二进制，自动计算两种架构的 SHA-256 和
+MD5；未更改版本的组件仍按原有固定 SHA-256 校验。全部下载及 OSS 上传成功后，
+Workflow 只将 `scripts/const.sh` 的版本号和 SHA-256 提交回所选分支。
+参数全部留空时只同步 OSS，不回写文件；填写相同版本且内容不变时不创建空提交。
+自动提交带有 `[docker-mirror-synced]` 标记，避免再次触发 OSS 同步，其他 CI 正常运行。
+
+回写优先使用仓库已有的 `PRIVATE_TOKEN`，未配置时使用具有 `contents: write`
+权限的 `GITHUB_TOKEN`。令牌必须有权写入所选分支；受保护分支仍受仓库规则约束。
+如果上传期间分支被其他提交更新，普通 push 会拒绝回写，需要基于最新分支重新运行。
+Workflow 的运行摘要会显示实际提交的 diff；回写失败会明确报告，已上传的 OSS 文件保留。
 
 本地仅下载和校验、不上传的检查方式：
 
 ```bash
 bash utils/prepare_docker_mirror.sh /tmp/docker-mirror
+# 指定版本，生成 /tmp/docker-mirror/const.sh 候选文件，不修改仓库文件
+bash utils/prepare_docker_mirror.sh /tmp/docker-mirror 29.7.2 v2.40.3
 ```
 
 ## 安装部署

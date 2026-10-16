@@ -4,7 +4,22 @@
 set -euo pipefail
 
 mirror_project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-mirror_output_dir=${1:?Usage: prepare_docker_mirror.sh OUTPUT_DIR}
+mirror_output_dir=${1:?Usage: prepare_docker_mirror.sh OUTPUT_DIR [DOCKER_VERSION] [COMPOSE_VERSION]}
+mirror_docker_version=${2:-}
+mirror_compose_version=${3:-}
+mirror_docker_version=${mirror_docker_version#v}
+mirror_compose_version=${mirror_compose_version#v}
+if [[ ( -n "${2:-}" && -z "${mirror_docker_version}" ) || ( -n "${3:-}" && -z "${mirror_compose_version}" ) ]]; then
+  echo 'Invalid version: a v prefix must be followed by a version number' >&2
+  exit 1
+fi
+for mirror_version in "${mirror_docker_version}" "${mirror_compose_version}"; do
+  if [[ -n "${mirror_version}" && ! "${mirror_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9][a-zA-Z0-9.-]*)?$ ]]; then
+    echo "Invalid version: ${mirror_version}" >&2
+    exit 1
+  fi
+done
+[[ -z "${mirror_compose_version}" ]] || mirror_compose_version="v${mirror_compose_version}"
 mkdir -p "${mirror_output_dir}"
 mirror_output_dir="$(cd "${mirror_output_dir}" && pwd)"
 
@@ -25,8 +40,8 @@ md5_file() {
 }
 
 download_verified() {
-  local url=$1 expected=$2 relative_path target actual
-  if [[ ! "${expected}" =~ ^[a-f0-9]{64}$ ]]; then
+  local url=$1 expected=$2 new_version=${3:-0} relative_path target actual
+  if [[ ! "${expected}" =~ ^[a-f0-9]{64}$ && !( -z "${expected}" && "${new_version}" == 1 ) ]]; then
     echo "Missing or invalid pinned SHA-256 for ${url}" >&2
     return 1
   fi
@@ -38,7 +53,7 @@ download_verified() {
   curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 600 \
     "${url}" -o "${target}.part"
   actual=$(sha256_file "${target}.part")
-  if [[ "${actual}" != "${expected}" ]]; then
+  if [[ -n "${expected}" && "${actual}" != "${expected}" ]]; then
     rm -f "${target}.part"
     echo "SHA-256 verification failed for ${url}" >&2
     return 1
@@ -54,7 +69,26 @@ for mirror_arch in x86_64 aarch64; do
     export BUILD_ARCH=${mirror_arch}
     unset DOCKER_BIN_HOST DOCKER_IMAGE_MIRROR
     . "${mirror_project_dir}/scripts/const.sh"
-    download_verified "${DOCKER_BIN_URL}" "${DOCKER_BIN_SHA256}"
-    download_verified "${COMPOSE_BIN_URL}" "${COMPOSE_BIN_SHA256}"
+    mirror_new_docker=0 mirror_new_compose=0
+    if [[ -n "${mirror_docker_version}" && "${mirror_docker_version}" != "${DOCKER_VERSION}" ]]; then
+      DOCKER_VERSION=${mirror_docker_version}
+      DOCKER_BIN_URL="https://download.docker.com/linux/static/stable/${ARCH}/docker-${DOCKER_VERSION}.tgz"
+      DOCKER_BIN_SHA256=''
+      mirror_new_docker=1
+    fi
+    if [[ -n "${mirror_compose_version}" && "${mirror_compose_version}" != "${DOCKER_COMPOSE_VERSION}" ]]; then
+      DOCKER_COMPOSE_VERSION=${mirror_compose_version}
+      COMPOSE_BIN_URL="https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"
+      COMPOSE_BIN_SHA256=''
+      mirror_new_compose=1
+    fi
+    download_verified "${DOCKER_BIN_URL}" "${DOCKER_BIN_SHA256}" "${mirror_new_docker}"
+    download_verified "${COMPOSE_BIN_URL}" "${COMPOSE_BIN_SHA256}" "${mirror_new_compose}"
   )
 done
+
+if [[ -n "${mirror_docker_version}" || -n "${mirror_compose_version}" ]]; then
+  python3 "${mirror_project_dir}/utils/update_docker_versions.py" \
+    "${mirror_project_dir}/scripts/const.sh" "${mirror_output_dir}" \
+    "${mirror_docker_version}" "${mirror_compose_version}"
+fi
