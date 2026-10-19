@@ -60,7 +60,7 @@ function prepare_image_files() {
     local INCLUDE_KOTL_IMAGE=1
     export INCLUDE_KOTL_IMAGE
   fi
-  pull_images
+  pull_images || return 1
 
   images=$(get_images)
   for image in ${images}; do

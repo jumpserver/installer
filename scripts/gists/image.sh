@@ -29,7 +29,7 @@ function get_pull_images() {
     images+=("$(get_openbao_image)")
   fi
   if should_include_kotl_image; then
-    images+=("jumpserver/kotl:${VERSION}")
+    images+=("jumpserver/jdmc:${VERSION}")
   fi
   echo "${images[@]}"
 }
@@ -157,19 +157,20 @@ function pull_image() {
     to_image=${to_image/jumpserver/${NAMESPACE}}
   fi
   if [[ "$(check_image_exists "${full_image_path}")" != "1" || "$IMAGE_PULL_POLICY" == "Always" ]]; then
-    docker pull -q ${pull_args} "${full_image_path}"
+    docker pull -q ${pull_args} "${full_image_path}" || return 1
   fi
   
   if [[ "${full_image_path}" != "${to_image}" ]]; then
-    docker tag "${full_image_path}" "${to_image}"
+    docker tag "${full_image_path}" "${to_image}" || return 1
   fi
   echo ""
 }
 
 
 function pull_images() {
+  local images_to image pid result=0
+  local -a pids=()
   images_to=$(get_pull_images)
-  pids=()
 
   if [[ -n "${REGISTRY}" ]]; then
     images_to=$(echo "${images_to}" | sed "s|${REGISTRY}||g")
@@ -181,7 +182,10 @@ function pull_images() {
     pull_image "$image" &
     pids+=($!)
   done
-  wait ${pids[*]}
+  for pid in "${pids[@]}"; do
+    wait "${pid}" || result=1
+  done
 
   trap - SIGINT SIGTERM
+  return "${result}"
 }

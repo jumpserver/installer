@@ -130,9 +130,9 @@ DOMAINS=
 # WEB_ENABLED=0
 
 # KOTL is an Enterprise Edition host management console. It is distributed as
-# an artifact image, then installed as a systemd service on the host instead of
-# running in Compose. It inherits VOLUME_DIR from the installer, requires
-# USE_XPACK=1, and can be disabled with:
+# a jdmc artifact image built from the v4 branch, retaining kotl.service on the
+# host instead of running in Compose. It inherits VOLUME_DIR from the installer,
+# requires USE_XPACK=1, and can be disabled with:
 # KOTL_ENABLED=0
 
 # Lion enables font smoothing to optimize the experience

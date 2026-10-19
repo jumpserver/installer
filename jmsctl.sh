@@ -95,10 +95,20 @@ function should_manage_kotl() {
 }
 
 function start() {
+  if [[ "${target}" == "kotl" ]]; then
+    ensure_current_installer_link || return 1
+    start_kotl
+    return
+  fi
+
   set_openbao || return 1
-  gen_safe_config >/dev/null
+  configure_kotl || return 1
   EXE=$(get_docker_compose_cmd_line)
-  ${EXE} up -d
+  if [[ -n "${target}" && "${target}" != "ignore_db" ]]; then
+    ${EXE} up -d "${target}"
+    return
+  fi
+  ${EXE} up -d || return $?
 
   ensure_current_installer_link || return 1
   if should_manage_kotl; then
@@ -139,7 +149,7 @@ function close() {
   fi
   services=$(get_docker_compose_services ignore_db)
   for i in ${services}; do
-    ${EXE} stop "${i}"
+    ${EXE} stop "${i}" || return $?
   done
 }
 
@@ -156,7 +166,7 @@ function restart() {
     restart_kotl
     return
   fi
-  stop
+  stop || return $?
   echo -e "\n"
 
   if [[ -n "${target}" && "${target}" != "ignore_db" ]]; then
@@ -269,9 +279,15 @@ function main() {
     close
     ;;
   status)
-    ${EXE} ps
-    if should_manage_kotl; then
+    if [[ "${target}" == "kotl" ]]; then
       status_kotl
+    elif [[ -n "${target}" ]]; then
+      ${EXE} ps "${target}"
+    else
+      ${EXE} ps || return $?
+      if should_manage_kotl; then
+        status_kotl
+      fi
     fi
     ;;
   down)
