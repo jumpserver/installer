@@ -289,6 +289,9 @@ function upgrade_compose() {
 }
 
 function main() {
+  if [[ -n "${JDMC_HA_UPGRADE_TASK:-}" ]]; then
+    bash "${BASE_DIR}/ha-upgrade-guard.sh" || return 1
+  fi
   confirm="y"
   to_version="${VERSION}"
   if [[ -n "${target}" ]]; then
@@ -339,11 +342,15 @@ function main() {
   db_migrations
 
   echo_yellow "\n6. $(gettext 'Cleanup Image')"
-  clean_images
+  if [[ -z "${JDMC_HA_UPGRADE_TASK:-}" ]]; then
+    clean_images
+  fi
 
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
-  upgrade_docker
-  upgrade_compose
+  if [[ -z "${JDMC_HA_UPGRADE_TASK:-}" ]]; then
+    upgrade_docker
+    upgrade_compose
+  fi
 
   installation_log "upgrade"
 

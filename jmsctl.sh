@@ -219,7 +219,7 @@ function main() {
   fi
   case "${action}" in
   ha_business)
-    python3 "${SCRIPT_DIR}/ha-business.py" "${args[@]:1}"
+    bash "${SCRIPT_DIR}/ha-business.sh" "${args[@]:1}"
     ;;
   install)
     bash "${SCRIPT_DIR}/4_install_jumpserver.sh"
