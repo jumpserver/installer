@@ -350,7 +350,7 @@ function main() {
   check_compose_install
 
   echo_yellow "\n2. $(gettext 'Loading Docker Image')"
-  bash "${BASE_DIR}/3_load_images.sh" || exit 1
+  bash "${BASE_DIR}/3_load_images.sh"
 
   echo_yellow "\n3. $(gettext 'Backup database')"
   backup_db

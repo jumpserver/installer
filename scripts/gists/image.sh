@@ -157,20 +157,19 @@ function pull_image() {
     to_image=${to_image/jumpserver/${NAMESPACE}}
   fi
   if [[ "$(check_image_exists "${full_image_path}")" != "1" || "$IMAGE_PULL_POLICY" == "Always" ]]; then
-    docker pull -q ${pull_args} "${full_image_path}" || return 1
+    docker pull ${pull_args} "${full_image_path}"
   fi
   
   if [[ "${full_image_path}" != "${to_image}" ]]; then
-    docker tag "${full_image_path}" "${to_image}" || return 1
+    docker tag "${full_image_path}" "${to_image}"
   fi
   echo ""
 }
 
 
 function pull_images() {
-  local images_to image pid result=0
-  local -a pids=()
   images_to=$(get_pull_images)
+  pids=()
 
   if [[ -n "${REGISTRY}" ]]; then
     images_to=$(echo "${images_to}" | sed "s|${REGISTRY}||g")
@@ -182,10 +181,7 @@ function pull_images() {
     pull_image "$image" &
     pids+=($!)
   done
-  for pid in "${pids[@]}"; do
-    wait "${pid}" || result=1
-  done
+  wait ${pids[*]}
 
   trap - SIGINT SIGTERM
-  return "${result}"
 }
