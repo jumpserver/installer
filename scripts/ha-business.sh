@@ -38,13 +38,19 @@ services() {
     local value
     value=$(run 60 bash "$INSTALLER" show_services) || fail
     jq -cn --arg value "$value" '
-        $value | [splits("\\s+") | select(length > 0)] |
+        # jq 1.5 may be built without the Oniguruma regex library.
+        def space: "\t\n\u000b\f\r \u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000";
+        $value | explode |
+        map(. as $c | if (space | explode | index($c)) != null then 32 else . end) |
+        implode | split(" ") | map(select(length > 0)) |
         map(select(. != "postgresql" and . != "mysql" and . != "mariadb" and
             . != "redis" and . != "es" and . != "minio" and . != "loki"))' || fail
 }
 valid_services() {
     jq -e 'type == "array" and length > 0 and all(.[];
-        type == "string" and test("^[a-zA-Z0-9_-]+$") and
+        type == "string" and length > 0 and
+        all(explode[]; (. >= 48 and . <= 57) or (. >= 65 and . <= 90) or
+            (. >= 97 and . <= 122) or . == 95 or . == 45) and
         . != "postgresql" and . != "mysql" and . != "mariadb" and
         . != "redis" and . != "es" and . != "minio" and . != "loki")' <<< "$1" >/dev/null || fail
 }
