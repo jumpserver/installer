@@ -87,7 +87,6 @@ function main() {
   echo_logo
   pre_install
   prepare_config
-  set_current_version
 
   echo_green "\n>>> $(gettext 'Install and Configure Docker')"
   if ! bash "${BASE_DIR}/2_install_docker.sh"; then
@@ -124,7 +123,12 @@ function main() {
     log_error "Failed to install JDMC"
     exit "${jdmc_status}"
   }
- 
+
+  if ! set_current_version; then
+    log_error "Failed to update CURRENT_VERSION"
+    exit 1
+  fi
+
   installation_log "install"
   post_install
 }
