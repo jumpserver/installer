@@ -168,7 +168,16 @@ DOMAINS=
 # CHEN_ENABLED=0
 # WEB_ENABLED=0
 # VIDEO_WORKER_ENABLED=0
-# CELERY_PRIVILEGED=false
+
+# Ansible tasks use the persistent SSH executor (no Docker socket or privileged mode).
+# ANSIBLE_EXECUTOR_ENABLED=0 disables the local executor; provision trusted client
+# credentials in CONFIG_DIR/ansible-executor/client before using an external one.
+# ANSIBLE_EXECUTOR_HOST=ansible-executor
+# ANSIBLE_EXECUTOR_PORT=2222
+# ANSIBLE_EXECUTOR_GATEWAY_HOST=celery
+# ANSIBLE_EXECUTOR_MEMORY=1g
+# ANSIBLE_EXECUTOR_CPUS=2
+# ANSIBLE_EXECUTOR_PIDS=256
 
 # VIDEO_WORKER_ENABLED only controls the local container. To send recordings
 # from KoKo to a worker, set ENABLE_VIDEO_WORKER=true. For the local container,

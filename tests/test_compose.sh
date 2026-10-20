@@ -101,6 +101,38 @@ for optional_image in elasticsearch minio grafana/loki grafana/promtail; do
   fi
 done
 
+(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  compose_cmd=$(get_docker_compose_cmd_line)
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config --format json >"${test_dir}/executor-compose.json"
+)
+python3 - "${test_dir}/executor-compose.json" <<'PYTEST'
+import json
+import sys
+services = json.load(open(sys.argv[1]))['services']
+for name in ('core', 'celery'):
+    service = services[name]
+    assert not service.get('privileged'), name
+    assert all('docker.sock' not in v['source'] for v in service['volumes']), name
+    env = service['environment']
+    assert env['ANSIBLE_EXECUTION_BACKEND'] == 'ssh'
+    assert env['ANSIBLE_EXECUTOR_HOST'] == 'ansible-executor'
+    assert env['ANSIBLE_EXECUTOR_GATEWAY_HOST'] == 'celery'
+    credential_mount = next(v for v in service['volumes'] if v['target'] == '/run/jms-executor')
+    assert credential_mount['read_only']
+executor = services['ansible-executor']
+assert executor['image'].endswith('/ansible-executor-ssh:latest')
+assert executor['pull_policy'] == 'never'
+assert not executor.get('privileged') and not executor.get('ports')
+assert 'no-new-privileges:true' in executor['security_opt']
+assert int(executor['mem_limit']) > 0 and int(executor['pids_limit']) > 0
+assert '/home/jms-executor:exec,nosuid,nodev' in executor['tmpfs']
+assert all('/client' not in v['source'] and 'docker.sock' not in v['source'] for v in executor['volumes'])
+assert {v['target'] for v in executor['volumes']} == {'/run/secrets', '/var/lib/jms-executor'}
+PYTEST
+printf 'PASS: SSH backend, separate credential mounts and unprivileged internal executor\n'
 printf 'PASS: default and all-feature Compose configurations render\n'
 printf 'PASS: optional infrastructure images stay out of the offline manifest\n'
 

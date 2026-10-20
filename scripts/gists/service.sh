@@ -1,5 +1,5 @@
 
-common_services=(core kael celery koko chen web)
+common_services=(core kael celery ansible-executor koko chen web)
 xpack_services=(magnus razor xrdp video-worker nec)
 
 

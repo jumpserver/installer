@@ -113,7 +113,6 @@ function main() {
     exit 1
   fi
 
-  ensure_core_data_symlink || log_warn "Failed to prepare host core data symlink, continue installation"
   ensure_current_installer_link || {
     log_error "Failed to update /opt/current/installer"
     exit 1

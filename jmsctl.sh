@@ -104,7 +104,11 @@ function start() {
   gen_safe_config >/dev/null
   stop_disabled_video_worker || return 1
   prepare_video_worker_volume || return 1
+  prepare_ansible_executor || return 1
   EXE=$(get_docker_compose_cmd_line)
+  if [[ "$(get_config_or_env ANSIBLE_EXECUTOR_ENABLED)" != "0" ]]; then
+    ${EXE} up -d --wait --wait-timeout 60 ansible-executor || return 1
+  fi
   ${EXE} up -d || return 1
   remove_stopped_openbao_init_container
 

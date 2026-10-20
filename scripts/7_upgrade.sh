@@ -671,7 +671,6 @@ function main() {
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
   upgrade_docker
   upgrade_compose
-  ensure_core_data_symlink || log_warn "Failed to prepare host core data symlink, continue upgrade"
   ensure_current_installer_link || {
     log_error "Failed to update /opt/current/installer"
     exit 1

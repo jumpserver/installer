@@ -125,6 +125,37 @@ PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通�
 `IMAGE_PULL_SCOPE` 默认为 `jumpserver`；设置为 `all` 时，基础镜像也从
 `IMAGE_PULL_PREFIX` 拉取，但拉取后仍恢复成各自的固定运行名称。
 
+## SSH Ansible 执行器
+
+安装器默认部署 `jumpserver/ansible-executor-ssh:latest`，Core/Celery 固定使用 SSH
+后端，需配套支持该后端的 Core 版本（[Core 适配 PR](https://github.com/jumpserver/jumpserver/pull/17797)）。
+升级在线安装时重新拉取 `latest`；离线包按镜像 ID 加载更新，运行时不访问镜像仓库。
+CE 和 EE 都包含执行器，旧 `ansible-executor:latest` 不再打包。
+自定义 `OFFLINE_IMAGE_SERVICES` 时应包含 `ansible-executor`。
+
+`./jmsctl.sh start` 使用执行器镜像中的 `ssh-keygen` 初始化每套安装独立的密钥，
+等待执行器健康后再启动 Core/Celery。重启、升级保留现有密钥；密钥损坏或只有公钥
+而缺少私钥时启动失败，不自动轮换身份。请备份 `${CONFIG_DIR}/ansible-executor`：
+
+- `client/`：服务私钥和固定服务器 host key 的 `known_hosts`，仅只读挂载给 Core/Celery。
+- `public/`：服务公钥，只读挂载给执行器。
+- `server/`：执行器 SSH host key，持久化并仅挂载给执行器。
+
+执行器只在 Compose 内网监听 2222，不发布宿主机端口，也不挂载 Core 数据或 Docker
+socket。Core/Celery 移除了 Docker socket 和 Celery 的 privileged 设置；旧
+`CELERY_PRIVILEGED`、`ANSIBLE_DOCKER_ENABLED` 不再决定此部署的执行方式。
+默认整体资源上限为 1 GiB 内存、2 CPU、256 PID，可通过配置示例中的选项调整。
+任务目录使用 `exec,nosuid,nodev` tmpfs，以支持上传的 SSH 包装脚本。
+
+资产地址须可从执行器访问，`127.0.0.1` 表示执行器自身。网域隧道默认连接
+`celery`；多节点部署需将 `ANSIBLE_EXECUTOR_GATEWAY_HOST` 配置为实际运行任务的
+Celery 节点地址。使用外部执行器时设置 `ANSIBLE_EXECUTOR_ENABLED=0` 和实际
+HOST/PORT，并自行在 `client/` 提供私钥 `client` 及对应地址的可信 `known_hosts`。
+不得将服务私钥放入任务目录。此隔离依赖不同 Linux UID，共享内核和网络。
+
+安装/升级不再创建 `/opt/jumpserver/data` 到宿主机数据目录的软链接；已有链接、
+目录和备份保持原状。配置文件、历史数据迁移及当前安装器路径使用的其他软链接保留。
+
 ## 配置文件说明
 
 全新安装内置 MySQL 8.0 时，在 `config.txt` 中设置 `DB_ENGINE=mysql`、
