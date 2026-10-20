@@ -16,7 +16,7 @@ services:
       ANSIBLE_EXECUTOR_PORT: ${ANSIBLE_EXECUTOR_PORT:-2222}
       ANSIBLE_EXECUTOR_PRIVATE_KEY: /run/jms-executor/client
       ANSIBLE_EXECUTOR_KNOWN_HOSTS: /run/jms-executor/known_hosts
-      ANSIBLE_EXECUTOR_GATEWAY_HOST: ${ANSIBLE_EXECUTOR_GATEWAY_HOST:-celery}
+      ANSIBLE_EXECUTOR_GATEWAY_HOST: ${ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST:-core}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
@@ -28,6 +28,8 @@ services:
       retries: 3
       start_period: 90s
     networks:
-      - net
+      net:
+        gw_priority: 1
+      executor: {}
     extra_hosts:
       - "host.docker.internal:host-gateway"

@@ -101,17 +101,22 @@ for optional_image in elasticsearch minio grafana/loki grafana/promtail; do
   fi
 done
 
+for use_ipv6 in 0 1; do
 (
   cd "${TEST_ROOT}"
   export JS_CONFIG_DIR="${ce_dir}"
   . ./scripts/utils.sh
+  set_config USE_IPV6 "${use_ipv6}"
   compose_cmd=$(get_docker_compose_cmd_line)
   ${compose_cmd} --env-file "${CONFIG_FILE}" config --format json >"${test_dir}/executor-compose.json"
 )
-python3 - "${test_dir}/executor-compose.json" <<'PYTEST'
+python3 - "${test_dir}/executor-compose.json" "${use_ipv6}" <<'PYTEST'
 import json
 import sys
-services = json.load(open(sys.argv[1]))['services']
+config = json.load(open(sys.argv[1]))
+services = config['services']
+assert bool(config['networks']['executor'].get('enable_ipv6')) == bool(int(sys.argv[2]))
+assert bool(config['networks']['net'].get('enable_ipv6')) == bool(int(sys.argv[2]))
 for name in ('core', 'celery'):
     service = services[name]
     assert not service.get('privileged'), name
@@ -119,10 +124,16 @@ for name in ('core', 'celery'):
     env = service['environment']
     assert env['ANSIBLE_EXECUTION_BACKEND'] == 'ssh'
     assert env['ANSIBLE_EXECUTOR_HOST'] == 'ansible-executor'
-    assert env['ANSIBLE_EXECUTOR_GATEWAY_HOST'] == 'celery'
+    assert env['ANSIBLE_EXECUTOR_GATEWAY_HOST'] == name
+    assert set(service['networks']) == {'net', 'executor'}
+    assert service['networks']['net']['gw_priority'] == 1
     credential_mount = next(v for v in service['volumes'] if v['target'] == '/run/jms-executor')
     assert credential_mount['read_only']
 executor = services['ansible-executor']
+assert set(executor['networks']) == {'executor'}
+for name, service in services.items():
+    if name not in ('core', 'celery', 'ansible-executor'):
+        assert 'executor' not in service.get('networks', {}), name
 assert executor['image'].endswith('/ansible-executor-ssh:latest')
 assert executor['pull_policy'] == 'never'
 assert not executor.get('privileged') and not executor.get('ports')
@@ -132,7 +143,30 @@ assert '/home/jms-executor:exec,nosuid,nodev' in executor['tmpfs']
 assert all('/client' not in v['source'] and 'docker.sock' not in v['source'] for v in executor['volumes'])
 assert {v['target'] for v in executor['volumes']} == {'/run/secrets', '/var/lib/jms-executor'}
 PYTEST
-printf 'PASS: SSH backend, separate credential mounts and unprivileged internal executor\n'
+done
+(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  set_config ANSIBLE_EXECUTOR_ENABLED 0
+  set_config ANSIBLE_EXECUTOR_HOST remote-executor.example
+  set_config ANSIBLE_EXECUTOR_GATEWAY_HOST celery.example
+  set_config ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST core.example
+  compose_cmd=$(get_docker_compose_cmd_line)
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config --format json >"${test_dir}/external-executor.json"
+)
+python3 - "${test_dir}/external-executor.json" <<'PYTEST'
+import json
+import sys
+services = json.load(open(sys.argv[1]))['services']
+assert 'ansible-executor' not in services
+for name in ('core', 'celery'):
+    env = services[name]['environment']
+    assert env['ANSIBLE_EXECUTOR_HOST'] == 'remote-executor.example'
+    assert env['ANSIBLE_EXECUTOR_GATEWAY_HOST'] == name + '.example'
+PYTEST
+printf 'PASS: separate caller networks and tunnel addresses in IPv4, IPv6 and external-executor configurations\n'
+
 printf 'PASS: default and all-feature Compose configurations render\n'
 printf 'PASS: optional infrastructure images stay out of the offline manifest\n'
 

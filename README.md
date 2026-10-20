@@ -141,17 +141,29 @@ CE 和 EE 都包含执行器，旧 `ansible-executor:latest` 不再打包。
 - `public/`：服务公钥，只读挂载给执行器。
 - `server/`：执行器 SSH host key，持久化并仅挂载给执行器。
 
-执行器只在 Compose 内网监听 2222，不发布宿主机端口，也不挂载 Core 数据或 Docker
-socket。Core/Celery 移除了 Docker socket 和 Celery 的 privileged 设置；旧
+执行器只接独立的 `executor` bridge 网络，在内网监听 2222，不发布宿主机端口，
+也不挂载 Core 数据或 Docker socket。Core/Celery 同时接入业务网 `net` 和执行网
+`executor`，Redis、数据库和其他组件只接业务网。
+业务网保留原 `DOCKER_SUBNET` 配置，执行网使用 Docker 地址池自动分配独立网段。
+`USE_IPV6=1` 时两个网络均启用 IPv6，执行网 IPv6 地址由 Docker 自动分配。
+Core/Celery 使用 `gw_priority: 1` 保持业务网为默认出口（需 Compose 2.33.1+，
+安装器自带的版本已支持，见 [Docker 配置说明](https://docs.docker.com/reference/compose-file/services/#gw_priority)）。
+Core/Celery 移除了 Docker socket 和 Celery 的 privileged 设置；旧
 `CELERY_PRIVILEGED`、`ANSIBLE_DOCKER_ENABLED` 不再决定此部署的执行方式。
 默认整体资源上限为 1 GiB 内存、2 CPU、256 PID，可通过配置示例中的选项调整。
 任务目录使用 `exec,nosuid,nodev` tmpfs，以支持上传的 SSH 包装脚本。
 
-资产地址须可从执行器访问，`127.0.0.1` 表示执行器自身。网域隧道默认连接
-`celery`；多节点部署需将 `ANSIBLE_EXECUTOR_GATEWAY_HOST` 配置为实际运行任务的
-Celery 节点地址。使用外部执行器时设置 `ANSIBLE_EXECUTOR_ENABLED=0` 和实际
+资产地址须可从执行器访问，`127.0.0.1` 表示执行器自身。执行网保留访问外部资产的
+出口，不设为 `internal` 网络。普通自动化由 Celery 执行，但资产页即时账号发现和
+风险检测由 Core 同步执行，因此两者都需要连接执行器。网域隧道必须返回创建它的
+容器：Celery 默认使用 `celery`，Core 默认使用 `core`。多节点部署分别配置
+`ANSIBLE_EXECUTOR_GATEWAY_HOST`（Celery）和 `ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST`
+（Core），使执行器能访问实际执行节点及其动态隧道端口。
+使用外部执行器时设置 `ANSIBLE_EXECUTOR_ENABLED=0` 和实际
 HOST/PORT，并自行在 `client/` 提供私钥 `client` 及对应地址的可信 `known_hosts`。
-不得将服务私钥放入任务目录。此隔离依赖不同 Linux UID，共享内核和网络。
+不得将服务私钥放入任务目录。任务仍通过不同 Linux UID 隔离，共享执行器内核和网络。
+分网阻止默认 bridge 之间直接互通，不能替代出口防火墙；宿主机发布的端口、外部服务、
+Core/Celery 在执行网上监听的服务仍可能可达，应保留认证并按部署环境限制访问。
 
 安装/升级不再创建 `/opt/jumpserver/data` 到宿主机数据目录的软链接；已有链接、
 目录和备份保持原状。配置文件、历史数据迁移及当前安装器路径使用的其他软链接保留。

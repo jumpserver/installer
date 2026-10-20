@@ -25,6 +25,6 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - net
+      - executor
     extra_hosts:
       - "host.docker.internal:host-gateway"

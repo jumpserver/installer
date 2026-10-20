@@ -174,7 +174,9 @@ DOMAINS=
 # credentials in CONFIG_DIR/ansible-executor/client before using an external one.
 # ANSIBLE_EXECUTOR_HOST=ansible-executor
 # ANSIBLE_EXECUTOR_PORT=2222
+# Tunnel addresses must point back to the process creating the tunnel.
 # ANSIBLE_EXECUTOR_GATEWAY_HOST=celery
+# ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST=core
 # ANSIBLE_EXECUTOR_MEMORY=1g
 # ANSIBLE_EXECUTOR_CPUS=2
 # ANSIBLE_EXECUTOR_PIDS=256
