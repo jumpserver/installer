@@ -169,7 +169,9 @@ DOMAINS=
 # WEB_ENABLED=0
 # VIDEO_WORKER_ENABLED=0
 
-# Ansible tasks use the persistent SSH executor (no Docker socket or privileged mode).
+# Ansible Docker isolation uses the persistent SSH executor (no Docker socket or privileged mode).
+# The existing ANSIBLE_DOCKER_ENABLED feature setting controls SSH versus local execution.
+# Disabling isolation does not stop the executor container.
 # ANSIBLE_EXECUTOR_ENABLED=0 disables the local executor; provision trusted client
 # credentials in CONFIG_DIR/ansible-executor/client before using an external one.
 # ANSIBLE_EXECUTOR_HOST=ansible-executor

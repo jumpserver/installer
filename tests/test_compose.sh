@@ -122,7 +122,8 @@ for name in ('core', 'celery'):
     assert not service.get('privileged'), name
     assert all('docker.sock' not in v['source'] for v in service['volumes']), name
     env = service['environment']
-    assert env['ANSIBLE_EXECUTION_BACKEND'] == 'ssh'
+    assert 'ANSIBLE_EXECUTION_BACKEND' not in env
+    assert 'ANSIBLE_DOCKER_ENABLED' not in env
     assert env['ANSIBLE_EXECUTOR_HOST'] == 'ansible-executor'
     assert env['ANSIBLE_EXECUTOR_GATEWAY_HOST'] == name
     assert set(service['networks']) == {'net', 'executor'}
@@ -144,6 +145,27 @@ assert all('/client' not in v['source'] and 'docker.sock' not in v['source'] for
 assert {v['target'] for v in executor['volumes']} == {'/run/secrets', '/var/lib/jms-executor'}
 PYTEST
 done
+(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  set_config ANSIBLE_DOCKER_ENABLED false
+  compose_cmd=$(get_docker_compose_cmd_line)
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config --format json >"${test_dir}/native-ansible.json"
+  set_config ANSIBLE_DOCKER_ENABLED ''
+)
+python3 - "${test_dir}/native-ansible.json" <<'PYTEST'
+import json
+import sys
+services = json.load(open(sys.argv[1]))['services']
+for name in ('core', 'celery'):
+    env = services[name]['environment']
+    assert env['ANSIBLE_DOCKER_ENABLED'] == 'false'
+    assert 'ANSIBLE_EXECUTION_BACKEND' not in env
+assert 'ansible-executor' in services
+PYTEST
+printf 'PASS: existing Ansible isolation setting is passed through without forcing SSH\n'
+
 (
   cd "${TEST_ROOT}"
   export JS_CONFIG_DIR="${ce_dir}"

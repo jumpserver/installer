@@ -127,8 +127,9 @@ PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通�
 
 ## SSH Ansible 执行器
 
-安装器默认部署 `jumpserver/ansible-executor-ssh:latest`，Core/Celery 固定使用 SSH
-后端，需配套支持该后端的 Core 版本（[Core 适配 PR](https://github.com/jumpserver/jumpserver/pull/17797)）。
+安装器默认部署 `jumpserver/ansible-executor-ssh:latest`，Core/Celery 复用原
+`ANSIBLE_DOCKER_ENABLED` 开关：开启时通过 SSH 使用常驻执行器，关闭时本地执行。
+页面已保存的开关值继续生效，安装器不再强制指定执行后端；需配套支持该行为的 Core 版本（[Core 适配 PR](https://github.com/jumpserver/jumpserver/pull/17797)）。
 升级在线安装时重新拉取 `latest`；离线包按镜像 ID 加载更新，运行时不访问镜像仓库。
 CE 和 EE 都包含执行器，旧 `ansible-executor:latest` 不再打包。
 自定义 `OFFLINE_IMAGE_SERVICES` 时应包含 `ansible-executor`。
@@ -148,8 +149,10 @@ CE 和 EE 都包含执行器，旧 `ansible-executor:latest` 不再打包。
 `USE_IPV6=1` 时两个网络均启用 IPv6，执行网 IPv6 地址由 Docker 自动分配。
 Core/Celery 使用 `gw_priority: 1` 保持业务网为默认出口（需 Compose 2.33.1+，
 安装器自带的版本已支持，见 [Docker 配置说明](https://docs.docker.com/reference/compose-file/services/#gw_priority)）。
-Core/Celery 移除了 Docker socket 和 Celery 的 privileged 设置；旧
-`CELERY_PRIVILEGED`、`ANSIBLE_DOCKER_ENABLED` 不再决定此部署的执行方式。
+Core/Celery 移除了 Docker socket 和 Celery 的 privileged 设置，旧 `CELERY_PRIVILEGED` 不再生效。
+关闭 Ansible Docker 隔离不会停止常驻执行器，便于从页面重新开启；本地执行不享有
+执行器提供的任务 UID 和文件隔离。`ANSIBLE_EXECUTOR_ENABLED=0` 仅控制是否部署本地
+执行器容器，与功能开关独立。
 默认整体资源上限为 1 GiB 内存、2 CPU、256 PID，可通过配置示例中的选项调整。
 任务目录使用 `exec,nosuid,nodev` tmpfs，以支持上传的 SSH 包装脚本。
 
