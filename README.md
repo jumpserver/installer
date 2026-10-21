@@ -133,6 +133,8 @@ PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通�
 升级在线安装时重新拉取 `latest`；离线包按镜像 ID 加载更新，运行时不访问镜像仓库。
 CE 和 EE 都包含执行器，旧 `ansible-executor:latest` 不再打包。
 自定义 `OFFLINE_IMAGE_SERVICES` 时应包含 `ansible-executor`。
+执行器地址、端口和凭据路径统一使用 Core 默认值；自定义值写入安装器配置文件，
+由现有 `env_file` 传入 Core/Celery。Compose 仅分别指定两者的网域隧道地址。
 
 `./jmsctl.sh start` 使用执行器镜像中的 `ssh-keygen` 初始化每套安装独立的密钥，
 等待执行器健康后再启动 Core/Celery。重启、升级保留现有密钥；密钥损坏或只有公钥

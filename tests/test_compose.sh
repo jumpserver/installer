@@ -124,7 +124,8 @@ for name in ('core', 'celery'):
     env = service['environment']
     assert 'ANSIBLE_EXECUTION_BACKEND' not in env
     assert 'ANSIBLE_DOCKER_ENABLED' not in env
-    assert env['ANSIBLE_EXECUTOR_HOST'] == 'ansible-executor'
+    for key in ('HOST', 'PORT', 'PRIVATE_KEY', 'KNOWN_HOSTS'):
+        assert 'ANSIBLE_EXECUTOR_' + key not in env
     assert env['ANSIBLE_EXECUTOR_GATEWAY_HOST'] == name
     assert set(service['networks']) == {'net', 'executor'}
     assert service['networks']['net']['gw_priority'] == 1
@@ -172,6 +173,9 @@ printf 'PASS: existing Ansible isolation setting is passed through without forci
   . ./scripts/utils.sh
   set_config ANSIBLE_EXECUTOR_ENABLED 0
   set_config ANSIBLE_EXECUTOR_HOST remote-executor.example
+  set_config ANSIBLE_EXECUTOR_PORT 2223
+  set_config ANSIBLE_EXECUTOR_PRIVATE_KEY /run/custom/client
+  set_config ANSIBLE_EXECUTOR_KNOWN_HOSTS /run/custom/known_hosts
   set_config ANSIBLE_EXECUTOR_GATEWAY_HOST celery.example
   set_config ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST core.example
   compose_cmd=$(get_docker_compose_cmd_line)
@@ -185,6 +189,9 @@ assert 'ansible-executor' not in services
 for name in ('core', 'celery'):
     env = services[name]['environment']
     assert env['ANSIBLE_EXECUTOR_HOST'] == 'remote-executor.example'
+    assert env['ANSIBLE_EXECUTOR_PORT'] == '2223'
+    assert env['ANSIBLE_EXECUTOR_PRIVATE_KEY'] == '/run/custom/client'
+    assert env['ANSIBLE_EXECUTOR_KNOWN_HOSTS'] == '/run/custom/known_hosts'
     assert env['ANSIBLE_EXECUTOR_GATEWAY_HOST'] == name + '.example'
 PYTEST
 printf 'PASS: separate caller networks and tunnel addresses in IPv4, IPv6 and external-executor configurations\n'

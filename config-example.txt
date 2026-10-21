@@ -174,8 +174,11 @@ DOMAINS=
 # Disabling isolation does not stop the executor container.
 # ANSIBLE_EXECUTOR_ENABLED=0 disables the local executor; provision trusted client
 # credentials in CONFIG_DIR/ansible-executor/client before using an external one.
+# Connection defaults come from Core; uncomment only to override them.
 # ANSIBLE_EXECUTOR_HOST=ansible-executor
 # ANSIBLE_EXECUTOR_PORT=2222
+# ANSIBLE_EXECUTOR_PRIVATE_KEY=/run/jms-executor/client
+# ANSIBLE_EXECUTOR_KNOWN_HOSTS=/run/jms-executor/known_hosts
 # Tunnel addresses must point back to the process creating the tunnel.
 # ANSIBLE_EXECUTOR_GATEWAY_HOST=celery
 # ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST=core

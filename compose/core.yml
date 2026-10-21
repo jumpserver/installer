@@ -11,10 +11,6 @@ services:
       - ${CONFIG_FILE}
     environment:
       TIME_ZONE: ${TZ:-Asia/Shanghai}
-      ANSIBLE_EXECUTOR_HOST: ${ANSIBLE_EXECUTOR_HOST:-ansible-executor}
-      ANSIBLE_EXECUTOR_PORT: ${ANSIBLE_EXECUTOR_PORT:-2222}
-      ANSIBLE_EXECUTOR_PRIVATE_KEY: /run/jms-executor/client
-      ANSIBLE_EXECUTOR_KNOWN_HOSTS: /run/jms-executor/known_hosts
       ANSIBLE_EXECUTOR_GATEWAY_HOST: ${ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST:-core}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
