@@ -26,16 +26,17 @@ fi
 assert_eq "${server_before}" "$(cksum "${keys}/server/ssh_host_ed25519_key")"
 printf 'PASS: independent private keys, pinned host key, restart persistence and lost-key failure\n'
 
+VERSION=dev-ce
 for edition in 0 1; do
   set_config USE_XPACK "${edition}"
   manifest=$(get_offline_image_manifest)
-  assert_contains "${manifest}" 'jumpserver/ansible-executor-ssh:latest'
+  assert_contains "${manifest}" 'jumpserver/ansible-executor:dev'
   [[ "${manifest}" != *'/ansible-executor:latest'* ]] || fail 'old executor must not be bundled'
 done
 set_config NAMESPACE registry.internal/custom
-assert_contains "$(get_offline_image_manifest)" 'registry.internal/custom/ansible-executor-ssh:latest'
+assert_contains "$(get_offline_image_manifest)" 'registry.internal/custom/ansible-executor:dev'
 set_config ANSIBLE_EXECUTOR_ENABLED 0
-[[ "$(get_offline_image_manifest)" != *'/ansible-executor-ssh:latest'* ]] || fail 'disabled executor must not be bundled'
+[[ "$(get_offline_image_manifest)" != *'/ansible-executor:dev'* ]] || fail 'disabled executor must not be bundled'
 [[ "$(get_docker_compose_cmd_line)" != *'compose/ansible-executor.yml'* ]] || fail 'disabled executor must not be deployed'
 docker() { fail 'disabled executor must not initialize credentials'; }
 prepare_ansible_executor
@@ -44,11 +45,27 @@ printf 'PASS: CE/EE image selection, custom namespaces and external executor mod
 BUILD_ARCH=${ARCH}
 check_image_exists() { echo 1; }
 docker() { printf '%s\n' "$*" >>"${test_dir}/pull-calls"; }
-pull_image jumpserver/ansible-executor-ssh:latest registry.internal/custom/ansible-executor-ssh:latest >"${test_dir}/pull.log"
-assert_contains "$(cat "${test_dir}/pull-calls")" 'pull -q' 'online upgrades must refresh latest even if present'
-assert_contains "$(cat "${test_dir}/pull-calls")" 'tag jumpserver/ansible-executor-ssh:latest registry.internal/custom/ansible-executor-ssh:latest'
+pull_image jumpserver/ansible-executor:dev registry.internal/custom/ansible-executor:dev >"${test_dir}/pull.log"
+assert_contains "$(cat "${test_dir}/pull-calls")" 'pull -q' 'online upgrades must refresh branch tags even if present'
+assert_contains "$(cat "${test_dir}/pull-calls")" 'tag jumpserver/ansible-executor:dev registry.internal/custom/ansible-executor:dev'
 docker() { return 1; }
-if pull_image jumpserver/ansible-executor-ssh:latest >"${test_dir}/pull.log" 2>&1; then
-  fail 'failed latest pulls must not silently use the old image'
+if pull_image jumpserver/ansible-executor:dev >"${test_dir}/pull.log" 2>&1; then
+  fail 'failed branch pulls must not silently use the old image'
 fi
-printf 'PASS: latest refresh, namespace retagging and pull failure propagation\n'
+printf 'PASS: branch refresh, namespace retagging and pull failure propagation\n'
+
+for version in dev-ce dev-ee v5-ce v5-ee v5.1.0-ce v5.1.0-ee v5.1.0-rc.1-ee; do
+  VERSION=${version}
+  expected=${version%-ce}
+  expected=${expected%-ee}
+  assert_eq "${expected}" "$(get_ansible_executor_tag)"
+  set_config ANSIBLE_EXECUTOR_ENABLED 1
+  assert_contains "$(get_offline_image_manifest)" "/ansible-executor:${expected}"
+  assert_contains "$(get_docker_compose_cmd_line)" "ANSIBLE_EXECUTOR_TAG=${expected}"
+done
+for VERSION in latest latest-ce build-123-ee 'bad/tag-ce'; do
+  if get_ansible_executor_tag >"${test_dir}/invalid.log" 2>&1; then
+    fail "unsafe executor tag accepted: ${VERSION}"
+  fi
+done
+printf 'PASS: shared edition tags, prereleases, version changes and legacy latest protection\n'

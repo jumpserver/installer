@@ -55,7 +55,7 @@ function emit_image_mapping() {
 }
 
 function get_image_mappings() {
-  local use_xpack enabled_services service image db_image namespace
+  local use_xpack enabled_services service image db_image namespace executor_tag
 
   use_xpack=$(get_config_or_env USE_XPACK)
   namespace=$(get_image_namespace)
@@ -73,9 +73,10 @@ function get_image_mappings() {
       "" | celery | jdmc | panda)
         ;;
       ansible-executor)
+        executor_tag=$(get_ansible_executor_tag) || return 1
         emit_image_mapping \
-          "jumpserver/ansible-executor-ssh:latest" \
-          "${namespace}/ansible-executor-ssh:latest"
+          "jumpserver/ansible-executor:${executor_tag}" \
+          "${namespace}/ansible-executor:${executor_tag}"
         ;;
       *)
         emit_image_mapping \
@@ -270,7 +271,7 @@ function pull_image() {
     to_image="${namespace}/${to_image#jumpserver/}"
   fi
   if [[ "$(check_image_exists "${full_image_path}")" != "1" || "${image_pull_policy}" == "Always" ||
-        "${image}" == */ansible-executor-ssh:latest ]]; then
+        "${image}" == */ansible-executor:* ]]; then
     if ! docker pull -q ${pull_args} "${full_image_path}"; then
       echo "[${image}] pull failed" >&2
       return 1

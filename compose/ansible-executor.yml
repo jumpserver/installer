@@ -1,6 +1,6 @@
 services:
   ansible-executor:
-    image: ${NAMESPACE:-jumpserver}/ansible-executor-ssh:latest
+    image: ${NAMESPACE:-jumpserver}/ansible-executor:${ANSIBLE_EXECUTOR_TAG:?executor tag is required}
     pull_policy: never
     container_name: jms_ansible_executor
     hostname: ansible-executor

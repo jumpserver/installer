@@ -127,11 +127,13 @@ PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通�
 
 ## SSH Ansible 执行器
 
-安装器默认部署 `jumpserver/ansible-executor-ssh:latest`，Core/Celery 复用原
+安装器部署 `jumpserver/ansible-executor:<版本或分支>`，标签取自 `VERSION` 并去掉末尾的
+`-ce` / `-ee`（例如 `v5.1.0-ce` → `v5.1.0`，`dev-ce` → `dev`）。Core/Celery 复用原
 `ANSIBLE_DOCKER_ENABLED` 开关：开启时通过 SSH 使用常驻执行器，关闭时本地执行。
 页面已保存的开关值继续生效，安装器不再强制指定执行后端；需配套支持该行为的 Core 版本（[Core 适配 PR](https://github.com/jumpserver/jumpserver/pull/17797)）。
-升级在线安装时重新拉取 `latest`；离线包按镜像 ID 加载更新，运行时不访问镜像仓库。
-CE 和 EE 都包含执行器，旧 `ansible-executor:latest` 不再打包。
+升级在线安装时重新拉取对应标签；离线包按镜像 ID 加载更新，运行时不访问镜像仓库。
+CE 和 EE 共用同一执行器标签，离线包包含执行器。`ansible-executor:latest` 保留给旧版，
+新安装器不会使用它。CI 从已验证的 digest 打包，发版只映射版本标签，不重新构建镜像。
 自定义 `OFFLINE_IMAGE_SERVICES` 时应包含 `ansible-executor`。
 执行器地址、端口和凭据路径统一使用 Core 默认值；自定义值写入安装器配置文件，
 由现有 `env_file` 传入 Core/Celery。Compose 仅分别指定两者的网域隧道地址。

@@ -136,7 +136,7 @@ assert set(executor['networks']) == {'executor'}
 for name, service in services.items():
     if name not in ('core', 'celery', 'ansible-executor'):
         assert 'executor' not in service.get('networks', {}), name
-assert executor['image'].endswith('/ansible-executor-ssh:latest')
+assert executor['image'].endswith('/ansible-executor:dev')
 assert executor['pull_policy'] == 'never'
 assert not executor.get('privileged') and not executor.get('ports')
 assert 'no-new-privileges:true' in executor['security_opt']
@@ -230,3 +230,17 @@ if [[ "${external_worker_manifest}" == *'/video-worker:'* ]]; then
   fail 'disabled local worker must not be packed into the offline image manifest'
 fi
 printf 'PASS: external worker routing disables only the local container and image\n'
+
+(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  set_config ANSIBLE_EXECUTOR_ENABLED 1
+  for VERSION in v5.1.0-ce v5.1.0-ee v5.1.0-rc.1-ee v5-ce; do
+    export VERSION
+    compose_cmd=$(get_docker_compose_cmd_line)
+    images=$(${compose_cmd} --env-file "${CONFIG_FILE}" config --images)
+    assert_contains "${images}" "jumpserver/ansible-executor:$(get_ansible_executor_tag)"
+  done
+)
+printf 'PASS: Compose derives executor tags on every version change\n'

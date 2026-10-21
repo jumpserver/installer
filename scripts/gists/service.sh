@@ -166,6 +166,11 @@ function get_docker_compose_cmd_line() {
   services=$(get_docker_compose_services "ignore_db")
 
   for service in $services; do
+      if [[ "${service}" == "ansible-executor" ]]; then
+        local executor_tag
+        executor_tag=$(get_ansible_executor_tag) || return 1
+        cmd="env ANSIBLE_EXECUTOR_TAG=${executor_tag} ${cmd}"
+      fi
       cmd+=" -f compose/${service}.yml"
   done
 
