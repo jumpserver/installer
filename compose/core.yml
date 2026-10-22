@@ -11,10 +11,11 @@ services:
       - ${CONFIG_FILE}
     environment:
       TIME_ZONE: ${TZ:-Asia/Shanghai}
+      ANSIBLE_EXECUTOR_GATEWAY_HOST: ${ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST:-core}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
-      - /var/run/docker.sock:/var/run/docker.sock:z
+      - ${CONFIG_DIR}/ansible-executor/client:/run/jms-executor:ro
     healthcheck:
       test: "check http://localhost:8080/api/health/"
       interval: 10s
@@ -22,6 +23,8 @@ services:
       retries: 3
       start_period: 90s
     networks:
-      - net
+      net:
+        gw_priority: 1
+      executor: {}
     extra_hosts:
       - "host.docker.internal:host-gateway"

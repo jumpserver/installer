@@ -7,3 +7,6 @@ networks:
       config:
         - subnet: ${DOCKER_SUBNET}
         - subnet: ${DOCKER_SUBNET_IPV6}
+  executor:
+    driver: bridge
+    enable_ipv6: true

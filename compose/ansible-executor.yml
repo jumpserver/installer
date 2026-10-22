@@ -1,0 +1,30 @@
+services:
+  ansible-executor:
+    image: ${NAMESPACE:-jumpserver}/ansible-executor:${ANSIBLE_EXECUTOR_TAG:?executor tag is required}
+    pull_policy: never
+    container_name: jms_ansible_executor
+    hostname: ansible-executor
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${ANSIBLE_EXECUTOR_MEMORY:-4g}
+    cpus: ${ANSIBLE_EXECUTOR_CPUS:-2}
+    pids_limit: ${ANSIBLE_EXECUTOR_PIDS:-1024}
+    ulimits:
+      core: 0
+    tmpfs:
+      - /run
+      - /home/jms-executor:exec,nosuid,nodev
+    volumes:
+      - ${CONFIG_DIR}/ansible-executor/public:/run/secrets:ro
+      - ${CONFIG_DIR}/ansible-executor/server:/var/lib/jms-executor
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; socket.create_connection(('127.0.0.1', 2222), 3).close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - executor
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

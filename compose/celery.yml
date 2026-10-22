@@ -6,16 +6,16 @@ services:
     ulimits:
       core: 0
     restart: always
-    privileged: ${CELERY_PRIVILEGED:-true}
     command: start task
     env_file:
       - ${CONFIG_FILE}
     environment:
       LC_ALL: C.UTF-8
+      ANSIBLE_EXECUTOR_GATEWAY_HOST: ${ANSIBLE_EXECUTOR_GATEWAY_HOST:-celery}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
       - ${VOLUME_DIR}/core/data:/opt/jumpserver/data
-      - /var/run/docker.sock:/var/run/docker.sock:z
+      - ${CONFIG_DIR}/ansible-executor/client:/run/jms-executor:ro
     healthcheck:
       test: "bash /opt/jumpserver/utils/check_celery.sh"
       interval: 10s
@@ -23,4 +23,6 @@ services:
       retries: 3
       start_period: 30s
     networks:
-      - net
+      net:
+        gw_priority: 1
+      executor: {}

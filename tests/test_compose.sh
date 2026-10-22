@@ -101,6 +101,103 @@ for optional_image in elasticsearch minio grafana/loki grafana/promtail; do
   fi
 done
 
+for use_ipv6 in 0 1; do
+(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  set_config USE_IPV6 "${use_ipv6}"
+  compose_cmd=$(get_docker_compose_cmd_line)
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config --format json >"${test_dir}/executor-compose.json"
+)
+python3 - "${test_dir}/executor-compose.json" "${use_ipv6}" <<'PYTEST'
+import json
+import sys
+config = json.load(open(sys.argv[1]))
+services = config['services']
+assert bool(config['networks']['executor'].get('enable_ipv6')) == bool(int(sys.argv[2]))
+assert bool(config['networks']['net'].get('enable_ipv6')) == bool(int(sys.argv[2]))
+for name in ('core', 'celery'):
+    service = services[name]
+    assert not service.get('privileged'), name
+    assert all('docker.sock' not in v['source'] for v in service['volumes']), name
+    env = service['environment']
+    assert 'ANSIBLE_EXECUTION_BACKEND' not in env
+    assert 'ANSIBLE_DOCKER_ENABLED' not in env
+    for key in ('HOST', 'PORT', 'PRIVATE_KEY', 'KNOWN_HOSTS'):
+        assert 'ANSIBLE_EXECUTOR_' + key not in env
+    assert env['ANSIBLE_EXECUTOR_GATEWAY_HOST'] == name
+    assert set(service['networks']) == {'net', 'executor'}
+    assert service['networks']['net']['gw_priority'] == 1
+    credential_mount = next(v for v in service['volumes'] if v['target'] == '/run/jms-executor')
+    assert credential_mount['read_only']
+executor = services['ansible-executor']
+assert set(executor['networks']) == {'executor'}
+for name, service in services.items():
+    if name not in ('core', 'celery', 'ansible-executor'):
+        assert 'executor' not in service.get('networks', {}), name
+assert executor['image'].endswith('/ansible-executor:dev')
+assert executor['pull_policy'] == 'never'
+assert not executor.get('privileged') and not executor.get('ports')
+assert 'no-new-privileges:true' in executor['security_opt']
+assert int(executor['mem_limit']) == 4 * 1024**3
+assert float(executor['cpus']) == 2
+assert int(executor['pids_limit']) == 1024
+assert '/home/jms-executor:exec,nosuid,nodev' in executor['tmpfs']
+assert all('/client' not in v['source'] and 'docker.sock' not in v['source'] for v in executor['volumes'])
+assert {v['target'] for v in executor['volumes']} == {'/run/secrets', '/var/lib/jms-executor'}
+PYTEST
+done
+(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  set_config ANSIBLE_DOCKER_ENABLED false
+  compose_cmd=$(get_docker_compose_cmd_line)
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config --format json >"${test_dir}/native-ansible.json"
+  set_config ANSIBLE_DOCKER_ENABLED ''
+)
+python3 - "${test_dir}/native-ansible.json" <<'PYTEST'
+import json
+import sys
+services = json.load(open(sys.argv[1]))['services']
+for name in ('core', 'celery'):
+    env = services[name]['environment']
+    assert env['ANSIBLE_DOCKER_ENABLED'] == 'false'
+    assert 'ANSIBLE_EXECUTION_BACKEND' not in env
+assert 'ansible-executor' in services
+PYTEST
+printf 'PASS: existing Ansible isolation setting is passed through without forcing SSH\n'
+
+(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  set_config ANSIBLE_EXECUTOR_ENABLED 0
+  set_config ANSIBLE_EXECUTOR_HOST remote-executor.example
+  set_config ANSIBLE_EXECUTOR_PORT 2223
+  set_config ANSIBLE_EXECUTOR_PRIVATE_KEY /run/custom/client
+  set_config ANSIBLE_EXECUTOR_KNOWN_HOSTS /run/custom/known_hosts
+  set_config ANSIBLE_EXECUTOR_GATEWAY_HOST celery.example
+  set_config ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST core.example
+  compose_cmd=$(get_docker_compose_cmd_line)
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config --format json >"${test_dir}/external-executor.json"
+)
+python3 - "${test_dir}/external-executor.json" <<'PYTEST'
+import json
+import sys
+services = json.load(open(sys.argv[1]))['services']
+assert 'ansible-executor' not in services
+for name in ('core', 'celery'):
+    env = services[name]['environment']
+    assert env['ANSIBLE_EXECUTOR_HOST'] == 'remote-executor.example'
+    assert env['ANSIBLE_EXECUTOR_PORT'] == '2223'
+    assert env['ANSIBLE_EXECUTOR_PRIVATE_KEY'] == '/run/custom/client'
+    assert env['ANSIBLE_EXECUTOR_KNOWN_HOSTS'] == '/run/custom/known_hosts'
+    assert env['ANSIBLE_EXECUTOR_GATEWAY_HOST'] == name + '.example'
+PYTEST
+printf 'PASS: separate caller networks and tunnel addresses in IPv4, IPv6 and external-executor configurations\n'
+
 printf 'PASS: default and all-feature Compose configurations render\n'
 printf 'PASS: optional infrastructure images stay out of the offline manifest\n'
 
@@ -135,3 +232,17 @@ if [[ "${external_worker_manifest}" == *'/video-worker:'* ]]; then
   fail 'disabled local worker must not be packed into the offline image manifest'
 fi
 printf 'PASS: external worker routing disables only the local container and image\n'
+
+(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  set_config ANSIBLE_EXECUTOR_ENABLED 1
+  for VERSION in v5.1.0-ce v5.1.0-ee v5.1.0-rc.1-ee v5-ce; do
+    export VERSION
+    compose_cmd=$(get_docker_compose_cmd_line)
+    images=$(${compose_cmd} --env-file "${CONFIG_FILE}" config --images)
+    assert_contains "${images}" "jumpserver/ansible-executor:$(get_ansible_executor_tag)"
+  done
+)
+printf 'PASS: Compose derives executor tags on every version change\n'

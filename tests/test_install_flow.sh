@@ -65,12 +65,12 @@ record_stage() {
 }
 prepare_config() { record_stage prepare; }
 perform_db_migrations() { record_stage migrations; [[ "${FAIL_STAGE}" != migrations ]]; }
-ensure_core_data_symlink() { :; }
 ensure_current_installer_link() { :; }
 install_jdmc() { record_stage jdmc; [[ "${FAIL_STAGE}" != jdmc ]]; }
 installation_log() { record_stage "success-$1"; }
 stop_disabled_video_worker() { :; }
 prepare_video_worker_volume() { :; }
+prepare_ansible_executor() { :; }
 get_docker_compose_cmd_line() { printf 'docker compose\n'; }
 docker() { :; }
 start_jdmc() { record_stage start; }

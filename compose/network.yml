@@ -5,3 +5,5 @@ networks:
       driver: default
       config:
         - subnet: ${DOCKER_SUBNET}
+  executor:
+    driver: bridge

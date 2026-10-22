@@ -55,7 +55,7 @@ function emit_image_mapping() {
 }
 
 function get_image_mappings() {
-  local use_xpack enabled_services service image db_image namespace
+  local use_xpack enabled_services service image db_image namespace executor_tag
 
   use_xpack=$(get_config_or_env USE_XPACK)
   namespace=$(get_image_namespace)
@@ -72,6 +72,12 @@ function get_image_mappings() {
     case "${service}" in
       "" | celery | jdmc | panda)
         ;;
+      ansible-executor)
+        executor_tag=$(get_ansible_executor_tag) || return 1
+        emit_image_mapping \
+          "jumpserver/ansible-executor:${executor_tag}" \
+          "${namespace}/ansible-executor:${executor_tag}"
+        ;;
       *)
         emit_image_mapping \
           "jumpserver/${service}:${VERSION}" \
@@ -85,9 +91,6 @@ function get_image_mappings() {
     if [[ "${INCLUDE_PANDA_IMAGE:-0}" == "1" ]]; then
       emit_image_mapping "jumpserver/panda:${VERSION}" "${namespace}/panda:${VERSION}"
     fi
-    emit_image_mapping \
-      "jumpserver/ansible-executor:latest" \
-      "${namespace}/ansible-executor:latest"
   fi
   if should_include_openbao_image; then
     image=$(get_openbao_image)
@@ -267,7 +270,8 @@ function pull_image() {
     namespace=$(get_image_namespace)
     to_image="${namespace}/${to_image#jumpserver/}"
   fi
-  if [[ "$(check_image_exists "${full_image_path}")" != "1" || "${image_pull_policy}" == "Always" ]]; then
+  if [[ "$(check_image_exists "${full_image_path}")" != "1" || "${image_pull_policy}" == "Always" ||
+        "${image}" == */ansible-executor:* ]]; then
     if ! docker pull -q ${pull_args} "${full_image_path}"; then
       echo "[${image}] pull failed" >&2
       return 1
