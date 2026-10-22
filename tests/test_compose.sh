@@ -128,7 +128,6 @@ for name in ('core', 'celery'):
         assert 'ANSIBLE_EXECUTOR_' + key not in env
     assert env['ANSIBLE_EXECUTOR_GATEWAY_HOST'] == name
     assert set(service['networks']) == {'net', 'executor'}
-    assert service['networks']['net']['gw_priority'] == 1
     credential_mount = next(v for v in service['volumes'] if v['target'] == '/run/jms-executor')
     assert credential_mount['read_only']
 executor = services['ansible-executor']

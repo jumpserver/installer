@@ -23,6 +23,5 @@ services:
       retries: 3
       start_period: 30s
     networks:
-      net:
-        gw_priority: 1
-      executor: {}
+      - net
+      - executor
