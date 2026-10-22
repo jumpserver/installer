@@ -151,8 +151,8 @@ CE 和 EE 共用同一执行器标签，离线包包含执行器。`ansible-exec
 `executor`，Redis、数据库和其他组件只接业务网。
 业务网保留原 `DOCKER_SUBNET` 配置，执行网使用 Docker 地址池自动分配独立网段。
 `USE_IPV6=1` 时两个网络均启用 IPv6，执行网 IPv6 地址由 Docker 自动分配。
-Core/Celery 使用 `gw_priority: 1` 保持业务网为默认出口（需 Compose 2.33.1+，
-安装器自带的版本已支持，见 [Docker 配置说明](https://docs.docker.com/reference/compose-file/services/#gw_priority)）。
+Core/Celery 的默认出口由 Docker 自动选择，业务网和执行网均保留出站能力。
+自定义出口防火墙规则时，需允许实际使用的网络出站。
 Core/Celery 移除了 Docker socket 和 Celery 的 privileged 设置，旧 `CELERY_PRIVILEGED` 不再生效。
 关闭 Ansible Docker 隔离不会停止常驻执行器，便于从页面重新开启；本地执行不享有
 执行器提供的任务 UID 和文件隔离。`ANSIBLE_EXECUTOR_ENABLED=0` 仅控制是否部署本地
