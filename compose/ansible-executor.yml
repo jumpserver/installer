@@ -7,9 +7,9 @@ services:
     restart: always
     security_opt:
       - no-new-privileges:true
-    mem_limit: ${ANSIBLE_EXECUTOR_MEMORY:-1g}
+    mem_limit: ${ANSIBLE_EXECUTOR_MEMORY:-4g}
     cpus: ${ANSIBLE_EXECUTOR_CPUS:-2}
-    pids_limit: ${ANSIBLE_EXECUTOR_PIDS:-256}
+    pids_limit: ${ANSIBLE_EXECUTOR_PIDS:-1024}
     ulimits:
       core: 0
     tmpfs:

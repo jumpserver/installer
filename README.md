@@ -157,7 +157,7 @@ Core/Celery 移除了 Docker socket 和 Celery 的 privileged 设置，旧 `CELE
 关闭 Ansible Docker 隔离不会停止常驻执行器，便于从页面重新开启；本地执行不享有
 执行器提供的任务 UID 和文件隔离。`ANSIBLE_EXECUTOR_ENABLED=0` 仅控制是否部署本地
 执行器容器，与功能开关独立。
-默认整体资源上限为 1 GiB 内存、2 CPU、256 PID，可通过配置示例中的选项调整。
+默认整体资源上限为 4 GiB 内存、2 CPU、1024 PID，可通过配置示例中的选项调整。
 任务目录使用 `exec,nosuid,nodev` tmpfs，以支持上传的 SSH 包装脚本。
 
 资产地址须可从执行器访问，`127.0.0.1` 表示执行器自身。执行网保留访问外部资产的

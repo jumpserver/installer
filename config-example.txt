@@ -182,9 +182,9 @@ DOMAINS=
 # Tunnel addresses must point back to the process creating the tunnel.
 # ANSIBLE_EXECUTOR_GATEWAY_HOST=celery
 # ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST=core
-# ANSIBLE_EXECUTOR_MEMORY=1g
+# ANSIBLE_EXECUTOR_MEMORY=4g
 # ANSIBLE_EXECUTOR_CPUS=2
-# ANSIBLE_EXECUTOR_PIDS=256
+# ANSIBLE_EXECUTOR_PIDS=1024
 
 # VIDEO_WORKER_ENABLED only controls the local container. To send recordings
 # from KoKo to a worker, set ENABLE_VIDEO_WORKER=true. For the local container,

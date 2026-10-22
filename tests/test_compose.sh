@@ -140,7 +140,9 @@ assert executor['image'].endswith('/ansible-executor:dev')
 assert executor['pull_policy'] == 'never'
 assert not executor.get('privileged') and not executor.get('ports')
 assert 'no-new-privileges:true' in executor['security_opt']
-assert int(executor['mem_limit']) > 0 and int(executor['pids_limit']) > 0
+assert int(executor['mem_limit']) == 4 * 1024**3
+assert float(executor['cpus']) == 2
+assert int(executor['pids_limit']) == 1024
 assert '/home/jms-executor:exec,nosuid,nodev' in executor['tmpfs']
 assert all('/client' not in v['source'] and 'docker.sock' not in v['source'] for v in executor['volumes'])
 assert {v['target'] for v in executor['volumes']} == {'/run/secrets', '/var/lib/jms-executor'}
