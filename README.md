@@ -149,7 +149,10 @@ CE 和 EE 共用同一执行器标签，离线包包含执行器。`ansible-exec
 执行器只接独立的 `executor` bridge 网络，在内网监听 2222，不发布宿主机端口，
 也不挂载 Core 数据或 Docker socket。Core/Celery 同时接入业务网 `net` 和执行网
 `executor`，Redis、数据库和其他组件只接业务网。
-业务网保留原 `DOCKER_SUBNET` 配置，执行网使用 Docker 地址池自动分配独立网段。
+业务网保留原 `DOCKER_SUBNET` 配置，执行网使用 `DOCKER_EXECUTOR_SUBNET`，默认
+`192.168.252.0/24`，须避开业务、资产、VPN 和其他 Docker 网段。Docker 的 `bip`
+只配置默认网桥，不控制执行网。已有执行网修改子网后，需先停止并移除连接它的容器，
+删除旧执行网，再通过安装器重新启动；请先等待运行中的任务完成。
 `USE_IPV6=1` 时两个网络均启用 IPv6，执行网 IPv6 地址由 Docker 自动分配。
 Core/Celery 的默认出口由 Docker 自动选择，业务网和执行网均保留出站能力。
 自定义出口防火墙规则时，需允许实际使用的网络出站。

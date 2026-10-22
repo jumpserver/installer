@@ -9,4 +9,8 @@ networks:
         - subnet: ${DOCKER_SUBNET_IPV6}
   executor:
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${DOCKER_EXECUTOR_SUBNET:-192.168.252.0/24}
     enable_ipv6: true

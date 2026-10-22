@@ -65,6 +65,9 @@ LOG_LEVEL=ERROR
 #
 DOCKER_SUBNET=192.168.250.0/24
 
+# Executor network; must not overlap business, asset, VPN or other Docker networks
+DOCKER_EXECUTOR_SUBNET=192.168.252.0/24
+
 # ipv6 nat, no need to enable under normal circumstances
 # If the host does not support ipv6, enabling this option will prevent the real client ip address from being obtained
 #
