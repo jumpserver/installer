@@ -102,21 +102,24 @@ for optional_image in elasticsearch minio grafana/loki grafana/promtail; do
 done
 
 for use_ipv6 in 0 1; do
+for executor_subnet in '' 10.254.252.0/24; do
 (
   cd "${TEST_ROOT}"
   export JS_CONFIG_DIR="${ce_dir}"
   . ./scripts/utils.sh
   set_config USE_IPV6 "${use_ipv6}"
+  set_config DOCKER_EXECUTOR_SUBNET "${executor_subnet}"
   compose_cmd=$(get_docker_compose_cmd_line)
   ${compose_cmd} --env-file "${CONFIG_FILE}" config --format json >"${test_dir}/executor-compose.json"
 )
-python3 - "${test_dir}/executor-compose.json" "${use_ipv6}" <<'PYTEST'
+python3 - "${test_dir}/executor-compose.json" "${use_ipv6}" "${executor_subnet:-192.168.252.0/24}" <<'PYTEST'
 import json
 import sys
 config = json.load(open(sys.argv[1]))
 services = config['services']
 assert bool(config['networks']['executor'].get('enable_ipv6')) == bool(int(sys.argv[2]))
 assert bool(config['networks']['net'].get('enable_ipv6')) == bool(int(sys.argv[2]))
+assert config['networks']['executor']['ipam']['config'][0]['subnet'] == sys.argv[3]
 for name in ('core', 'celery'):
     service = services[name]
     assert not service.get('privileged'), name
@@ -146,6 +149,7 @@ assert '/home/jms-executor:exec,nosuid,nodev' in executor['tmpfs']
 assert all('/client' not in v['source'] and 'docker.sock' not in v['source'] for v in executor['volumes'])
 assert {v['target'] for v in executor['volumes']} == {'/run/secrets', '/var/lib/jms-executor'}
 PYTEST
+done
 done
 (
   cd "${TEST_ROOT}"
