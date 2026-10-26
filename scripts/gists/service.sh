@@ -232,6 +232,38 @@ function stop_disabled_video_worker() {
   fi
 }
 
+function prepare_chen_volume() {
+  [[ "$(get_config_or_env CHEN_ENABLED)" != "0" ]] || return 0
+  local image owner data_dir folder
+  image="$(get_image_namespace)/chen:${VERSION}"
+  owner=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
+    log_error "Unable to inspect Chen image user: ${image}"
+    return 1
+  }
+  # Legacy Java images run as root and need no ownership migration.
+  case "${owner}" in ''|root|root:root|0|0:0) return 0 ;; esac
+  if [[ ! "${owner}" =~ ^[0-9]+:[0-9]+$ ]]; then
+    owner=$(docker run --rm --entrypoint /bin/sh "${image}" -c \
+      'printf "%s:%s\n" "$(id -u)" "$(id -g)"') || return 1
+  fi
+  if [[ ! "${owner}" =~ ^[0-9]+:[0-9]+$ ]]; then
+    log_error "Invalid Chen image user: ${owner}"
+    return 1
+  fi
+  data_dir="$(get_config VOLUME_DIR)/chen/data"
+  # Only Chen's runtime state is writable. Leave the shared certificate mount
+  # and legacy application files alone; never follow a state-directory symlink.
+  for folder in "${data_dir}" "${data_dir}/keys" "${data_dir}/logs" "${data_dir}/go"; do
+    if [[ -L "${folder}" ]]; then
+      log_error "Chen state directory must not be a symbolic link: ${folder}"
+      return 1
+    fi
+  done
+  mkdir -p -m 700 "${data_dir}/keys" "${data_dir}/logs" "${data_dir}/go" || return 1
+  chown -h "${owner}" "${data_dir}" || return 1
+  chown -hR "${owner}" "${data_dir}/keys" "${data_dir}/logs" "${data_dir}/go" || return 1
+}
+
 function prepare_video_worker_volume() {
   local volume_dir data_dir image user_spec owner
   if ! video_worker_can_start; then
