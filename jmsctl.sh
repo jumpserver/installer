@@ -103,6 +103,7 @@ function start() {
   configure_jdmc || return 1
   gen_safe_config >/dev/null
   stop_disabled_video_worker || return 1
+  prepare_chen_volume || return 1
   prepare_video_worker_volume || return 1
   prepare_ansible_executor || return 1
   EXE=$(get_docker_compose_cmd_line)
@@ -172,6 +173,9 @@ function restart() {
   echo -e "\n"
 
   if [[ -n "${target}" && "${target}" != "ignore_db" ]]; then
+    if [[ "${target}" == "chen" || "${target}" == "jms_chen" ]]; then
+      prepare_chen_volume || return 1
+    fi
     ${EXE} up -d "${target}" || return 1
     remove_stopped_openbao_init_container
     return
