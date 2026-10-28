@@ -22,10 +22,12 @@ oss://jms-pkg/docker/compose/releases/download/<version>/docker-compose-linux-<a
 版本配置变更时自动同步，也可手动 **Run workflow**，选择分支并填写
 `docker_version`、`docker_compose_version`（可带 `v`），留空沿用当前版本。
 新版本自动计算 SHA-256 和 MD5，原版本仍校验固定 SHA-256。
-OSS 上传成功后，只将 `const.sh` 的版本和 SHA-256 提交回所选分支；
-参数全部留空时只同步，不提交。历史 OSS 文件保留。
+OSS 上传成功后，将 `const.sh` 的版本和 SHA-256 提交到
+`pr@所选分支@docker-versions-…` 分支，并创建以所选分支为目标的 PR。
+参数全部留空或文件内容不变时只同步，不创建 PR。历史 OSS 文件保留。
 
-回写使用 `PRIVATE_TOKEN`，未配置时使用 `GITHUB_TOKEN`，需有权推送所选分支。
+创建 PR 使用 `PRIVATE_TOKEN`，未配置时使用 `GITHUB_TOKEN`，
+需有权推送新分支和创建 PR。
 自动提交通过 `[docker-mirror-synced]` 标记避免重复同步。
 
 ## 安装部署
