@@ -71,6 +71,19 @@ $ ./jmsctl.sh video-worker {start|stop|restart|status}
 `USE_XPACK` 是组件部署模式，不代表许可证校验。旧版本的
 `VIDEO_ENABLED`、`VIDEO_ENABLE` 以及 `${VOLUME_DIR}/video` 数据目录会在升级时迁移。
 
+## 外置 MySQL 升级
+
+使用外置 MySQL 且未启用 `HA_MODE=1` 时，如果已由 DBA 或云数据库完成可恢复的备份，
+可以显式跳过安装器的数据库备份：
+
+```bash
+SKIP_BACKUP_DB=1 ./jmsctl.sh upgrade
+```
+
+此时镜像清单会排除用于备份的 MySQL/MariaDB 客户端镜像，离线加载和在线拉取均不再
+要求该镜像，表结构迁移仍由 Core 连接外置数据库执行。未设置该变量、使用内置数据库
+或设置 `HA_MODE=1` 时，继续要求数据库镜像。该变量通过命令环境传入，不是 `config.txt` 配置项。
+
 ## JDMC（企业版）
 
 JDMC 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设置

@@ -4,6 +4,22 @@ function get_db_images() {
   get_db_info "image"
 }
 
+function should_skip_external_mysql_image() {
+  local image=$1 db_host
+
+  # External MySQL only needs this image for installer-managed backups.
+  # Keep client image resolution intact for explicit backup/restore commands.
+  [[ "${SKIP_BACKUP_DB:-0}" == "1" ]] || return 1
+  case "${image}" in
+    mysql:8.0|mariadb:10.6) ;;
+    *) return 1 ;;
+  esac
+
+  db_host=$(get_config DB_HOST)
+  [[ -n "${db_host}" && "${db_host}" != "mysql" &&
+    "${db_host}" != "postgresql" && "$(get_config HA_MODE)" != "1" ]]
+}
+
 function reuse_legacy_db_image() {
   local image=$1
 
@@ -61,7 +77,7 @@ function get_image_mappings() {
   namespace=$(get_image_namespace)
   emit_image_mapping "redis:7.4.10-bookworm" "redis:7.4.10-bookworm"
   db_image=$(get_db_images)
-  if [[ -n "${db_image}" ]]; then
+  if [[ -n "${db_image}" ]] && ! should_skip_external_mysql_image "${db_image}"; then
     emit_image_mapping "${db_image}" "${db_image}"
   fi
 
