@@ -484,8 +484,23 @@ function cleanup_failed_upgrade() {
 }
 
 function backup_db() {
-  if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
+  local db_image external_mysql=0
+
+  if [[ "${SKIP_BACKUP_DB:-0}" != "1" ]]; then
+    db_image=$(get_db_images)
+    if is_external_mysql_image "${db_image}"; then
+      external_mysql=1
+      # Do not let docker run implicitly pull a missing client in offline upgrades.
+      if ! reuse_legacy_db_image "${db_image}"; then
+        log_warn "External MySQL backup image ${db_image} is unavailable; skipping database backup and continuing upgrade. No installer database backup was created."
+        return 0
+      fi
+    fi
     if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
+      if [[ "${external_mysql}" == "1" ]]; then
+        log_warn 'Failed to back up external MySQL; continuing upgrade without a successful installer database backup.'
+        return 0
+      fi
       confirm="n"
       read_from_input confirm "$(gettext 'Failed to backup the database. Continue to upgrade')?" "y/n" "${confirm}"
       if [[ "${confirm}" == "n" ]]; then
@@ -645,7 +660,7 @@ function main() {
   # Database backup starts a Core container using the target version.
   # Load the offline images before that container is created.
   echo_yellow "\n3. $(gettext 'Loading Docker Image')"
-  if ! bash "${BASE_DIR}/3_load_images.sh"; then
+  if ! ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh"; then
     log_error "$(gettext 'Failed to load Docker images')"
     exit 1
   fi

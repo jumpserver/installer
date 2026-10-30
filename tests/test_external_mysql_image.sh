@@ -29,6 +29,9 @@ for test_image in redis:7.4.10-bookworm "jumpserver/core:${VERSION}"; do
 done
 
 docker_calls="${test_dir}/docker-calls"
+installed_db_image=''
+fail_pull_image=''
+load_result=fail
 docker() {
   printf '%s\n' "$*" >>"${docker_calls}"
   case "$1 ${2:-}" in
@@ -37,16 +40,28 @@ docker() {
         redis:7.4.10-bookworm|"jumpserver/core:${VERSION}")
           printf 'sha256:installed\n'
           ;;
-        *) return 1 ;;
+        *)
+          [[ "${*: -1}" == "${installed_db_image}" ]] || return 1
+          printf 'sha256:installed\n'
+          ;;
       esac
       ;;
-    'pull '*|'tag '*) ;;
+    'pull '*) [[ "${*: -1}" != "${fail_pull_image}" ]] ;;
+    'tag '*) installed_db_image=$3 ;;
+    'load ')
+      case "${load_result}" in
+        fail) return 1 ;;
+        success) installed_db_image=$(get_db_images) ;;
+        missing) ;;
+      esac
+      ;;
     *) fail "Unexpected Docker command: $*" ;;
   esac
 }
 gettext() { printf '%s\n' "$1"; }
 echo_red() { printf '%s\n' "$*"; }
 echo_done() { printf 'complete\n'; }
+log_warn() { printf 'WARNING: %s\n' "$*"; }
 
 assert_no_db_image_operations() {
   if grep -Eq 'mysql|mariadb' "${docker_calls}"; then
@@ -91,6 +106,64 @@ unset SKIP_BACKUP_DB
 assert_db_image_required mariadb:10.6
 export SKIP_BACKUP_DB=0
 assert_db_image_required mariadb:10.6
+
+# Upgrades tolerate only the external MySQL backup image. The normal loader
+# above stays strict, and an explicitly skipped backup still omits the image.
+export ALLOW_MISSING_DB_IMAGE=1
+for selected_db_image in mariadb:10.6 mysql:8.0; do
+  set_config DB_IMAGE "${selected_db_image}"
+  unset SKIP_BACKUP_DB
+  main >"${test_dir}/load.log"
+  assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Docker image not found'
+  assert_contains "$(cat "${test_dir}/load.log")" 'upgrade will continue'
+
+  export SKIP_BACKUP_DB=0
+  main >"${test_dir}/load.log"
+  assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Docker image not found'
+
+  for installed_db_image in "${selected_db_image}" "jumpserver/${selected_db_image}"; do
+    main >"${test_dir}/load.log"
+    assert_eq "${selected_db_image}" "${installed_db_image}" 'legacy client tags must remain usable'
+    if [[ "$(cat "${test_dir}/load.log")" == *WARNING* ]]; then
+      fail 'an available backup image must not produce a missing-image warning'
+    fi
+  done
+  installed_db_image=''
+
+  printf 'mock archive\n' >"${IMAGE_DIR}/${selected_db_image}.zst"
+  main >"${test_dir}/load.log"
+  assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Docker image ID file not found'
+  : >"${IMAGE_DIR}/${selected_db_image}.sha256"
+  main >"${test_dir}/load.log"
+  assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Docker image ID file is empty'
+  printf 'sha256:installed\n' >"${IMAGE_DIR}/${selected_db_image}.sha256"
+  main >"${test_dir}/load.log"
+  assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Error loading image'
+  load_result=missing
+  main >"${test_dir}/load.log"
+  assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Docker image not found after loading'
+  load_result=success
+  main >"${test_dir}/load.log"
+  assert_eq "${selected_db_image}" "${installed_db_image}" 'available archives must still be loaded for backup'
+  installed_db_image=''
+  load_result=fail
+  rm "${IMAGE_DIR}/${selected_db_image}.zst" "${IMAGE_DIR}/${selected_db_image}.sha256"
+done
+printf 'PASS: upgrades warn for unavailable external MySQL clients and still use local or packaged clients\n'
+
+IMAGE_DIR="${test_dir}/no-offline-images"
+fail_pull_image=$(get_db_images)
+main >"${test_dir}/pull.log" 2>&1
+assert_contains "$(cat "${test_dir}/pull.log")" "WARNING: Failed to pull Docker image: ${fail_pull_image}"
+fail_pull_image="jumpserver/core:${VERSION}"
+if main >"${test_dir}/pull.log" 2>&1; then
+  fail 'application image pull failure must still stop an external MySQL upgrade'
+fi
+fail_pull_image=''
+IMAGE_DIR="${test_dir}/images"
+set_config DB_IMAGE mariadb:10.6
+printf 'PASS: upgrades tolerate backup-client pull failures but reject application pull failures\n'
+
 export SKIP_BACKUP_DB=1
 
 set_config DB_HOST mysql
@@ -111,7 +184,7 @@ assert_db_image_required mariadb:10.6
 set_config DB_HOST db.example.test
 set_config DB_ENGINE postgresql
 assert_db_image_required postgres:16.15-bookworm
-printf 'PASS: automatic backup, internal databases, HA, missing hosts, and PostgreSQL retain required image checks\n'
+printf 'PASS: internal databases, HA, missing hosts, and PostgreSQL retain required image checks during upgrade\n'
 
 # Older MySQL configurations can omit DB_ENGINE.
 remove_config DB_ENGINE
