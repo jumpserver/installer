@@ -4,11 +4,11 @@ function get_db_images() {
   get_db_info "image"
 }
 
-function is_external_mysql_image() {
+function is_external_db_image() {
   local image=$1 db_host
 
   case "${image}" in
-    mysql:8.0|mariadb:10.6) ;;
+    mysql:8.0|mariadb:10.6|postgres:*) ;;
     *) return 1 ;;
   esac
 
@@ -17,36 +17,38 @@ function is_external_mysql_image() {
     "${db_host}" != "postgresql" && "$(get_config HA_MODE)" != "1" ]]
 }
 
-function should_skip_external_mysql_image() {
+function should_skip_external_db_image() {
   # Keep client image resolution intact for explicit backup/restore commands.
-  [[ "${SKIP_BACKUP_DB:-0}" == "1" ]] && is_external_mysql_image "$1"
+  [[ "${SKIP_BACKUP_DB:-0}" == "1" ]] && is_external_db_image "$1"
 }
 
 function report_image_failure() {
   local image=$1 message=$2
 
-  # Only upgrades may proceed without the external MySQL backup client.
+  # Upgrades defer unavailable external database clients to the backup prompt.
   # Built-in databases and application images remain required.
-  if [[ "${ALLOW_MISSING_DB_IMAGE:-0}" == "1" ]] && is_external_mysql_image "${image}"; then
-    log_warn "${message}. External MySQL backup image ${image} could not be prepared; upgrade will continue."
+  if [[ "${ALLOW_MISSING_DB_IMAGE:-0}" == "1" ]] && is_external_db_image "${image}"; then
+    log_warn "${message}. External database backup image ${image} could not be prepared; continuing to the backup step."
     return 0
   fi
   echo_red "${message}"
   return 1
 }
 
-function reuse_legacy_db_image() {
+function reuse_local_db_image() {
   local image=$1
 
   # New offline packages only bundle PostgreSQL. Existing MySQL/MariaDB
   # installations retain their database image, including legacy tags.
   case "${image}" in
     mysql:8.0|mariadb:10.6) ;;
+    postgres:*) is_external_db_image "${image}" || return 1 ;;
     *) return 1 ;;
   esac
   if docker image inspect "${image}" &>/dev/null; then
     return 0
   fi
+  [[ "${image}" != postgres:* ]] || return 1
   if docker image inspect "jumpserver/${image}" &>/dev/null; then
     docker tag "jumpserver/${image}" "${image}"
     return $?
@@ -92,7 +94,7 @@ function get_image_mappings() {
   namespace=$(get_image_namespace)
   emit_image_mapping "redis:7.4.10-bookworm" "redis:7.4.10-bookworm"
   db_image=$(get_db_images)
-  if [[ -n "${db_image}" ]] && ! should_skip_external_mysql_image "${db_image}"; then
+  if [[ -n "${db_image}" ]] && ! should_skip_external_db_image "${db_image}"; then
     emit_image_mapping "${db_image}" "${db_image}"
   fi
 

@@ -18,7 +18,7 @@ function load_image_files() {
       filename=${filename_windows}
     fi
     if [[ ! -f ${IMAGE_DIR}/${filename} ]]; then
-      if reuse_legacy_db_image "${image}"; then
+      if reuse_local_db_image "${image}"; then
         echo "${image}: $(gettext 'Docker image loaded, skipping')"
         continue
       fi
