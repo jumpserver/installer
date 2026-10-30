@@ -71,12 +71,22 @@ $ ./jmsctl.sh video-worker {start|stop|restart|status}
 `USE_XPACK` 是组件部署模式，不代表许可证校验。旧版本的
 `VIDEO_ENABLED`、`VIDEO_ENABLE` 以及 `${VOLUME_DIR}/video` 数据目录会在升级时迁移。
 
-## 外置 MySQL 升级
+## 升级时的数据库备份
 
-使用外置 MySQL 且未启用 `HA_MODE=1` 时，升级会尝试准备 MySQL/MariaDB 备份客户端
-镜像。镜像缺失、加载或拉取失败只输出警告，不中断升级。本地没有可用的客户端镜像时，
-跳过安装器的数据库备份；镜像可用时仍尝试备份，备份失败也只警告并继续，无需交互确认。
-出现这类警告表示安装器未保证生成升级前的数据库备份，请由 DBA 或云数据库保障可恢复的备份。
+使用外置 MySQL 或 PostgreSQL 且未启用 `HA_MODE=1` 时，备份客户端镜像缺失、加载或
+拉取失败先输出警告，继续到备份步骤。本地没有可用的客户端镜像时不执行备份；镜像可用时
+正常尝试备份。内置数据库和应用必需镜像仍必须准备成功。
+
+升级过程中所有数据库备份失败统一提示：
+
+```text
+Failed to backup the database. Continue to upgrade? [Y/n] (Timeout: 30s, default: y):
+```
+
+输入 `y`（不区分大小写）或直接回车继续，输入 `n` 中止；30 秒没有输入时提示超时并继续。
+其他输入或输入流关闭会中止升级。超时仅用于此备份失败确认，其他确认保持原有行为；
+`AUTO_INSTALL=1` 按既有自动安装规则直接采用默认值 `y`。
+继续升级表示接受本次没有成功的安装器数据库备份，请由 DBA 或云数据库保障可恢复的备份。
 
 如果已自行完成备份，也可以显式跳过备份及备份客户端镜像准备：
 
@@ -84,8 +94,8 @@ $ ./jmsctl.sh video-worker {start|stop|restart|status}
 SKIP_BACKUP_DB=1 ./jmsctl.sh upgrade
 ```
 
-表结构迁移仍由 Core 连接外置数据库执行，迁移失败会中止升级。内置数据库、
-`HA_MODE=1` 和应用必需镜像继续保留原有检查；单独执行 `backup_db` 失败仍返回非零状态。
+表结构迁移仍由 Core 连接数据库执行。单独执行 `backup_db` 失败仍返回非零状态，
+不会触发升级确认。此流程不改变备份客户端版本，PostgreSQL 客户端与服务端版本不兼容时仍可能备份失败。
 `SKIP_BACKUP_DB` 通过命令环境传入，不是 `config.txt` 配置项。
 
 ## JDMC（企业版）

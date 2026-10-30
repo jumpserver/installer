@@ -484,32 +484,32 @@ function cleanup_failed_upgrade() {
 }
 
 function backup_db() {
-  local db_image external_mysql=0
+  local db_image backup_failed=0 confirm="y"
 
-  if [[ "${SKIP_BACKUP_DB:-0}" != "1" ]]; then
-    db_image=$(get_db_images)
-    if is_external_mysql_image "${db_image}"; then
-      external_mysql=1
-      # Do not let docker run implicitly pull a missing client in offline upgrades.
-      if ! reuse_legacy_db_image "${db_image}"; then
-        log_warn "External MySQL backup image ${db_image} is unavailable; skipping database backup and continuing upgrade. No installer database backup was created."
-        return 0
-      fi
-    fi
-    if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
-      if [[ "${external_mysql}" == "1" ]]; then
-        log_warn 'Failed to back up external MySQL; continuing upgrade without a successful installer database backup.'
-        return 0
-      fi
-      confirm="n"
-      read_from_input confirm "$(gettext 'Failed to backup the database. Continue to upgrade')?" "y/n" "${confirm}"
-      if [[ "${confirm}" == "n" ]]; then
-        exit 1
-      fi
-    fi
-  else
+  if [[ "${SKIP_BACKUP_DB:-0}" == "1" ]]; then
     echo "SKIP_BACKUP_DB=${SKIP_BACKUP_DB}, $(gettext 'Skip database backup')"
+    return 0
   fi
+
+  if ! db_image=$(get_db_images) || [[ -z "${db_image}" ]]; then
+    log_warn 'Could not determine the database backup image.'
+    backup_failed=1
+  elif is_external_db_image "${db_image}" && ! reuse_local_db_image "${db_image}"; then
+    # Avoid an implicit docker run pull when the offline client is unavailable.
+    log_warn "External database backup image ${db_image} is unavailable."
+    backup_failed=1
+  elif ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
+    backup_failed=1
+  fi
+
+  if [[ "${backup_failed}" == "1" ]]; then
+    log_warn 'No successful installer database backup was created.'
+    if ! read_from_input confirm "$(gettext 'Failed to backup the database. Continue to upgrade')?" "y/n" "${confirm}" 30 ||
+      [[ "${confirm}" != "y" ]]; then
+      exit 1
+    fi
+  fi
+  return 0
 }
 
 function db_migrations() {

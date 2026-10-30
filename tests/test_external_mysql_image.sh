@@ -64,8 +64,8 @@ echo_done() { printf 'complete\n'; }
 log_warn() { printf 'WARNING: %s\n' "$*"; }
 
 assert_no_db_image_operations() {
-  if grep -Eq 'mysql|mariadb' "${docker_calls}"; then
-    fail 'external MySQL with backup disabled must not inspect, load, or pull a database image'
+  if grep -Eq 'mysql|mariadb|postgres' "${docker_calls}"; then
+    fail 'external databases with backup disabled must not inspect, load, or pull a database image'
   fi
 }
 
@@ -115,7 +115,7 @@ for selected_db_image in mariadb:10.6 mysql:8.0; do
   unset SKIP_BACKUP_DB
   main >"${test_dir}/load.log"
   assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Docker image not found'
-  assert_contains "$(cat "${test_dir}/load.log")" 'upgrade will continue'
+  assert_contains "$(cat "${test_dir}/load.log")" 'continuing to the backup step'
 
   export SKIP_BACKUP_DB=0
   main >"${test_dir}/load.log"
@@ -181,10 +181,39 @@ set_config DB_HOST ''
 assert_db_image_required mariadb:10.6
 set_config DB_HOST postgresql
 assert_db_image_required mariadb:10.6
-set_config DB_HOST db.example.test
 set_config DB_ENGINE postgresql
 assert_db_image_required postgres:16.15-bookworm
-printf 'PASS: internal databases, HA, missing hosts, and PostgreSQL retain required image checks during upgrade\n'
+set_config DB_HOST db.example.test
+set_config HA_MODE 1
+assert_db_image_required postgres:16.15-bookworm
+set_config HA_MODE 0
+printf 'PASS: internal MySQL/PostgreSQL databases, HA, and missing hosts retain required image checks during upgrade\n'
+
+# External PostgreSQL shares the same optional backup-client behavior.
+: >"${docker_calls}"
+main >"${test_dir}/load.log"
+assert_no_db_image_operations
+unset SKIP_BACKUP_DB
+main >"${test_dir}/load.log"
+assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Docker image not found'
+assert_contains "$(cat "${test_dir}/load.log")" 'continuing to the backup step'
+installed_db_image=postgres:16.15-bookworm
+main >"${test_dir}/load.log"
+if [[ "$(cat "${test_dir}/load.log")" == *WARNING* ]]; then
+  fail 'an existing external PostgreSQL client must be reused without an archive'
+fi
+installed_db_image=''
+IMAGE_DIR="${test_dir}/no-offline-images"
+fail_pull_image=postgres:16.15-bookworm
+main >"${test_dir}/pull.log" 2>&1
+assert_contains "$(cat "${test_dir}/pull.log")" 'WARNING: Failed to pull Docker image: postgres:16.15-bookworm'
+export SKIP_BACKUP_DB=1
+: >"${docker_calls}"
+main >"${test_dir}/pull.log" 2>&1
+assert_no_db_image_operations
+fail_pull_image=''
+IMAGE_DIR="${test_dir}/images"
+printf 'PASS: external PostgreSQL supports backup skipping, local clients, and deferred image failures\n'
 
 # Older MySQL configurations can omit DB_ENGINE.
 remove_config DB_ENGINE
