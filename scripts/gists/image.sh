@@ -4,12 +4,9 @@ function get_db_images() {
   get_db_info "image"
 }
 
-function should_skip_external_mysql_image() {
+function is_external_mysql_image() {
   local image=$1 db_host
 
-  # External MySQL only needs this image for installer-managed backups.
-  # Keep client image resolution intact for explicit backup/restore commands.
-  [[ "${SKIP_BACKUP_DB:-0}" == "1" ]] || return 1
   case "${image}" in
     mysql:8.0|mariadb:10.6) ;;
     *) return 1 ;;
@@ -18,6 +15,24 @@ function should_skip_external_mysql_image() {
   db_host=$(get_config DB_HOST)
   [[ -n "${db_host}" && "${db_host}" != "mysql" &&
     "${db_host}" != "postgresql" && "$(get_config HA_MODE)" != "1" ]]
+}
+
+function should_skip_external_mysql_image() {
+  # Keep client image resolution intact for explicit backup/restore commands.
+  [[ "${SKIP_BACKUP_DB:-0}" == "1" ]] && is_external_mysql_image "$1"
+}
+
+function report_image_failure() {
+  local image=$1 message=$2
+
+  # Only upgrades may proceed without the external MySQL backup client.
+  # Built-in databases and application images remain required.
+  if [[ "${ALLOW_MISSING_DB_IMAGE:-0}" == "1" ]] && is_external_mysql_image "${image}"; then
+    log_warn "${message}. External MySQL backup image ${image} could not be prepared; upgrade will continue."
+    return 0
+  fi
+  echo_red "${message}"
+  return 1
 }
 
 function reuse_legacy_db_image() {
@@ -315,7 +330,10 @@ function pull_images() {
 
   while IFS=$'\t' read -r source_image target_image; do
     [[ -n "${source_image}" && -n "${target_image}" ]] || continue
-    pull_image "${source_image}" "${target_image}" 1 &
+    (
+      pull_image "${source_image}" "${target_image}" 1 ||
+        report_image_failure "${target_image}" "Failed to pull Docker image: ${target_image}"
+    ) &
     pids+=("$!")
   done < <(get_offline_image_manifest)
   for pid in "${pids[@]}"; do
