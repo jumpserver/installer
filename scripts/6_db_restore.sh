@@ -4,7 +4,16 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/utils.sh"
 
-DB_FILE="$1"
+DB_FILE="${1:-}"
+RESTORE_DATA_ONLY=false
+if [[ $# -gt 1 ]]; then
+  if [[ $# == 2 && "$2" == --data-only ]]; then
+    RESTORE_DATA_ONLY=true
+  else
+    echo 'Usage: restore_db <backup-file> [--data-only]' >&2
+    exit 1
+  fi
+fi
 BACKUP_DIR=$(dirname "${DB_FILE}")
 
 DB_ENGINE=$(get_config DB_ENGINE "mysql")
@@ -79,7 +88,9 @@ function main() {
 
   echo "$(gettext 'Start restoring database'): $DB_FILE"
 
-  if ! docker ps | grep -w "jms_core" &>/dev/null; then
+  # Coordinated recovery owns service lifecycle. In data-only mode never create
+  # core: its entrypoint or a later start could migrate a partially restored DB.
+  if [[ "$RESTORE_DATA_ONLY" == false ]] && ! docker ps | grep -w "jms_core" &>/dev/null; then
     create_db_ops_env
     flag=1
   fi
@@ -94,6 +105,7 @@ function main() {
   case "${DB_ENGINE}" in
     mysql)
       restore_cmd='
+        set -o pipefail
         if [[ "${DB_FILE}" == *.gz ]]; then
           gzip -dc "${DB_FILE}" | mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}"
         else
@@ -165,19 +177,15 @@ function main() {
   else
     [[ -n "${tmp_restore_file}" ]] && rm -f "${tmp_restore_file}"
     log_success "$(gettext 'Database recovered successfully')!"
-    run_post_restore
   fi
 
-  if [[ -n "$flag" ]]; then
-    down_db_ops_env
-    unset flag
-  fi
 }
 
 function run_post_restore() {
   echo "$(gettext 'Updating database schema')..."
-  if ! perform_db_migrations; then
-    log_warn "$(gettext 'Failed to change the table structure')!"
+  if ! (perform_db_migrations); then
+    log_error "$(gettext 'Failed to change the table structure')!"
+    return 1
   fi
 }
 
@@ -189,12 +197,15 @@ function stop_jms_core() {
 }
 
 function start_jms_core() {
-  docker start jms_core &>/dev/null || true
-  docker start jms_celery &>/dev/null || true
+  # Migration uses a temporary core whose command is sleep. Recreate from the
+  # normal service definition instead of restarting that migration container.
+  local cmd
+  cmd=$(get_docker_compose_cmd_line)
+  ${cmd} up -d --no-deps core celery
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
-  if [[ -z "$1" ]]; then
+  if [[ -z "$DB_FILE" ]]; then
     log_error "$(gettext 'Format error')！Usage './jmsctl.sh restore_db DB_Backup_file'"
     exit 1
   fi
@@ -202,7 +213,20 @@ if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
     echo "$(gettext 'The backup file does not exist'): $1"
     exit 1
   fi
-  stop_jms_core
-  main
-  start_jms_core
+  if [[ "$RESTORE_DATA_ONLY" == true ]]; then
+    main
+  else
+    # Coordinated HA recovery must use its explicit data-only phase. Ordinary
+    # restore is not allowed to start business inside an active HA task.
+    ha_recovery_lifecycle_guard startup || exit $?
+    stop_jms_core
+    main || exit 1
+    # Migration and startup are separate phases, after every restore command
+    # has completed. A failed migration must not expose a partially ready app.
+    run_post_restore || exit 1
+    if [[ -n "${flag:-}" ]]; then
+      down_db_ops_env
+    fi
+    start_jms_core || exit 1
+  fi
 fi

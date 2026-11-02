@@ -27,11 +27,6 @@ AUDITS_TABLES=(
   terminal_command
 )
 
-FULL_IGNORE_TABLES=(
-  audits_activitylog
-  terminal_command
-)
-
 SHARED_BACKUP_TABLES=(
   users_user
 )
@@ -79,7 +74,6 @@ function cleanup_db_env() {
 }
 
 function backup_main_db() {
-  local table
   case "${DB_ENGINE}" in
     mysql)
       DB_FILE="${BACKUP_DIR}/${DB_NAME}-${CURRENT_VERSION}-$(date +%F_%T).sql"
@@ -92,9 +86,6 @@ function backup_main_db() {
         -P"${DB_PORT}"
         -u"${DB_USER}"
       )
-      for table in "${FULL_IGNORE_TABLES[@]}"; do
-        dump_cmd+=("--ignore-table=${DB_NAME}.${table}")
-      done
       dump_cmd+=("${DB_NAME}")
 
       if ! docker run --rm \
@@ -107,27 +98,6 @@ function backup_main_db() {
         exit 1
       fi
 
-      local schema_cmd=(
-        mysqldump
-        --skip-add-locks
-        --skip-lock-tables
-        --single-transaction
-        --no-data
-        -h"${DB_HOST}"
-        -P"${DB_PORT}"
-        -u"${DB_USER}"
-        "${DB_NAME}"
-        "${FULL_IGNORE_TABLES[@]}"
-      )
-      if ! docker run --rm \
-        --env MYSQL_PWD="${DB_PASSWORD}" \
-        -i --network=jms_net \
-        "${db_images}" \
-        "${schema_cmd[@]}" >> "${DB_FILE}"; then
-        log_error "$(gettext 'Backup failed')!"
-        rm -f "${DB_FILE}"
-        exit 1
-      fi
       ;;
     postgresql)
       local schema
@@ -146,9 +116,6 @@ function backup_main_db() {
         -p "${DB_PORT}"
         -d "${DB_NAME}"
       )
-      for table in "${FULL_IGNORE_TABLES[@]}"; do
-        dump_cmd+=("--exclude-table-data=${schema}.\"${table}\"")
-      done
 
       if ! docker run --rm \
         --env PGPASSWORD="${DB_PASSWORD}" \

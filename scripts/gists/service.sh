@@ -170,6 +170,13 @@ function get_docker_compose_services() {
   echo "${services}"
 }
 
+function compose_env_options() {
+  # Compose uses the first -f file's directory as its project directory. A
+  # stale compose/.env must not override the active JumpServer configuration.
+  [[ ! -f compose/.env ]] || printf '%s ' '--env-file compose/.env'
+  printf '%s' "--env-file ${CONFIG_FILE}"
+}
+
 function get_docker_compose_cmd_line() {
   ignore_db="$1"
   use_ipv6=$(get_config USE_IPV6)
@@ -180,7 +187,7 @@ function get_docker_compose_cmd_line() {
   db_images_file=$(get_db_images_file)
   cap_addon=$(get_config CAP_ADDON)
 
-  cmd="docker compose"
+  cmd="docker compose $(compose_env_options)"
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
   else
@@ -220,7 +227,7 @@ function get_video_worker_cmd_line() {
     return
   fi
   use_ipv6=$(get_config USE_IPV6)
-  cmd="docker compose"
+  cmd="docker compose $(compose_env_options)"
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
   else
@@ -273,7 +280,7 @@ function get_db_compose_cmd() {
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
 
-  cmd="docker compose "
+  cmd="docker compose $(compose_env_options) "
   yml=$(get_db_compose_yml)
 
   if [[ -n "${yml}" ]]; then
@@ -326,7 +333,36 @@ function db_redis_restart() {
   db_redis_start
 }
 
+function ha_recovery_lifecycle_guard() {
+  local purpose="$1"
+  local recovery_root=/data/ha-toolkit/recovery
+  local helper="${SCRIPT_DIR}/ha-recovery.sh"
+  if [[ ! -f "$helper" ]] || ! command -v jq >/dev/null || ! command -v flock >/dev/null; then
+    # Without recovery dependencies a new HA task cannot pass preflight. Keep
+    # ordinary standalone lifecycle behavior when no task owns the machine.
+    [[ -e /data/ha-toolkit/recovery-active.json || -L /data/ha-toolkit/recovery-active.json ]] || return 0
+    echo 'HA recovery lifecycle guard is unavailable' >&2
+    return 1
+  fi
+  if [[ -L "$recovery_root" || -L "$recovery_root/operation.lock" ]]; then
+    echo 'Unsafe HA recovery lifecycle lock' >&2
+    return 1
+  fi
+  if [[ ! -d "$recovery_root" ]]; then
+    (umask 077; mkdir -p "$recovery_root") || return 1
+  fi
+  # Dynamic descriptor remains open until the surrounding shell exits. This
+  # also covers migration calls made by install/upgrade child scripts.
+  if [[ -z "${HA_RECOVERY_LOCK_FD:-}" ]]; then
+    (umask 077; touch "$recovery_root/operation.lock") || return 1
+    exec {HA_RECOVERY_LOCK_FD}<>"$recovery_root/operation.lock" || return 1
+    flock -s "$HA_RECOVERY_LOCK_FD" || return 1
+  fi
+  bash "$helper" guard --purpose "$purpose" --installer "${PROJECT_DIR}/jmsctl.sh"
+}
+
 function perform_db_migrations() {
+  ha_recovery_lifecycle_guard migration || return 1
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
 

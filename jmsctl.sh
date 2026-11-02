@@ -62,7 +62,7 @@ function usage() {
   echo "  load_image        $(gettext 'Loading docker image')"
   echo "  backup_db         $(gettext 'Backup database')"
   echo "  backup_audit      $(gettext 'Backup audits tables')"
-  echo "  restore_db [file]        $(gettext 'Data recovery through database backup file')"
+  echo "  restore_db [file] [--data-only] $(gettext 'Data recovery through database backup file')"
   echo "  raw               $(gettext 'Execute the original docker compose command')"
   echo "  tail [service]    $(gettext 'View log')"
   echo
@@ -200,6 +200,33 @@ function check_os() {
 function main() {
   check_os || return 3
 
+  # Hold the shared lifecycle lock through the command. Recovery phases take
+  # its exclusive side before stopping or restoring data.
+  case "${action}" in
+    start_db|restart_db)
+      if ha_recovery_lifecycle_guard infrastructure; then guard_status=0; else guard_status=$?; fi
+      [[ "$guard_status" == 75 ]] && return 0
+      [[ "$guard_status" == 0 ]] || return "$guard_status"
+      ;;
+    start|restart)
+      if ha_recovery_lifecycle_guard startup; then guard_status=0; else guard_status=$?; fi
+      [[ "$guard_status" == 75 ]] && return 0
+      [[ "$guard_status" == 0 ]] || return "$guard_status"
+      ;;
+    raw)
+      for raw_arg in "${args[@]:1}"; do
+        case "$raw_arg" in
+          up|start|restart|run)
+            if ha_recovery_lifecycle_guard startup; then guard_status=0; else guard_status=$?; fi
+            [[ "$guard_status" == 75 ]] && return 0
+            [[ "$guard_status" == 0 ]] || return "$guard_status"
+            break
+            ;;
+        esac
+      done
+      ;;
+  esac
+
   if [[ -e /data/ha-toolkit/detaching ]]; then
     case "${action}" in
       start|restart|restart_db|upgrade|install|reconfig|config|down|uninstall)
@@ -278,7 +305,21 @@ function main() {
     bash "${SCRIPT_DIR}/5_db_backup.sh" "audit"
     ;;
   restore_db)
-    bash "${SCRIPT_DIR}/6_db_restore.sh" "$target"
+    bash "${SCRIPT_DIR}/6_db_restore.sh" "${args[@]:1}"
+    ;;
+  recovery_capabilities)
+    printf '%s\n' '{"version":1,"full_table_data":true,"restore_data_only":true,"coordinated_startup":1}'
+    ;;
+  ha_recovery)
+    if [[ "${args[1]-}" == restore ]]; then
+      # Restore may replace the installer directory while this script runs.
+      recovery_dir=$(mktemp -d /run/jms-ha-recovery-XXXXXXXX) || exit 1
+      trap 'rm -rf -- "$recovery_dir"' EXIT
+      cp -- "${SCRIPT_DIR}/ha-recovery.sh" "$recovery_dir/ha-recovery.sh" || exit 1
+      bash "$recovery_dir/ha-recovery.sh" "${args[@]:1}" --installer "${PROJECT_DIR}/jmsctl.sh"
+    else
+      bash "${SCRIPT_DIR}/ha-recovery.sh" "${args[@]:1}" --installer "${PROJECT_DIR}/jmsctl.sh"
+    fi
     ;;
   load_image)
     bash "${SCRIPT_DIR}/3_load_images.sh"
