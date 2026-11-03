@@ -38,11 +38,15 @@ function report_image_failure() {
 function reuse_local_db_image() {
   local image=$1
 
-  # New offline packages only bundle PostgreSQL. Existing MySQL/MariaDB
-  # installations retain their database image, including legacy tags.
+  # New offline packages bundle the default PostgreSQL image. Existing
+  # databases may reuse their local image when no matching archive is bundled.
   case "${image}" in
     mysql:8.0|mariadb:10.6) ;;
-    postgres:*) is_external_db_image "${image}" || return 1 ;;
+    postgres:*)
+      if ! is_external_db_image "${image}"; then
+        [[ -n "$(get_internal_postgresql_data_version)" && ( "${image}" == "$(get_db_images)" || ( "${POSTGRESQL_MAJOR_UPGRADE:-0}" == 1 && "${image}" == postgres:18.6-bookworm ) ) ]] || return 1
+      fi
+      ;;
     *) return 1 ;;
   esac
   if docker image inspect "${image}" &>/dev/null; then
@@ -96,6 +100,10 @@ function get_image_mappings() {
   db_image=$(get_db_images)
   if [[ -n "${db_image}" ]] && ! should_skip_external_db_image "${db_image}"; then
     emit_image_mapping "${db_image}" "${db_image}"
+  fi
+  if [[ "${POSTGRESQL_MAJOR_UPGRADE:-0}" == 1 && "$(get_config DB_ENGINE)" == postgresql &&
+    ( "$(get_config DB_HOST)" == postgresql || "$(get_config HA_MODE)" == 1 ) && "${db_image}" != postgres:18.6-bookworm ]]; then
+    emit_image_mapping postgres:18.6-bookworm postgres:18.6-bookworm
   fi
 
   enabled_services=${OFFLINE_IMAGE_SERVICES:-$(get_enabled_services)}

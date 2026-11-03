@@ -239,7 +239,9 @@ function migrate_internal_mysql_business_account() {
 
 function remove_obsolete_containers() {
   local container existing_containers
-  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_kael" "jms_magnus" "jms_video" "jms_lion" "jms_facelive" "jms_panda")
+  # Kael and Magnus are current services. Keep their containers until the normal
+  # stop/recreate flow so PostgreSQL migration can record their restart intent.
+  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_video" "jms_lion" "jms_facelive" "jms_panda")
 
   # XRDP is still supported when explicitly enabled in the enterprise edition.
   if [[ "$(get_config_or_env USE_XPACK)" != "1" || "$(get_config_or_env XRDP_ENABLED)" != "1" ]]; then
@@ -455,6 +457,7 @@ function cleanup_failed_upgrade() {
   local status=$? safe_to_restore=1
 
   if [[ "${status}" != "0" && "${UPGRADE_COMMITTED}" != "1" ]]; then
+    fence_internal_postgresql_upgrade || log_error "Could not stop all application containers after the interrupted PostgreSQL migration"
     if [[ "${UPGRADE_CONFIG_CHANGED}" == "1" && \
       "${UPGRADE_DATABASE_MIGRATION_STARTED}" == "0" && \
       -f "${backup_config_file:-}" ]]; then
@@ -484,10 +487,18 @@ function cleanup_failed_upgrade() {
 }
 
 function backup_db() {
-  local db_image backup_failed=0 confirm="y"
+  local db_image migration_backup backup_failed=0 confirm="y"
 
   if [[ "${SKIP_BACKUP_DB:-0}" == "1" ]]; then
     echo "SKIP_BACKUP_DB=${SKIP_BACKUP_DB}, $(gettext 'Skip database backup')"
+    return 0
+  fi
+
+  migration_backup="$(get_config VOLUME_DIR)/postgresql/data.upgrade18/cluster.sql"
+  if postgresql_upgrade_pending && [[ -s "${migration_backup}" ]]; then
+    # A retry must not start the temporary Core container while migration is
+    # fenced. The atomic full-cluster export still contains the original data.
+    log_success "Resuming PostgreSQL migration; retained full-cluster backup: ${migration_backup}"
     return 0
   fi
 
@@ -536,6 +547,10 @@ function db_migrations() {
   fi
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
+    if [[ "${PG18_UPGRADE_ACTIVE:-0}" == 1 ]]; then
+      log_error 'PostgreSQL migrated, but application schema migration failed; keep business stopped and retry the same upgrade'
+      exit 1
+    fi
     confirm="n"
     read_from_input confirm "$(gettext 'Failed to change the table structure. Continue to upgrade')?" "y/n" "${confirm}"
     if [[ "${confirm}" != "y" ]]; then
@@ -660,7 +675,7 @@ function main() {
   # Database backup starts a Core container using the target version.
   # Load the offline images before that container is created.
   echo_yellow "\n3. $(gettext 'Loading Docker Image')"
-  if ! ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh"; then
+  if ! POSTGRESQL_MAJOR_UPGRADE=1 ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh"; then
     log_error "$(gettext 'Failed to load Docker images')"
     exit 1
   fi
@@ -681,6 +696,14 @@ function main() {
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
   write_upgrade_recovery_state recovery_required || exit 1
   UPGRADE_DATABASE_MIGRATION_STARTED=1
+  upgrade_internal_postgresql || {
+    log_error "PostgreSQL migration did not complete; business remains stopped. Retry the same upgrade."
+    exit 1
+  }
+  # Remove the former image setting only after cutover; an old HA Compose
+  # binding may still require it while its database is being migrated.
+  remove_config POSTGRESQL_IMAGE || exit 1
+  gen_safe_config >/dev/null || exit 1
   db_migrations
 
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
@@ -708,6 +731,10 @@ function main() {
     log_error "Failed to update CURRENT_VERSION"
     exit 1
   fi
+  complete_internal_postgresql_upgrade || {
+    log_error "PostgreSQL migrated, but application recovery is incomplete; retry the same upgrade"
+    exit 1
+  }
   UPGRADE_COMMITTED=1
   trap - EXIT
   installation_log "upgrade"

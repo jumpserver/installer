@@ -83,6 +83,8 @@ DB_HOST=postgresql
 # For a new built-in DB_ENGINE=mysql installation, choose mysql:8.0 or
 # mariadb:10.6. Existing mysql/data or mariadb/data takes precedence.
 DB_IMAGE=mariadb:10.6
+# New PostgreSQL installations use 18.6-bookworm. Upgrades select the old image
+# from the existing data version until migration to 18 has completed.
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=

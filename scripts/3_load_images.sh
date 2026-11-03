@@ -60,6 +60,15 @@ function load_image_files() {
 function main() {
   # Panda belongs to remote publishers, even if packaging flags are inherited.
   local INCLUDE_PANDA_IMAGE=0
+  if [[ "$(get_config HA_MODE)" == 1 && -n "${JDMC_HA_MAINTENANCE_ID:-}" &&
+    "${JDMC_HA_PG18_COORDINATED:-0}" != 1 && "${POSTGRESQL_MAJOR_UPGRADE:-0}" != 1 && "$(get_config DB_ENGINE)" == postgresql ]]; then
+    local pg_major
+    pg_major=$(get_internal_postgresql_data_version) || return 1
+    if [[ -n "${pg_major}" && "${pg_major}" -lt 18 ]]; then
+      log_error 'This installer requires coordinated PostgreSQL 18 migration. Update JDMC on both nodes before applying this package.'
+      return 1
+    fi
+  fi
   if [[ -d "${IMAGE_DIR}" && $(find "${IMAGE_DIR}" -type f -name "*.zst" -print -quit 2>/dev/null) ]]; then
     load_image_files || return 1
   else
