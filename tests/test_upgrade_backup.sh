@@ -66,7 +66,7 @@ assert_backup_choices() {
   fi
 }
 
-for selected_db_image in mariadb:10.6 mysql:8.0 postgres:16.15-bookworm; do
+for selected_db_image in mariadb:10.6 mysql:8.0 postgres:18.6-bookworm; do
   select_database "${selected_db_image}"
   installed_db_image=''
   assert_backup_choices ''
@@ -103,7 +103,7 @@ unset SKIP_BACKUP_DB
 printf 'PASS: legacy MySQL configurations and explicit backup skipping remain supported\n'
 
 # The same confirmation applies to built-in databases and HA backup failures.
-for selected_db_image in mariadb:10.6 postgres:16.15-bookworm; do
+for selected_db_image in mariadb:10.6 postgres:18.6-bookworm; do
   select_database "${selected_db_image}"
   for deployment in internal ha; do
     set_config HA_MODE 0
@@ -154,7 +154,7 @@ persist_installer_version() { :; }
 installation_log() { printf 'success\n' >>"${BACKUP_EVENTS}"; }
 clean_images() { :; }
 
-for selected_db_image in mariadb:10.6 postgres:16.15-bookworm; do
+for selected_db_image in mariadb:10.6 postgres:18.6-bookworm; do
   select_database "${selected_db_image}"
   for installed_db_image in '' "${selected_db_image}"; do
     for response in y n; do
@@ -217,7 +217,7 @@ assert_contains "$(cat "${test_dir}/backup.log")" 'default: y): y'
   printf 'mock archive\n' >"${UPGRADE_TEST_IMAGES}/jdmc:${VERSION}.zst"
   printf 'sha256:installed\n' >"${UPGRADE_TEST_IMAGES}/jdmc:${VERSION}.sha256"
 
-  for selected_db_image in mariadb:10.6 postgres:16.15-bookworm; do
+  for selected_db_image in mariadb:10.6 postgres:18.6-bookworm; do
     select_database "${selected_db_image}"
     for installed_db_image in '' "${selected_db_image}"; do
       set_config CURRENT_VERSION v3.10.21
