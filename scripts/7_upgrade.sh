@@ -226,6 +226,11 @@ function db_migrations() {
 }
 
 function clean_images() {
+  # Recovery may be owned by a construction task or another entry point that
+  # does not carry the coordinated upgrade environment variable.
+  if [[ -n "${JDMC_HA_UPGRADE_TASK:-}" || -e /data/ha-toolkit/recovery-active.json || -L /data/ha-toolkit/recovery-active.json ]]; then
+    return
+  fi
   current_version=$(get_config CURRENT_VERSION)
 
   if [[ -z "${to_version}" || -z "${current_version}" ]];then

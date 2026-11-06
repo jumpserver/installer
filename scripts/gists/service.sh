@@ -303,6 +303,14 @@ function get_db_migrate_compose_cmd() {
 
 function create_db_ops_env() {
   cmd=$(get_db_migrate_compose_cmd)
+  # During HA recovery the database and Redis were already restored and
+  # started by the task. Recreating them here interrupts replication and
+  # can invalidate the paired recovery checkpoint.
+  if [[ -f /data/ha-toolkit/recovery-active.json ]] &&
+     [[ -n "${HA_RECOVERY_TASK_ID:-}${JDMC_HA_UPGRADE_TASK:-}${HA_GUIDED_TASK_ID:-}" ]]; then
+    ${cmd} up -d --no-deps core || return 1
+    return 0
+  fi
   ${cmd} up -d || {
     exit 1
   }
@@ -366,7 +374,7 @@ function perform_db_migrations() {
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
 
-  create_db_ops_env
+  create_db_ops_env || return 1
   case "${db_host}" in
     mysql|postgresql)
       while [[ "$(docker inspect -f "{{.State.Health.Status}}" jms_${db_host})" != "healthy" ]]; do

@@ -10,7 +10,7 @@ export LC_ALL=C
 ROOT=/data/ha-toolkit/recovery
 ACTIVE=/data/ha-toolkit/recovery-active.json
 INFRA='["postgresql","redis","minio","es","loki"]'
-PLAN='' RECEIPT='' CONFIG='' ROWS='' PATHS='' IMAGES=''
+PLAN='' RECEIPT='' CONFIG='' ROWS='' PATHS='' IMAGES='' DATABASE_PATHS='[]' DATABASE_LAYOUT='{}' PRESERVED_PATHS='[]'
 TASK='' INSTALLER='' DIRECTORY='' OPERATION=build PURPOSE=startup ISOLATED=false
 
 fail() {
@@ -52,7 +52,7 @@ run() {
     if [[ "${1##*/}" == docker ]]; then
         case "${2:-}" in
             compose) for arg in "$@"; do case "$arg" in config|create|up|stop) operation="compose $arg";; esac; done ;;
-            image) case "${3:-}" in load|save|inspect) operation="image $3";; esac ;;
+            image) case "${3:-}" in load|save|inspect|ls|rm) operation="image $3";; esac ;;
             update|stop|tag|inspect|ps) operation=$2 ;;
         esac
         error_file=$(mktemp) || fail 'cannot create recovery diagnostic file'
@@ -64,6 +64,10 @@ run() {
         # diagnostics can contain configuration, credentials or command args.
         if LC_ALL=C grep -Eq 'services\.[A-Za-z0-9_-]+\.ulimits\.core must be (an integer or string|a number or a string)' "$error_file"; then
             diagnostic=': invalid services.*.ulimits.core in Compose configuration'
+        elif LC_ALL=C grep -Fqi 'cannot allocate memory' "$error_file"; then
+            diagnostic=': system memory allocation failed'
+        elif LC_ALL=C grep -Fqi 'no space left on device' "$error_file"; then
+            diagnostic=': no space left on device'
         fi
         rm -f -- "$error_file"
         fail "docker ${operation:-operation} failed (exit $status)$diagnostic"
@@ -202,6 +206,10 @@ validate_destination() {
 validate_plan() {
     j -e --arg task "$TASK" '.version==1 and .task_id==$task and (.paths|type)=="array"' <<< "$PLAN" >/dev/null || fail 'recovery task identity mismatch'
     verify_checksum digest "$DIRECTORY/compose.json" "$(j -r .compose_sha256 <<< "$PLAN")" 'original Compose configuration checksum mismatch'
+    if j -e 'has("recovery_sha256")' <<< "$PLAN" >/dev/null; then
+        [[ -f "$DIRECTORY/ha-recovery.sh" && ! -L "$DIRECTORY/ha-recovery.sh" ]] || fail 'task recovery executor is missing or unsafe'
+        verify_checksum digest "$DIRECTORY/ha-recovery.sh" "$(j -r .recovery_sha256 <<< "$PLAN")" 'task recovery executor checksum mismatch'
+    fi
     if j -e '.waf != null' <<< "$PLAN" >/dev/null; then
         verify_checksum digest "$DIRECTORY/waf-compose.json" "$(j -r .waf.sha256 <<< "$PLAN")" 'original NGSWAF configuration checksum mismatch'
     fi
@@ -210,15 +218,80 @@ validate_plan() {
     while IFS= read -r target; do
         [[ -n "$target" ]] || continue
         target=$(j -r . <<< "$target")
-        j -e --arg target "$target" '(["/data/jumpserver","/data/ngswaf","/opt/jumpserver/config"]+(.deployment_roots//[]))|index($target)!=null' <<< "$PLAN" >/dev/null || fail 'unsupported recovery destination'
+        j -e --arg target "$target" '(["/data/jumpserver","/data/ngswaf","/opt/jumpserver/config"]+(.deployment_roots//[])+(.database_paths//[]))|index($target)!=null' <<< "$PLAN" >/dev/null || fail 'unsupported recovery destination'
         validate_destination "$target"
     done <<< "$targets"
+}
+local_image_entries() {
+    j -e '.images as $images |
+      ($images|type)=="array" and ($images|length)>0 and (.image_tags|type)=="object" and
+      ($images|sort)==(.image_tags|keys) and
+      ($images|sort)==([.containers[].image,(.waf_containers//{})[].image]|unique)' <<< "$PLAN" >/dev/null ||
+        fail 'invalid local recovery image inventory'
+    local entries entry image tag
+    entries=$(j -c '.image_tags|to_entries[]' <<< "$PLAN")
+    while IFS= read -r entry; do
+        image=$(j -er .key <<< "$entry")
+        tag=$(j -er .value <<< "$entry")
+        [[ "$image" == sha256:* ]] && valid_digest "${image#sha256:}" || fail 'invalid recovery image identity'
+        [[ "$tag" == "jdmc-ha-recovery/$TASK:${image#sha256:}" ]] || fail 'invalid recovery image retention tag'
+    done <<< "$entries"
+    printf '%s\n' "$entries"
+}
+verify_local_images() {
+    local entries entry image actual tag
+    entries=$(local_image_entries)
+    while IFS= read -r entry; do
+        image=$(j -r .key <<< "$entry")
+        tag=$(j -r .value <<< "$entry")
+        actual=$(run 60 docker image inspect -f '{{.Id}}' "$tag")
+        [[ "$actual" == "$image" ]] || fail 'local recovery image retention tag changed'
+    done <<< "$entries"
+}
+protect_images() {
+    [[ "$(j -r '.image_backup_mode//"archive"' <<< "$PLAN")" == local ]] || return 0
+    local entries entry
+    entries=$(local_image_entries)
+    # Independent references preserve the original layers when an installer
+    # overwrites business tags. They do not protect against prune -a or loss
+    # of Docker storage; task-controlled workflows must never prune images.
+    while IFS= read -r entry; do
+        run_quiet 60 docker tag "$(j -r .key <<< "$entry")" "$(j -r .value <<< "$entry")"
+    done <<< "$entries"
+    verify_local_images
+}
+cleanup_images() {
+    [[ "$(j -r '.image_backup_mode//"archive"' <<< "$PLAN")" == local ]] || return 0
+    j -e '.completed==true' <<< "$PLAN" >/dev/null || fail 'image cleanup requires completed business recovery'
+    if j -e '.images_released==true' <<< "$PLAN" >/dev/null; then return; fi
+    local entries entry image tag actual present
+    entries=$(local_image_entries)
+    present=$(run 60 docker image ls --format '{{.Repository}}:{{.Tag}}' "jdmc-ha-recovery/$TASK" | j -Rsc 'split("\n")|map(select(length>0))')
+    while IFS= read -r entry; do
+        image=$(j -r .key <<< "$entry")
+        tag=$(j -r .value <<< "$entry")
+        if ! j -e --arg tag "$tag" 'index($tag)!=null' <<< "$present" >/dev/null; then continue; fi
+        actual=$(run 60 docker image inspect -f '{{.Id}}' "$tag")
+        [[ "$actual" == "$image" ]] || fail 'local recovery image retention tag changed'
+        # Remove this task's reference only, never force-delete a shared ID.
+        run_quiet 60 docker image rm "$tag"
+    done <<< "$entries"
+    PLAN=$(j -c '.images_released=true' <<< "$PLAN")
+    save_plan
 }
 verify_snapshot() {
     j -e '.captured==true and (.paths|type)=="array" and (.paths|length)>0 and
       (.files_sha256|type)=="array" and all(.files_sha256[]; type=="string" and length==64) and
       (.files_sha256|length)==(.paths|length)' <<< "$PLAN" >/dev/null || fail 'complete recovery point is unavailable or inventory mismatches'
-    verify_checksum digest "$DIRECTORY/images.tar" "$(j -r .images_sha256 <<< "$PLAN")" 'recovery image archive checksum mismatch'
+    case "$(j -r '.image_backup_mode//"archive"' <<< "$PLAN")" in
+        local) verify_local_images;;
+        archive) verify_checksum digest "$DIRECTORY/images.tar" "$(j -r .images_sha256 <<< "$PLAN")" 'recovery image archive checksum mismatch';;
+        *) fail 'unsupported recovery image backup mode';;
+    esac
+    if j -e 'has("entrypoints_sha256")' <<< "$PLAN" >/dev/null; then
+        [[ -d "$DIRECTORY/entrypoints" && ! -L "$DIRECTORY/entrypoints" ]] || fail 'recovery entrypoint snapshot is missing or unsafe'
+        verify_checksum tree_digest "$DIRECTORY/entrypoints" "$(j -r .entrypoints_sha256 <<< "$PLAN")" 'recovery entrypoint snapshot checksum mismatch'
+    fi
     local checks expected index=0 source
     checks=$(j -r '.files_sha256[]' <<< "$PLAN")
     while IFS= read -r expected; do
@@ -234,7 +307,9 @@ compose() {
     shift
     project=$(j -er .project <<< "$item")
     path=$(j -er .compose_path <<< "$item")
-    run_quiet 600 docker compose -p "$project" -f "$path" "$@"
+    # Recovery can restart many containers on a host with fragmented memory.
+    # Serialize Docker operations instead of creating all veth pairs at once.
+    run_quiet 600 docker compose --parallel 1 -p "$project" -f "$path" "$@"
 }
 inspect() { if (($#)); then run 600 docker inspect "$@"; else printf '[]\n'; fi; }
 # Convert validated JSON strings to a bash array without eval or word splitting.
@@ -252,12 +327,29 @@ runtime_mount() {
     local service=$1 source=$2 target=$3
     if [[ "$source" == /dev/bus/usb && "$target" == "$source" && ( "$service" == core || "$service" == celery ) ]]; then return 0; fi
     if [[ "$source" == /sys/fs/bpf && "$target" == "$source" && "$service" == web ]]; then
-        run_quiet 600 systemctl is-active --quiet sangfor-zta
+        if ! env -u SHELLOPTS timeout --signal=KILL 600 systemctl is-active --quiet sangfor-zta 2>/dev/null; then
+            fail 'ZTA must be running for the web BPF runtime mount'
+        fi
         return 0
     fi
     return 1
 }
 inside_roots() { j -e --arg source "$1" 'any(.[]; . as $root | $source==$root or ($source|startswith($root+"/")))' <<< "$2" >/dev/null; }
+validate_database_storage() {
+    local service=$1 row=$2 name path
+    name=$(j -r '.Name|ltrimstr("/")' <<< "$row")
+    if [[ "$service" == postgresql ]]; then
+        path=$(run 30 docker exec "$name" sh -c 'exec psql -X -w -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -Atc "SHOW data_directory"')
+    else
+        path=$(run 30 docker exec "$name" sh -c 'export REDISCLI_AUTH="$REDIS_PASSWORD"; exec redis-cli --raw --no-auth-warning -p "${REDIS_PORT:-6379}" CONFIG GET dir')
+        [[ "$path" == $'dir\n'/* ]] || fail 'Redis data directory could not be inspected'
+        path=${path#*$'\n'}
+    fi
+    [[ "$path" == /* && "$path" != *$'\n'* ]] || fail 'invalid database data directory'
+    path=$(run 30 docker exec "$name" readlink -e -- "$path")
+    j -e --arg path "$path" '.Mounts | any(.[]; .Type=="bind" and .RW and (.Destination as $root | $path==$root or ($path|startswith($root+"/"))))' <<< "$row" >/dev/null || fail 'database data directory is not on persistent bind storage'
+    DATABASE_LAYOUT=$(j -c --arg service "$service" --arg path "$path" '.[$service]=$path' <<< "$DATABASE_LAYOUT")
+}
 validate_inventory() {
     local config=$1 rows=$2
     printf '%s\n' "$config" "$rows" | j -es '
@@ -273,7 +365,11 @@ inventory() {
     json_args "$(j -c '[.services[].container_name]' <<< "$CONFIG")"
     ROWS=$(inspect "${ARGS[@]}")
     validate_inventory "$CONFIG" "$ROWS"
-    local running row entries mount mounts source service
+    local running row entries mount mounts source service storage
+    DATABASE_PATHS='[]'
+    DATABASE_LAYOUT='{}'
+    PRESERVED_PATHS='[]'
+    storage=$(j -cn --arg root "$(realpath -e /data/jumpserver)" '[$root,"/opt/jumpserver/config"]')
     running=$(run 600 docker ps --filter 'name=^jms_' --format '{{.Names}}')
     while IFS= read -r row; do
         [[ -n "$row" ]] || continue
@@ -283,27 +379,40 @@ inventory() {
     while IFS= read -r row; do
         j -e '.HostConfig.NetworkMode!="host"' <<< "$row" >/dev/null || fail 'host-network business containers require a dedicated recovery adapter'
         service=$(j -er --arg name "$(j -r '.Name|ltrimstr("/")' <<< "$row")" '.services|to_entries[]|select(.value.container_name==$name)|.key' <<< "$CONFIG")
+        if [[ "$service" == postgresql || "$service" == redis ]]; then validate_database_storage "$service" "$row"; fi
         mounts=$(j -c '.Mounts[]|select(.RW)' <<< "$row")
         while IFS= read -r mount; do
             [[ -n "$mount" ]] || continue
             source=$(realpath -m -- "$(j -er .Source <<< "$mount")")
             if [[ "$(j -r .Type <<< "$mount")" == bind ]] && runtime_mount "$service" "$source" "$(j -r .Destination <<< "$mount")"; then continue; fi
-            inside_roots "$source" '["/data/jumpserver","/opt/jumpserver/config"]' || fail 'business storage outside managed recovery roots'
+            [[ "$(j -r .Type <<< "$mount")" == bind ]] && inside_roots "$source" "$storage" || fail 'business storage outside managed recovery roots'
+            if [[ "$service" == postgresql || "$service" == redis ]]; then
+                if inside_roots "$source" '["/opt/jumpserver/config"]'; then continue; fi
+                [[ -d "$source" && "$source" != "$(realpath -e /data/jumpserver)" ]] || fail 'database requires a dedicated data directory'
+                DATABASE_PATHS=$(j -c --arg path "$source" '.+[$path]|unique' <<< "$DATABASE_PATHS")
+            else
+                PRESERVED_PATHS=$(j -c --arg path "$source" '.+[$path]|unique' <<< "$PRESERVED_PATHS")
+            fi
         done <<< "$mounts"
     done <<< "$entries"
 }
 check() {
-    local capabilities program installer_root path paths size=0 amount required free image waf_config waf_rows mounts mount source
+    local capabilities program installer_root path paths size=0 amount required free image actual waf_config waf_rows mounts mount source
     capabilities=$(run 600 bash "$INSTALLER" recovery_capabilities)
     j -e '.version==1 and .full_table_data==true and .restore_data_only==true' <<< "$capabilities" >/dev/null || fail 'installer does not support coordinated full recovery'
     j -e '.coordinated_startup==1' <<< "$capabilities" >/dev/null || fail 'coordinated startup isolation is required before automatic recovery can be enabled'
     for program in docker rsync du flock jq timeout realpath sha256sum stat find sort sync; do require "$program"; done
-    check_license_socket
+    check_jdmc_socket
     inventory
     CONFIG=$(normalize_compose_ulimits <<< "$CONFIG")
     run_quiet 600 docker compose -f - config --quiet <<< "$CONFIG"
     installer_root=$(dirname -- "$(realpath -e -- "$INSTALLER")")
-    PATHS=$(j -cn --arg root "$installer_root" '["/data/jumpserver","/opt/jumpserver/config",$root]')
+    [[ "$(j 'length' <<< "$DATABASE_PATHS")" -ge 2 ]] || fail 'PostgreSQL and Redis require persistent data directories'
+    if [[ "${HA_RECOVERY_LEGACY:-0}" == 1 ]]; then
+        PATHS=$(j -cn --arg root "$installer_root" '["/data/jumpserver","/opt/jumpserver/config",$root]')
+    else
+        PATHS=$(j -cn --arg root "$installer_root" --argjson databases "$DATABASE_PATHS" '$databases+["/opt/jumpserver/config",$root]')
+    fi
     if [[ -e /data/ngswaf ]]; then PATHS=$(j -c '.+["/data/ngswaf"]' <<< "$PATHS"); fi
     if [[ -L /opt/current/osm ]]; then
         capabilities=$(run 600 bash /opt/current/osm/osmctl.sh recovery-capabilities)
@@ -311,6 +420,11 @@ check() {
         PATHS=$(j -c --arg root "$(realpath -e /opt/current/osm)" '.+[$root]' <<< "$PATHS")
     fi
     PATHS=$(j -c 'unique as $paths | [$paths[] | . as $path | select(any($paths[]; . as $parent | $parent!=$path and ($path|startswith($parent+"/")))|not)]' <<< "$PATHS")
+    # A broad deployment mount must not accidentally capture recordings again.
+    source=$(realpath -e /data/jumpserver)
+    if [[ "${HA_RECOVERY_LEGACY:-0}" != 1 ]]; then
+        inside_roots "$source" "$PATHS" && fail 'recovery roots must not include the complete business data directory'
+    fi
     paths=$(j -c '.[]' <<< "$PATHS")
     while IFS= read -r path; do
         path=$(j -r . <<< "$path")
@@ -340,9 +454,8 @@ check() {
     fi
     json_args "$IMAGES"
     for image in "${ARGS[@]}"; do
-        amount=$(run 600 docker image inspect -f '{{.Size}}' "$image")
-        [[ "$amount" =~ ^[0-9]+$ ]] || fail 'invalid recovery image size'
-        size=$((size+amount))
+        actual=$(run 60 docker image inspect -f '{{.Id}}' "$image")
+        [[ "$actual" == "$image" ]] || fail 'original recovery image is unavailable'
     done
     required=$((size*2+5*1024*1024*1024))
     free=$(df -B1 --output=avail -- "$DIRECTORY" | tail -n 1); free=${free// /}
@@ -350,6 +463,61 @@ check() {
     (( free >= required )) || fail "insufficient recovery storage: at least $required bytes required"
 }
 
+stop_databases() {
+    local service name row value
+    for service in redis postgresql; do
+        name=$(j -er --arg service "$service" '.services[$service]' <<< "$PLAN")
+        row=$(inspect "$name")
+        if j -e '.[0].State.Running' <<< "$row" >/dev/null; then
+            run_quiet 600 docker update --restart=no "$name"
+            if [[ "$service" == redis ]]; then
+                # SAVE also covers instances with periodic snapshots disabled.
+                # Read auth inside the container; never expose it in argv/logs.
+                value=$(run 600 docker exec "$name" sh -c 'export REDISCLI_AUTH="$REDIS_PASSWORD"; exec redis-cli --raw --no-auth-warning -p "${REDIS_PORT:-6379}" SAVE')
+                [[ "$value" == OK ]] || fail 'Redis persistence failed before cold backup'
+            fi
+            # Do not let Docker turn a slow clean shutdown into SIGKILL.
+            run_quiet 600 docker stop --time -1 "$name"
+        fi
+        row=$(inspect "$name")
+        j -e 'length==1 and all(.[]; .State.Running==false and .State.ExitCode==0 and .State.OOMKilled!=true)' <<< "$row" >/dev/null || fail 'database did not shut down cleanly'
+    done
+}
+shutdown_proof() {
+    local name image path output key value system='' timeline='' lsn='' state=''
+    name=$(j -er '.services.postgresql' <<< "$PLAN")
+    image=$(j -er --arg name "$name" '.containers[$name].image' <<< "$PLAN")
+    path=$(j -er '.database_layout.postgresql' <<< "$PLAN")
+    # Read the stopped instance using its original binary and read-only mounts.
+    # The shutdown checkpoint includes WAL produced after the last SQL probe.
+    output=$(run 60 docker run --rm --network none --read-only --env LC_ALL=C --volumes-from "$name:ro" --entrypoint pg_controldata "$image" "$path")
+    while IFS=: read -r key value; do
+        value=${value//[[:space:]]/}
+        case "$key" in
+            'Database system identifier') system=$value;;
+            "Latest checkpoint's TimeLineID") timeline=$value;;
+            'Latest checkpoint location') lsn=$value;;
+            'Database cluster state') state=$value;;
+        esac
+    done <<< "$output"
+    [[ "$system" =~ ^[0-9]+$ && "$timeline" =~ ^[0-9]+$ && "$lsn" =~ ^[0-9A-F]+/[0-9A-F]+$ ]] || fail 'invalid PostgreSQL shutdown checkpoint'
+    [[ "$state" == shutdown || "$state" == shutdowninrecovery ]] || fail 'PostgreSQL control file does not confirm clean shutdown'
+    j -cn --arg system "$system" --arg timeline "$timeline" --arg lsn "$lsn" --arg state "$state" '{system_id:$system,timeline:$timeline,lsn:$lsn,state:$state}'
+}
+validate_database_links() {
+    local paths path link target list
+    paths=$(j -r '.database_paths//[]|.[]' <<< "$PLAN")
+    while IFS= read -r path; do
+        [[ -n "$path" ]] || continue
+        list=$(mktemp)
+        find "$path" -type l -print0 > "$list" || fail 'database symlink inventory failed'
+        while IFS= read -r -d '' link; do
+            target=$(realpath -e -- "$link") || fail 'database contains a broken storage link'
+            inside_roots "$target" "$(j -c .database_paths <<< "$PLAN")" || fail 'external database WAL or tablespace requires an explicit recovery adapter'
+        done < "$list"
+        rm -f -- "$list"
+    done <<< "$paths"
+}
 stop() {
     local infrastructure=${1:-true} present names projects project candidates rows name
     present=$(run 600 docker ps -a --format '{{.Names}}' | j -Rsc 'split("\n")|map(select(length>0))')
@@ -386,6 +554,23 @@ pinned_config() {
     local config=$1
     printf '%s\n' "$config" "$PLAN" | j -cs '.[1] as $plan | .[0] | .services |= with_entries(.value.image=$plan.containers[$plan.services[.key]].image | .value.restart="no")' | normalize_compose_ulimits
 }
+compose_start() {
+    local attempt diagnostic
+    diagnostic=$(mktemp)
+    for attempt in 1 2 3; do
+        if (compose "$@") 2>"$diagnostic"; then
+            rm -f -- "$diagnostic"
+            return 0
+        fi
+        if (( attempt == 3 )) || ! grep -Fq 'system memory allocation failed' "$diagnostic"; then
+            cat -- "$diagnostic" >&2
+            rm -f -- "$diagnostic"
+            return 1
+        fi
+        printf 'Retrying HA container startup after memory allocation failure (%s/3)\n' "$attempt" >&2
+        sleep 5
+    done
+}
 start_infrastructure() {
     local config target="$DIRECTORY/infrastructure-compose.json" item names
     config=$(read_json "$DIRECTORY/compose.json")
@@ -394,7 +579,7 @@ start_infrastructure() {
     item=$(j -c --arg target "$target" '{project:.project,compose_path:$target}' <<< "$PLAN")
     names=$(j -c --argjson infra "$INFRA" '[.services|keys[]|select(. as $s|$infra|index($s)!=null)]' <<< "$PLAN")
     json_args "$names"
-    compose "$item" up -d --no-deps --pull never "${ARGS[@]}"
+    compose_start "$item" up -d --no-deps --no-recreate --pull never "${ARGS[@]}"
     names=$(printf '%s\n' "$PLAN" "$names" | j -cs '.[1] as $names | .[0] | [.services[$names[]]]')
     json_args "$names"
     wait_healthy "${ARGS[@]}"
@@ -402,9 +587,45 @@ start_infrastructure() {
 container_states() {
     j -c 'map({key:(.Name|ltrimstr("/")),value:{running:.State.Running,image:.Image,reference:.Config.Image,restart:.HostConfig.RestartPolicy}})|from_entries' <<< "$1"
 }
+capture_entrypoints() {
+    local path name
+    [[ ! -L "$DIRECTORY/entrypoints" ]] || fail 'unsafe recovery entrypoint snapshot'
+    mkdir -p -m 700 -- "$DIRECTORY/entrypoints"
+    for path in /usr/bin/jmsctl /var/run/installer.lock /var/run/osm.lock; do
+        name=${path##*/}
+        if [[ -e "$DIRECTORY/entrypoints/$name" || -L "$DIRECTORY/entrypoints/$name" ]]; then
+            [[ -f "$DIRECTORY/entrypoints/$name" || -L "$DIRECTORY/entrypoints/$name" ]] || fail 'unsafe recovery entrypoint snapshot'
+            rm -- "$DIRECTORY/entrypoints/$name"
+        fi
+        if [[ -e "$path" || -L "$path" ]]; then
+            [[ -f "$path" || -L "$path" ]] || fail 'unsupported recovery entrypoint'
+            cp -aP -- "$path" "$DIRECTORY/entrypoints/$name"
+        fi
+    done
+    PLAN=$(j -c --arg checksum "$(tree_digest "$DIRECTORY/entrypoints")" '.entrypoints_sha256=$checksum' <<< "$PLAN")
+}
+restore_entrypoints() {
+    # These files can redirect later starts to the failed release even after
+    # /opt/current was restored. Keep old recovery points backward compatible.
+    j -e 'has("entrypoints_sha256")' <<< "$PLAN" >/dev/null || return 0
+    local path source temporary
+    for path in /usr/bin/jmsctl /var/run/installer.lock /var/run/osm.lock; do
+        source="$DIRECTORY/entrypoints/${path##*/}"
+        [[ ! -e "$path" || -f "$path" || -L "$path" ]] || fail 'recovery entrypoint was replaced by a directory'
+        temporary="${path%/*}/.${path##*/}-$TASK"
+        [[ ! -e "$temporary" && ! -L "$temporary" ]] || fail 'unexpected pending recovery entrypoint'
+        if [[ -e "$source" || -L "$source" ]]; then
+            [[ -f "$source" || -L "$source" ]] || fail 'unsupported recovery entrypoint snapshot'
+            cp -aP -- "$source" "$temporary"
+            mv -fT -- "$temporary" "$path"
+        elif [[ -e "$path" || -L "$path" ]]; then
+            rm -- "$path"
+        fi
+    done
+}
 freeze() {
     local original="$DIRECTORY/compose.json" deployment links link target waf_config waf_rows waf_path="$DIRECTORY/waf-compose.json"
-    local checksum containers installer_path
+    local checksum containers installer_path recovery_checksum temporary
     if [[ -e "$DIRECTORY/manifest.json" || -L "$DIRECTORY/manifest.json" ]]; then
         PLAN=$(read_json "$DIRECTORY/manifest.json")
         validate_plan
@@ -429,14 +650,25 @@ freeze() {
         valid_digest "$checksum" || fail 'invalid original Compose checksum'
         containers=$(container_states "$ROWS")
         installer_path=$(realpath -e -- "$INSTALLER")
+        temporary=$(mktemp "$DIRECTORY/.recovery-XXXXXX")
+        cp -- "${BASH_SOURCE[0]}" "$temporary"
+        chmod 600 "$temporary"
+        sync -f "$temporary"
+        mv -fT -- "$temporary" "$DIRECTORY/ha-recovery.sh"
+        recovery_checksum=$(digest "$DIRECTORY/ha-recovery.sh")
         PLAN=$(printf '%s\n' "$CONFIG" "$containers" "$PATHS" "$IMAGES" "$deployment" "$links" | \
             j -cs --arg task "$TASK" --arg operation "$OPERATION" --arg original "$original" \
-            --arg installer "$installer_path" --arg license_socket "${JDMC_LICENSE_SOCKET:-/data/jumpserver/core/data/unshare/jdmc.sock}" --arg checksum "$checksum" --argjson isolated "$ISOLATED" '
+            --arg installer "$installer_path" --arg recovery "$recovery_checksum" --arg license_socket "${JDMC_LICENSE_SOCKET:-/data/jumpserver/core/data/unshare/jdmc.sock}" --arg checksum "$checksum" --argjson isolated "$ISOLATED" \
+            --argjson databases "$DATABASE_PATHS" --argjson layout "$DATABASE_LAYOUT" --argjson preserved "$PRESERVED_PATHS" '
             .[0] as $config | .[1] as $containers | .[2] as $paths | .[3] as $images | .[4] as $roots | .[5] as $links |
             {version:1,task_id:$task,project:($config.name//"jms"),operation:$operation,compose_path:$original,
              services:($config.services|map_values(.container_name)),containers:$containers,paths:$paths,images:$images,
              captured:false,restored:false,original_isolated:$isolated,deployment_roots:$roots,completed:false,
-             installer:$installer,license_socket:$license_socket,compose_sha256:$checksum,links:$links}')
+             storage_scope:"databases",database_paths:$databases,database_layout:$layout,preserved_paths:$preserved,
+             installer:$installer,recovery_sha256:$recovery,license_socket:$license_socket,compose_sha256:$checksum,links:$links}')
+        if [[ "${HA_RECOVERY_LEGACY:-0}" == 1 ]]; then
+            PLAN=$(j -c 'del(.storage_scope,.database_paths,.database_layout,.preserved_paths)' <<< "$PLAN")
+        fi
         if [[ -f /opt/current/osm/ngswaf/ngswafctl.sh ]]; then
             waf_config=$(run 600 env -u COMPOSE_PROJECT_NAME bash /opt/current/osm/ngswaf/ngswafctl.sh recovery-config)
             waf_config=$(normalize_compose_ulimits <<< "$waf_config")
@@ -453,11 +685,15 @@ freeze() {
                 .waf_images=($rows|map({key:(.Name|ltrimstr("/")),value:.Image})|from_entries) |
                 .waf_containers=$containers | .images=(.images+[$rows[].Image]|unique)')
         fi
+        PLAN=$(j -c --arg task "$TASK" '.image_backup_mode="local" |
+          .image_tags=(.images|map({key:.,value:("jdmc-ha-recovery/"+$task+":"+ltrimstr("sha256:"))})|from_entries)' <<< "$PLAN")
+        capture_entrypoints
         save_plan
     fi
     if [[ -e "$ACTIVE" || -L "$ACTIVE" ]]; then
         [[ "$(read_json "$ACTIVE" | j -r .task_id)" == "$TASK" ]] || fail 'another recovery task owns business services'
     fi
+    protect_images
     set_phase freezing
     stop false
     PLAN=$(j -c '.frozen=true' <<< "$PLAN")
@@ -468,12 +704,17 @@ capture() {
     freeze
     if j -e '.captured==true' <<< "$PLAN" >/dev/null; then
         verify_snapshot
-        start_infrastructure
+        if ! j -e '.storage_scope=="databases"' <<< "$PLAN" >/dev/null; then start_infrastructure; fi
         set_phase captured
         return
     fi
     set_phase capturing
+    if j -e '.storage_scope=="databases"' <<< "$PLAN" >/dev/null; then
+        j -e '.cold_stopped==true' <<< "$PLAN" >/dev/null || fail 'coordinated database shutdown must complete before capture'
+    fi
+    if j -e '.storage_scope=="databases"' <<< "$PLAN" >/dev/null; then stop_databases; fi
     stop
+    validate_database_links
     local paths source target checksum index=0 checksums='[]'
     paths=$(j -c '.paths[]' <<< "$PLAN")
     mkdir -p -m 700 "$DIRECTORY/files"
@@ -489,15 +730,22 @@ capture() {
         checksums=$(j -c --arg checksum "$checksum" '.+[$checksum]' <<< "$checksums")
         index=$((index+1))
     done <<< "$paths"
-    json_args "$(j -c .images <<< "$PLAN")"
-    run_quiet 86400 docker image save -o "$DIRECTORY/images.tar" "${ARGS[@]}"
-    chmod 600 "$DIRECTORY/images.tar"
-    checksum=$(digest "$DIRECTORY/images.tar") || fail 'recovery image checksum failed'
-    valid_digest "$checksum" || fail 'invalid recovery image checksum'
-    PLAN=$(printf '%s\n' "$PLAN" "$checksums" | j -cs --arg checksum "$checksum" '.[1] as $checksums | .[0] | .images_sha256=$checksum|.files_sha256=$checksums|.captured=true')
+    case "$(j -r '.image_backup_mode//"archive"' <<< "$PLAN")" in
+        local) verify_local_images;;
+        archive)
+            json_args "$(j -c .images <<< "$PLAN")"
+            run_quiet 86400 docker image save -o "$DIRECTORY/images.tar" "${ARGS[@]}"
+            chmod 600 "$DIRECTORY/images.tar"
+            checksum=$(digest "$DIRECTORY/images.tar") || fail 'recovery image checksum failed'
+            valid_digest "$checksum" || fail 'invalid recovery image checksum'
+            PLAN=$(j -c --arg checksum "$checksum" '.images_sha256=$checksum' <<< "$PLAN");;
+        *) fail 'unsupported recovery image backup mode';;
+    esac
+    PLAN=$(j -c --argjson checksums "$checksums" '.files_sha256=$checksums|.captured=true' <<< "$PLAN")
     run_quiet 600 sync
     save_plan
-    start_infrastructure
+    # Both upgrade snapshots must finish before either database is restarted.
+    if ! j -e '.storage_scope=="databases"' <<< "$PLAN" >/dev/null; then start_infrastructure; fi
     set_phase captured
 }
 recover_waf_project() {
@@ -536,29 +784,34 @@ socket_filters() {
     done < "$list"
     rm -f -- "$list"
 }
-check_license_socket() {
+check_jdmc_socket() {
     local socket=${JDMC_LICENSE_SOCKET:-/data/jumpserver/core/data/unshare/jdmc.sock} response
     if [[ -n "$PLAN" ]]; then socket=$(j -r --arg fallback "$socket" ' .license_socket//$fallback' <<< "$PLAN"); fi
     # Deployments without JDMC retain the existing installer behavior.
     if ! command -v systemctl >/dev/null || [[ "$(systemctl show jdmc -p LoadState --value 2>/dev/null)" == not-found ]]; then return; fi
     systemctl is-active --quiet jdmc || fail 'JDMC is not running'
-    [[ -S "$socket" && ! -L "$socket" ]] || fail 'JDMC license socket is unavailable'
+    [[ -S "$socket" && ! -L "$socket" ]] || fail 'JDMC socket is unavailable'
     require curl
-    response=$(run 15 curl --silent --show-error --fail --max-time 10 --unix-socket "$socket" http://localhost/jdmc/api/v1/apps/web/license)
-    j -e '.data.exists==true and .data.info.status=="valid"' <<< "$response" >/dev/null || fail 'JDMC license socket did not return a valid license'
+    # The trusted UDS serves license APIs but does not expose a health route.
+    # A 404 on this path still proves the HTTP listener is responsive without
+    # evaluating a license during recovery or release.
+    response=$(run 15 curl --silent --show-error --max-time 10 --unix-socket "$socket" --output /dev/null --write-out '%{http_code}' http://localhost/jdmc/api/v1/health)
+    [[ "$response" == 200 || "$response" == 404 ]] || fail 'JDMC socket did not respond as expected'
 }
 restore() {
     j -e '(.completed or .releasing)|not' <<< "$PLAN" >/dev/null || fail 'business release has begun; repeated data restoration is prohibited'
     if j -e '.restored==true' <<< "$PLAN" >/dev/null; then
-        if [[ "$(j -r .operation <<< "$PLAN")" != upgrade ]]; then start_infrastructure; fi
+        if [[ "$(j -r .operation <<< "$PLAN")" != upgrade ]] && ! j -e '.storage_scope=="databases"' <<< "$PLAN" >/dev/null; then start_infrastructure; fi
         set_phase restored
         return
     fi
     if ! j -e '.captured==true' <<< "$PLAN" >/dev/null; then
-        if [[ "$(j -r .operation <<< "$PLAN")" == upgrade ]]; then stop; fi
+        if [[ "$(j -r .operation <<< "$PLAN")" == upgrade ]]; then
+            if j -e '.storage_scope=="databases"' <<< "$PLAN" >/dev/null; then stop false; else stop; fi
+        fi
         PLAN=$(j -c '.restored=true|.aborted_before_install=true' <<< "$PLAN")
         save_plan
-        if [[ "$(j -r .operation <<< "$PLAN")" != upgrade ]]; then start_infrastructure; fi
+        if [[ "$(j -r .operation <<< "$PLAN")" != upgrade ]] && ! j -e '.storage_scope=="databases"' <<< "$PLAN" >/dev/null; then start_infrastructure; fi
         set_phase restored
         return
     fi
@@ -569,7 +822,11 @@ restore() {
     recover_waf_project
     set_phase restoring
     stop
-    run_quiet 86400 docker image load -i "$DIRECTORY/images.tar"
+    if [[ "$(j -r '.image_backup_mode//"archive"' <<< "$PLAN")" == archive ]]; then
+        run_quiet 86400 docker image load -i "$DIRECTORY/images.tar"
+    else
+        verify_local_images
+    fi
     local originals original reference image targets target index=0 expected config links entry link temporary
     originals=$(j -c '[.containers[],(.waf_containers//{})[]]|.[]' <<< "$PLAN")
     while IFS= read -r original; do
@@ -601,6 +858,7 @@ restore() {
         ln -s -- "$target" "$temporary"
         mv -fT -- "$temporary" "$link"
     done <<< "$links"
+    restore_entrypoints
     if j -e '.waf!=null' <<< "$PLAN" >/dev/null; then
         config=$(read_json "$(j -r .waf.compose_path <<< "$PLAN")")
         config=$(printf '%s\n' "$config" "$PLAN" | j -cs '.[1] as $plan | .[0] | .services|=map_values(.image=$plan.waf_images[.container_name]|.restart="no")' | normalize_compose_ulimits)
@@ -613,7 +871,7 @@ restore() {
     PLAN=$(j -c '.restored=true' <<< "$PLAN")
     save_plan
     # During upgrade, restore both nodes before starting either database.
-    if [[ "$(j -r .operation <<< "$PLAN")" != upgrade ]]; then start_infrastructure; fi
+    if [[ "$(j -r .operation <<< "$PLAN")" != upgrade ]] && ! j -e '.storage_scope=="databases"' <<< "$PLAN" >/dev/null; then start_infrastructure; fi
     set_phase restored
 }
 validate_target_config() {
@@ -634,7 +892,11 @@ validate_target_config() {
             if j -e '.read_only==true' <<< "$mount" >/dev/null; then continue; fi
             source=$(realpath -m -- "$(j -er .source <<< "$mount")")
             if [[ "$(j -r .type <<< "$mount")" == bind ]] && runtime_mount "$name" "$source" "$(j -r .target <<< "$mount")"; then continue; fi
-            [[ "$(j -r .type <<< "$mount")" == bind ]] && inside_roots "$source" "$(j -c .paths <<< "$PLAN")" || fail "recovery target storage is outside captured roots: $name"
+            [[ "$(j -r .type <<< "$mount")" == bind ]] || fail "recovery target requires bind storage: $name"
+            if ! inside_roots "$source" "$(j -c .paths <<< "$PLAN")"; then
+                j -e --arg source "$source" '(.preserved_paths//[])|index($source)!=null' <<< "$PLAN" >/dev/null || fail "recovery target storage is outside managed roots: $name"
+                printf '%s\n' "$service" "$previous" | j -es '.[0].volumes==.[1].volumes' >/dev/null || fail "preserved business storage changed: $name"
+            fi
         done <<< "$mounts"
         if ! j -en --arg name "$name" --argjson infra "$INFRA" '$infra|index($name)!=null' >/dev/null; then continue; fi
         j -e --arg name "$name" '.services|has($name)' <<< "$original" >/dev/null || fail "new database infrastructure requires a dedicated recovery adapter: $name"
@@ -660,6 +922,23 @@ pin_target_images() {
 release_item() {
     j -c --arg target "$2" '{project:.name,compose_path:$target,services:(.services|map_values(.container_name))}' <<< "$1"
 }
+release_restart_policies() {
+    # The release configuration is only started after releasing=true is durable.
+    # Restore application restart policies then so a proxy that starts before
+    # its upstream can recover. Infrastructure retains its running containers.
+    printf '%s\n' "$1" "$2" | j -cs --argjson infra "$INFRA" \
+        --argjson isolated "$(j -c '(.original_isolated==true) and (.restored==true)' <<< "$PLAN")" '
+      .[1] as $original | .[0] | .services |= with_entries(
+        .key as $service | $original[.value.container_name] as $container |
+        if $isolated or ($infra|index($service)!=null) or $container.running!=true then .
+        else ($container.restart//{}) as $policy |
+          .value.restart=(
+            if ($policy.Name//"") == "" then "no"
+            elif $policy.Name=="on-failure" and ($policy.MaximumRetryCount//0)>0
+              then "on-failure:"+($policy.MaximumRetryCount|tostring)
+            else $policy.Name end)
+        end)'
+}
 verify() {
     j -e '(.releasing or .completed)|not' <<< "$PLAN" >/dev/null || fail 'business release has already begun'
     j -e '.captured or .aborted_before_install' <<< "$PLAN" >/dev/null || fail 'complete recovery point is unavailable'
@@ -681,20 +960,19 @@ verify() {
             PLAN=$(printf '%s\n' "$PLAN" "$item" | j -cs '.[1] as $item | .[0] | .release_waf=$item')
         fi
     else
-        if j -e '.aborted_before_install==true' <<< "$PLAN" >/dev/null; then
-            recover_waf_project
-            config=$(normalize_compose_ulimits < "$DIRECTORY/compose.json")
-            target="$DIRECTORY/release-compose.json"
+        if j -e '.aborted_before_install==true' <<< "$PLAN" >/dev/null; then recover_waf_project; fi
+        config=$(read_json "$(j -er .compose_path <<< "$PLAN")")
+        config=$(release_restart_policies "$config" "$(j -c .containers <<< "$PLAN")" | normalize_compose_ulimits)
+        target="$DIRECTORY/release-compose.json"
+        atomic "$target" "$config"
+        PLAN=$(j -c --arg path "$target" '.release={project:.project,compose_path:$path,services:.services}' <<< "$PLAN")
+        if j -e '.waf!=null' <<< "$PLAN" >/dev/null; then
+            config=$(read_json "$(j -er .waf.compose_path <<< "$PLAN")")
+            config=$(release_restart_policies "$config" "$(j -c .waf_containers <<< "$PLAN")" | normalize_compose_ulimits)
+            target="$DIRECTORY/release-waf-compose.json"
             atomic "$target" "$config"
-            PLAN=$(j -c --arg path "$target" '.compose_path=$path' <<< "$PLAN")
-            if j -e '.waf!=null' <<< "$PLAN" >/dev/null; then
-                config=$(normalize_compose_ulimits < "$DIRECTORY/waf-compose.json")
-                target="$DIRECTORY/release-waf-compose.json"
-                atomic "$target" "$config"
-                PLAN=$(j -c --arg path "$target" '.waf.compose_path=$path' <<< "$PLAN")
-            fi
+            PLAN=$(j -c --arg path "$target" '.release_waf=(.waf|.compose_path=$path)' <<< "$PLAN")
         fi
-        PLAN=$(j -c '.release={project:.project,compose_path:.compose_path,services:.services} | if .waf then .release_waf=.waf else . end' <<< "$PLAN")
     fi
     compose "$(j -c .release <<< "$PLAN")" config --quiet
     if j -e '.release_waf!=null' <<< "$PLAN" >/dev/null; then compose "$(j -c .release_waf <<< "$PLAN")" config --quiet; fi
@@ -714,25 +992,20 @@ verify() {
 release() {
     if j -e '.completed==true' <<< "$PLAN" >/dev/null; then clear_active; return; fi
     j -e '.verified==true' <<< "$PLAN" >/dev/null || fail 'business recovery has not been verified'
-    local key item isolated original enabled disabled running='[]' present entries entry name policy count
+    local key item isolated original enabled disabled applications infrastructure running='[]' present entries entry name policy count
     local -a up_options=(-d --no-deps --pull never)
     for key in release release_waf; do
         item=$(j -c --arg key "$key" '.[$key]' <<< "$PLAN")
         [[ "$item" != null ]] || continue
         verify_checksum digest "$(j -r .compose_path <<< "$item")" "$(j -r .sha256 <<< "$item")" 'release configuration checksum mismatch'
     done
-    check_license_socket
+    check_jdmc_socket
     # Durable decision before any application accepts writes. After this,
     # failures permit forward release retries only, never snapshot restoration.
     PLAN=$(j -c '.releasing=true' <<< "$PLAN")
     save_plan
     set_phase releasing
     isolated=$(j -c '(.original_isolated==true) and (.restored==true)' <<< "$PLAN")
-    # The upgrade has already installed and started these containers. Recreating
-    # them here would invalidate the replication checkpoint taken before commit.
-    if j -e '.operation == "upgrade" and .restored != true' <<< "$PLAN" >/dev/null; then
-        up_options+=(--no-recreate)
-    fi
     for key in release release_waf; do
         item=$(j -c --arg key "$key" '.[$key]' <<< "$PLAN")
         [[ "$item" != null ]] || continue
@@ -741,11 +1014,22 @@ release() {
         disabled=$(printf '%s\n' "$item" "$enabled" | j -cs '.[1] as $enabled | .[0] | [.services|keys[]|select(. as $s|$enabled|index($s)==null)]')
         json_args "$disabled"
         if ((${#ARGS[@]})); then compose "$item" stop --timeout 60 "${ARGS[@]}"; fi
-        json_args "$enabled"
+        infrastructure=$(j -c --argjson infra "$INFRA" '[.[]|select(. as $s|$infra|index($s)!=null)]' <<< "$enabled")
+        applications=$(j -c --argjson infra "$INFRA" '[.[]|select(. as $s|$infra|index($s)==null)]' <<< "$enabled")
+        json_args "$infrastructure"
         if ((${#ARGS[@]})); then
-            compose "$item" up "${up_options[@]}" "${ARGS[@]}"
-            running=$(printf '%s\n' "$running" "$item" "$enabled" | j -cs '.[1] as $item | .[2] as $enabled | .[0]+[$item.services[$enabled[]]]')
+            # These containers were started and checked before release.
+            # Preserve their identity and replication connections.
+            compose_start "$item" up -d --no-deps --no-recreate --pull never "${ARGS[@]}"
         fi
+        json_args "$applications"
+        if ((${#ARGS[@]})); then
+            # HA setup may recreate the external JMS network. Recreate WAF
+            # containers so Docker binds them to the current network ID.
+            if [[ "$key" == release_waf ]]; then up_options+=(--force-recreate); fi
+            compose_start "$item" up "${up_options[@]}" "${ARGS[@]}"
+        fi
+        running=$(printf '%s\n' "$running" "$item" "$enabled" | j -cs '.[1] as $item | .[2] as $enabled | .[0]+[$item.services[$enabled[]]]')
     done
     if [[ "$isolated" == true ]]; then stop; fi
     json_args "$running"
@@ -808,7 +1092,7 @@ guard() {
 main() {
     local action=${1:-} value fd owner mode before after pid=${BASHPID:-$$}
     (($#)) && shift
-    case "$action" in manifest|check|freeze|capture|restore|start|verify|release|guard) ;; *) fail 'unsupported recovery action';; esac
+    case "$action" in manifest|check|freeze|cold_stop|capture|restore|start|verify|release|cleanup|guard) ;; *) fail 'unsupported recovery action';; esac
     while (($#)); do
         case "$1" in
             --task-id|--installer|--operation|--purpose)
@@ -824,7 +1108,7 @@ main() {
     [[ "$PURPOSE" == startup || "$PURPOSE" == migration || "$PURPOSE" == infrastructure ]] || fail 'invalid recovery purpose'
     # This build-time command must work without jq, root or runtime state.
     if [[ "$action" == manifest ]]; then
-        printf '%s\n' '{"version":1,"coordinated_startup":1,"native_components":"unchanged"}'
+        printf '%s\n' '{"version":1,"coordinated_startup":1,"paired_cold_backup":1,"native_components":"unchanged"}'
         return
     fi
     # No task: preserve standalone lifecycle even before recovery tools exist.
@@ -861,11 +1145,19 @@ main() {
         *)
             PLAN=$(read_json "$DIRECTORY/manifest.json")
             validate_plan
-            if [[ "$action" != release ]]; then
+            if [[ "$action" != release && "$action" != cleanup ]]; then
                 j -e '.completed!=true' <<< "$PLAN" >/dev/null || fail 'recovery already completed; repeated rollback is prohibited'
                 j -e '.releasing!=true' <<< "$PLAN" >/dev/null || fail 'business release has begun; only forward release retry is allowed'
             fi
             case "$action" in
+                cold_stop)
+                    j -e '.storage_scope=="databases" and .frozen==true and .captured!=true and .restored!=true' <<< "$PLAN" >/dev/null || fail 'cold shutdown requires a new frozen task'
+                    set_phase capturing
+                    stop_databases
+                    PLAN=$(j -c --argjson proof "$(shutdown_proof)" '.cold_stopped=true|.cold_shutdown=$proof' <<< "$PLAN")
+                    save_plan
+                    j -cn --arg task "$TASK" --argjson proof "$(j -c .cold_shutdown <<< "$PLAN")" '{task_id:$task,shutdown:$proof,success:true}'
+                    return;;
                 restore) restore;;
                 start)
                     j -e '.captured or .aborted_before_install' <<< "$PLAN" >/dev/null || fail 'recovery point has not been captured'
@@ -876,6 +1168,7 @@ main() {
                     if j -e '.restored==true' <<< "$PLAN" >/dev/null; then set_phase restored; else set_phase captured; fi;;
                 verify) verify;;
                 release) release;;
+                cleanup) cleanup_images;;
             esac;;
     esac
     j -cn --arg task "$TASK" --arg phase "$action" '{task_id:$task,phase:$phase,success:true}'
