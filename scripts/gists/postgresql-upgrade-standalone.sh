@@ -88,12 +88,10 @@ complete_internal_postgresql_upgrade() {
   # Called only after application schema and JDMC upgrades have succeeded.
   while read -r container running policy retries service; do
     [[ "${running}" == true ]] || continue
-    if [[ "${service}" == chen ]]; then
-      prepare_chen_volume || return 1
-    fi
     services+=("${service}")
   done <"${PG18_WORK}/writers"
   if (( ${#services[@]} )); then
+    prepare_services_for_start "${services[@]}" || return 1
     cmd=$(get_docker_compose_cmd_line) || return 1
     ${cmd} up -d "${services[@]}" || return 1
   fi

@@ -70,6 +70,8 @@ function usage() {
   echo "  uninstall         $(gettext 'Uninstall JumpServer')"
   echo
   echo "More Commands: "
+  echo "  prepare [service ...]  Prepare service files and permissions without starting services"
+  echo "  prepare --containers <container ...>  Prepare stopped containers using their installed images"
   echo "  load_image        $(gettext 'Loading docker image')"
   echo "  backup_db         $(gettext 'Backup database')"
   echo "  backup_no_audit   $(gettext 'Backup database without audit data')"
@@ -103,9 +105,7 @@ function start() {
   configure_jdmc || return 1
   gen_safe_config >/dev/null
   stop_disabled_video_worker || return 1
-  prepare_chen_volume || return 1
-  prepare_video_worker_volume || return 1
-  prepare_ansible_executor || return 1
+  prepare_services_for_start || return 1
   EXE=$(get_docker_compose_cmd_line)
   if [[ "$(get_config_or_env ANSIBLE_EXECUTOR_ENABLED)" != "0" ]]; then
     ${EXE} up -d --wait --wait-timeout 60 ansible-executor || return 1
@@ -173,9 +173,7 @@ function restart() {
   echo -e "\n"
 
   if [[ -n "${target}" && "${target}" != "ignore_db" ]]; then
-    if [[ "${target}" == "chen" || "${target}" == "jms_chen" ]]; then
-      prepare_chen_volume || return 1
-    fi
+    prepare_services_for_start "${target}" || return 1
     ${EXE} up -d "${target}" || return 1
     remove_stopped_openbao_init_container
     return
@@ -215,7 +213,7 @@ function video-worker() {
         log_error "video-worker is disabled by VIDEO_WORKER_ENABLED=0"
         return 1
       fi
-      prepare_video_worker_volume && ${EXE} up -d
+      prepare_services_for_start video-worker && ${EXE} up -d
       ;;
     stop) ${EXE} down -v ;;
     restart)
@@ -223,7 +221,7 @@ function video-worker() {
         log_error "video-worker is disabled by VIDEO_WORKER_ENABLED=0"
         return 1
       fi
-      ${EXE} down -v && prepare_video_worker_volume && ${EXE} up -d
+      ${EXE} down -v && prepare_services_for_start video-worker && ${EXE} up -d
       ;;
     status) ${EXE} ps ;;
     *)
@@ -254,6 +252,17 @@ function check_os() {
 
 function main() {
   check_os || return 3
+
+  # Preparation also runs on an HA standby. Do not render Compose, rewrite
+  # configuration, or enter any service/database lifecycle action here.
+  if [[ "${action}" == prepare ]]; then
+    [[ -f "${CONFIG_FILE}" ]] || {
+      log_error "Configuration file not found: ${CONFIG_FILE}"
+      return 3
+    }
+    prepare_services_for_start "${args[@]:1}"
+    return $?
+  fi
 
   if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
     echo ""
