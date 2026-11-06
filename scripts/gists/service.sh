@@ -328,18 +328,57 @@ function stop_disabled_video_worker() {
   fi
 }
 
+function prepare_services_for_start() {
+  local service enabled container image owner running metadata extra from_containers=0
+  if [[ "${1:-}" == --containers ]]; then
+    from_containers=1
+    shift
+    (( $# > 0 )) || {
+      log_error 'prepare --containers requires at least one container'
+      return 1
+    }
+  fi
+  local -a selected=("$@")
+  if (( $# == 0 )); then
+    enabled=$(get_enabled_services) || return 1
+    read -r -a selected <<<"${enabled}"
+  fi
+  for service in "${selected[@]}"; do
+    image='' owner=''
+    if [[ "${from_containers}" == 1 ]]; then
+      container=${service}
+      [[ "${container}" =~ ^/?jms_[A-Za-z0-9_.-]+$ ]] || return 1
+      metadata=$(docker inspect -f '{{.State.Running}}|{{.Image}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.Config.User}}' "${container}") || return 1
+      IFS='|' read -r running image service owner extra <<<"${metadata}"
+      [[ "${running}" == false && "${image}" =~ ^sha256:[a-f0-9]{64}$ && \
+        "${service}" =~ ^[A-Za-z0-9_.-]+$ && -z "${extra}" ]] || {
+        log_error "Cannot prepare a running or invalid service container: ${container}"
+        return 1
+      }
+    fi
+    case "${service#jms_}" in
+      chen) prepare_chen_volume "${image}" "${owner}" || return 1 ;;
+      video-worker) prepare_video_worker_volume "${image}" "${owner}" || return 1 ;;
+      ansible-executor|ansible_executor) prepare_ansible_executor "${image}" || return 1 ;;
+    esac
+  done
+}
+
 function prepare_chen_volume() {
   [[ "$(get_config_or_env CHEN_ENABLED)" != "0" ]] || return 0
   local image owner data_dir folder
-  image="$(get_image_namespace)/chen:${VERSION}"
-  owner=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
-    log_error "Unable to inspect Chen image user: ${image}"
-    return 1
-  }
+  image=${1:-"$(get_image_namespace)/chen:${VERSION}"}
+  owner=${2:-}
+  if [[ -z "${owner}" ]]; then
+    owner=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
+      log_error "Unable to inspect Chen image user: ${image}"
+      return 1
+    }
+  fi
   # Legacy Java images run as root and need no ownership migration.
   case "${owner}" in ''|root|root:root|0|0:0) return 0 ;; esac
   if [[ ! "${owner}" =~ ^[0-9]+:[0-9]+$ ]]; then
-    owner=$(docker run --rm --entrypoint /bin/sh "${image}" -c \
+    owner=$(docker run --rm --network none --user "${owner}" --entrypoint /bin/sh "${image}" -c \
       'printf "%s:%s\n" "$(id -u)" "$(id -g)"') || return 1
   fi
   if [[ ! "${owner}" =~ ^[0-9]+:[0-9]+$ ]]; then
@@ -370,15 +409,18 @@ function prepare_video_worker_volume() {
   data_dir="${volume_dir}/video-worker/data"
   mkdir -p "${data_dir}" || return 1
 
-  image="$(get_image_namespace)/video-worker:${VERSION}"
-  user_spec=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
-    log_error "Unable to inspect video-worker image user: ${image}"
-    return 1
-  }
+  image=${1:-"$(get_image_namespace)/video-worker:${VERSION}"}
+  user_spec=${2:-}
+  if [[ -z "${user_spec}" ]]; then
+    user_spec=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
+      log_error "Unable to inspect video-worker image user: ${image}"
+      return 1
+    }
+  fi
   if [[ "${user_spec}" =~ ^[0-9]+:[0-9]+$ ]]; then
     owner=${user_spec}
   else
-    owner=$(docker run --rm --entrypoint /bin/sh "${image}" -c \
+    owner=$(docker run --rm --network none --user "${user_spec:-0}" --entrypoint /bin/sh "${image}" -c \
       'printf "%s:%s\n" "$(id -u)" "$(id -g)"') || {
       log_error "Unable to resolve video-worker image user: ${image}"
       return 1

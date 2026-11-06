@@ -167,6 +167,17 @@ JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。安
 命令行使用 `jdmc` 作为 JDMC 服务目标。
 `--skip-jdmc` 仅供 JDMC 发起 JumpServer 重启时避免停止自身，不是组件开关。
 
+组件的目录、权限和密钥初始化统一由安装器负责：
+
+```bash
+./jmsctl.sh prepare chen video-worker
+./jmsctl.sh prepare --containers jms_chen jms_video-worker
+```
+
+不指定服务时准备所有已启用服务。`--containers` 必须指定已停止的容器，按容器实际使用的
+镜像和运行用户准备，适用于 JDMC 主备及组件补丁后的启动。此命令不启动或重建业务容器，
+不改写配置或执行数据库操作。JDMC 在两端维护升级及拉起应用前调用它，继续负责主备启停。
+
 ## 离线镜像清单
 
 `scripts/gists/image.sh` 是离线镜像选择和重标记规则的唯一来源。调用

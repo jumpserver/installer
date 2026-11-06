@@ -17,8 +17,11 @@ function prepare_ansible_executor() {
   fi
 
   credential_dir="${CONFIG_DIR}/ansible-executor"
-  tag=$(get_ansible_executor_tag) || return 1
-  image="$(get_image_namespace)/ansible-executor:${tag}"
+  image=${1:-}
+  if [[ -z "${image}" ]]; then
+    tag=$(get_ansible_executor_tag) || return 1
+    image="$(get_image_namespace)/ansible-executor:${tag}"
+  fi
   mkdir -p "${credential_dir}" || return 1
   chmod 700 "${credential_dir}" || return 1
   # Use the shipped SSH tools; the host needs no additional key-generation package.
