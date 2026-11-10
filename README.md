@@ -230,7 +230,11 @@ CE 和 EE 共用同一执行器标签，离线包包含执行器。`ansible-exec
 `USE_IPV6=1` 时两个网络均启用 IPv6，执行网 IPv6 地址由 Docker 自动分配。
 Core/Celery 的默认出口由 Docker 自动选择，业务网和执行网均保留出站能力。
 自定义出口防火墙规则时，需允许实际使用的网络出站。
-Core/Celery 移除了 Docker socket 和 Celery 的 privileged 设置，旧 `CELERY_PRIVILEGED` 不再生效。
+Core/Celery 不挂载 Docker socket。Celery 恢复 `CELERY_PRIVILEGED` 配置，默认 `true`，
+以便关闭 Ansible Docker 隔离时，普通 Playbook 仍能在 Celery 内通过 `bwrap` 创建隔离命名空间。
+Core 和 SSH 执行器不启用 privileged。只使用 SSH 执行器的部署可设置
+`CELERY_PRIVILEGED=false`；修改后需要重建 Celery 容器，单纯重启进程不会改变容器权限。
+privileged 会扩大 Celery 容器的宿主机权限，`bwrap` 隔离不能消除这项部署风险。
 关闭 Ansible Docker 隔离不会停止常驻执行器，便于从页面重新开启；本地执行不享有
 执行器提供的任务 UID 和文件隔离。`ANSIBLE_EXECUTOR_ENABLED=0` 仅控制是否部署本地
 执行器容器，与功能开关独立。
