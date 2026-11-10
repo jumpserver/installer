@@ -29,7 +29,10 @@ function configure_kotl() {
   if is_kotl_enabled; then
     set_config KOTL_ENABLED 1 || return 1
     set_config JDMC_ENABLED 1 || return 1
-    set_config JDMC_SOCK_PATH "${KOTL_CORE_SOCKET_PATH}" || return 1
+    # Preserve custom socket paths when starting, restarting, or upgrading.
+    if [[ -z "$(get_config JDMC_SOCK_PATH)" ]]; then
+      set_config JDMC_SOCK_PATH "${KOTL_CORE_SOCKET_PATH}" || return 1
+    fi
   else
     # Clear the Core flag left by an earlier enabled installation.
     set_config JDMC_ENABLED 0 || return 1
