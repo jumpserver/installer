@@ -122,7 +122,7 @@ assert bool(config['networks']['net'].get('enable_ipv6')) == bool(int(sys.argv[2
 assert config['networks']['executor']['ipam']['config'][0]['subnet'] == sys.argv[3]
 for name in ('core', 'celery'):
     service = services[name]
-    assert not service.get('privileged'), name
+    assert bool(service.get('privileged')) == (name == 'celery'), name
     assert all('docker.sock' not in v['source'] for v in service['volumes']), name
     env = service['environment']
     assert 'ANSIBLE_EXECUTION_BACKEND' not in env
@@ -169,8 +169,28 @@ for name in ('core', 'celery'):
     assert env['ANSIBLE_DOCKER_ENABLED'] == 'false'
     assert 'ANSIBLE_EXECUTION_BACKEND' not in env
 assert 'ansible-executor' in services
+assert services['celery']['privileged'] is True
 PYTEST
 printf 'PASS: existing Ansible isolation setting is passed through without forcing SSH\n'
+
+(
+  cd "${TEST_ROOT}"
+  export JS_CONFIG_DIR="${ce_dir}"
+  . ./scripts/utils.sh
+  set_config CELERY_PRIVILEGED false
+  compose_cmd=$(get_docker_compose_cmd_line)
+  ${compose_cmd} --env-file "${CONFIG_FILE}" config --format json >"${test_dir}/unprivileged-celery.json"
+  set_config CELERY_PRIVILEGED ''
+)
+python3 - "${test_dir}/unprivileged-celery.json" <<'PYTEST'
+import json
+import sys
+services = json.load(open(sys.argv[1]))['services']
+for name in ('core', 'celery', 'ansible-executor'):
+    assert not services[name].get('privileged'), name
+    assert all('docker.sock' not in v['source'] for v in services[name]['volumes']), name
+PYTEST
+printf 'PASS: Celery privileged mode can be explicitly disabled\n'
 
 (
   cd "${TEST_ROOT}"

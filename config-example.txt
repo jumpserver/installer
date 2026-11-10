@@ -174,6 +174,10 @@ DOMAINS=
 # WEB_ENABLED=0
 # VIDEO_WORKER_ENABLED=0
 
+# Celery keeps privileged mode for local Ansible execution with bwrap.
+# SSH-only deployments can disable it; changing this requires recreating Celery.
+# CELERY_PRIVILEGED=true
+
 # Ansible Docker isolation uses the persistent SSH executor (no Docker socket or privileged mode).
 # The existing ANSIBLE_DOCKER_ENABLED feature setting controls SSH versus local execution.
 # Disabling isolation does not stop the executor container.
