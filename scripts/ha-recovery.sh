@@ -554,20 +554,31 @@ pinned_config() {
     local config=$1
     printf '%s\n' "$config" "$PLAN" | j -cs '.[1] as $plan | .[0] | .services |= with_entries(.value.image=$plan.containers[$plan.services[.key]].image | .value.restart="no")' | normalize_compose_ulimits
 }
+reclaim_contiguous_memory() {
+    # Container startup triggers order:6 GFP_KERNEL allocations (256 KiB
+    # contiguous, partly from the ZTA per-namespace zone control). On a
+    # long-running box these fail from fragmentation even with free memory to
+    # spare. Reclaim page cache and compact before retrying so the next attempt
+    # can find a contiguous block.
+    sync || true
+    [[ ! -w /proc/sys/vm/drop_caches ]] || printf 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
+    [[ ! -w /proc/sys/vm/compact_memory ]] || printf 1 > /proc/sys/vm/compact_memory 2>/dev/null || true
+}
 compose_start() {
-    local attempt diagnostic
+    local attempt diagnostic attempts=5
     diagnostic=$(mktemp)
-    for attempt in 1 2 3; do
+    for (( attempt=1; attempt<=attempts; attempt++ )); do
         if (compose "$@") 2>"$diagnostic"; then
             rm -f -- "$diagnostic"
             return 0
         fi
-        if (( attempt == 3 )) || ! grep -Fq 'system memory allocation failed' "$diagnostic"; then
+        if (( attempt == attempts )) || ! grep -Fq 'system memory allocation failed' "$diagnostic"; then
             cat -- "$diagnostic" >&2
             rm -f -- "$diagnostic"
             return 1
         fi
-        printf 'Retrying HA container startup after memory allocation failure (%s/3)\n' "$attempt" >&2
+        printf 'Retrying HA container startup after memory allocation failure (%s/%s)\n' "$attempt" "$attempts" >&2
+        reclaim_contiguous_memory
         sleep 5
     done
 }
