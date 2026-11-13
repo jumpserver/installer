@@ -23,7 +23,7 @@ function get_enabled_services() {
       enabled_services+=("${service}")
     fi
   done
- 
+
   echo "${enabled_services[@]}"
 }
 
@@ -87,7 +87,7 @@ function get_db_info() {
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "mariadb:10.6"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        echo "postgres:16.15-bookworm"
+        echo "postgres:16.16-bookworm"
       fi
       ;;
     "file")
@@ -250,7 +250,7 @@ function get_db_compose_cmd() {
   if [[ -n "${yml}" ]]; then
     cmd+=" ${yml}"
   fi
- 
+
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
   else
