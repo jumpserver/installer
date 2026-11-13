@@ -70,7 +70,7 @@ function get_internal_postgresql_data_version() {
 
 function get_postgresql_image() {
   local image data_version container_image candidate
-  image=postgres:18.6-bookworm
+  image=postgres:18.7-trixie
   data_version=$(get_internal_postgresql_data_version) || return 1
   if [[ -n "${data_version}" && ! "${image}" =~ ^postgres:${data_version}([.-]|$) ]]; then
     # Keep the installed patch/OS variant when the old container still exists.
@@ -91,7 +91,7 @@ function get_postgresql_image() {
       case "${data_version}" in
         16) image=postgres:16.15-bookworm ;;
         17) image=postgres:17.11-bookworm ;;
-        18) image=postgres:18.6-bookworm ;;
+        18) image=postgres:18.7-trixie ;;
         *) image="postgres:${data_version}-bookworm" ;;
       esac
     fi
@@ -102,7 +102,7 @@ function get_postgresql_image() {
 function get_postgresql_compose_files() {
   local image directory file content tmp
   image=$(get_postgresql_image) || return 1
-  if [[ "${image}" == postgres:18.6-bookworm ]]; then
+  if [[ "${image}" == postgres:18.7-trixie ]]; then
     printf 'compose/postgresql.yml -f compose/postgresql.port.yml\n'
     return 0
   fi

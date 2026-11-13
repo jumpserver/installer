@@ -2,7 +2,7 @@
 # Shared by the standalone installer and JDMC's coordinated maintenance worker.
 # Callers must fence every application writer before prepare/cutover, and keep
 # those fences until the replacement database and application are verified.
-PG18_IMAGE=postgres:18.6-bookworm
+PG18_IMAGE=postgres:18.7-trixie
 
 pg18_error() { printf '[postgresql-upgrade] %s\n' "$*" >&2; return 1; }
 pg18_save() {
