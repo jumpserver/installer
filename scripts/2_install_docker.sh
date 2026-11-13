@@ -20,23 +20,23 @@ function copy_docker() {
 }
 
 function install_docker() {
-  if [[ ! -f ${BASE_DIR}/docker/docker.tar.gz ]]; then
-    prepare_docker_bin
-  fi
-  if [[ ! -f ${BASE_DIR}/docker/docker.tar.gz ]]; then
-    echo_red "Error: $(gettext 'Docker program does not exist')"
-    exit 1
-  fi
-  if [[ ! -f "/usr/local/bin/dockerd" ]]; then
+  if [ ! "$(docker version --format '{{.Server.Version}}' 2>/dev/null)" = "${DOCKER_VERSION}" ]; then
+    if [[ ! -f ${BASE_DIR}/docker/docker.tar.gz ]]; then
+      prepare_docker_bin
+    fi
+    if [[ ! -f ${BASE_DIR}/docker/docker.tar.gz ]]; then
+      echo_red "Error: $(gettext 'Docker program does not exist')"
+      exit 1
+    fi
     copy_docker
   fi
 }
 
 function install_compose() {
-  if [[ ! -f ${BASE_DIR}/docker/docker-compose ]]; then
-    prepare_compose_bin
-  fi
-  if [[ ! -f "/usr/local/libexec/docker/cli-plugins/docker-compose" ]]; then
+  if [ ! "$(docker compose version --short 2>/dev/null)" = "${DOCKER_COMPOSE_VERSION}" ]; then
+    if [[ ! -f ${BASE_DIR}/docker/docker-compose ]]; then
+      prepare_compose_bin
+    fi
     if [[ ! -d "/usr/local/libexec/docker/cli-plugins" ]]; then
       mkdir -p /usr/local/libexec/docker/cli-plugins
     fi
@@ -45,10 +45,10 @@ function install_compose() {
 }
 
 function install_compose_home() {
-  if [[ ! -f ${BASE_DIR}/docker/docker-compose ]]; then
-    prepare_compose_bin
-  fi
-  if [[ ! -f "$HOME/.docker/cli-plugins/docker-compose" ]]; then
+  if [ ! "$(docker compose version --short 2>/dev/null)" = "${DOCKER_COMPOSE_VERSION}" ]; then
+    if [[ ! -f ${BASE_DIR}/docker/docker-compose ]]; then
+      prepare_compose_bin
+    fi
     if [[ ! -d "$HOME/.docker/cli-plugins" ]]; then
       mkdir -p $HOME/.docker/cli-plugins
     fi
@@ -57,24 +57,26 @@ function install_compose_home() {
 }
 
 function check_docker_install() {
-  docker version &>/dev/null || {
+  if ! docker version &>/dev/null &&
+     ! /usr/local/bin/docker version &>/dev/null &&
+     ! /usr/bin/docker version &>/dev/null; then
     if check_root; then
       install_docker
     else
       log_warn "$(gettext 'Permission denied. pass...')"
     fi
-  }
+    echo_done
+  fi
 }
 
 function check_compose_install() {
-  docker compose version &>/dev/null || {
+  if ! docker compose version &>/dev/null; then
     if check_root; then
       install_compose
     else
       install_compose_home
     fi
-  }
-  echo_done
+  fi
 }
 
 function set_docker_config() {
