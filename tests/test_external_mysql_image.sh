@@ -22,7 +22,7 @@ export SKIP_BACKUP_DB=1
 
 IMAGE_DIR="${test_dir}/images"
 mkdir -p "${IMAGE_DIR}"
-for test_image in redis:7.4.10-bookworm "jumpserver/core:${VERSION}"; do
+for test_image in redis:8.10.3-trixie "jumpserver/core:${VERSION}"; do
   archive_name=${test_image##*/}
   printf 'mock archive\n' >"${IMAGE_DIR}/${archive_name}.zst"
   printf 'sha256:installed\n' >"${IMAGE_DIR}/${archive_name}.sha256"
@@ -37,7 +37,7 @@ docker() {
   case "$1 ${2:-}" in
     'image inspect')
       case "${*: -1}" in
-        redis:7.4.10-bookworm|"jumpserver/core:${VERSION}")
+        redis:8.10.3-trixie|"jumpserver/core:${VERSION}")
           printf 'sha256:installed\n'
           ;;
         *)
@@ -182,10 +182,10 @@ assert_db_image_required mariadb:10.6
 set_config DB_HOST postgresql
 assert_db_image_required mariadb:10.6
 set_config DB_ENGINE postgresql
-assert_db_image_required postgres:18.6-bookworm
+assert_db_image_required postgres:18.7-trixie
 set_config DB_HOST db.example.test
 set_config HA_MODE 1
-assert_db_image_required postgres:18.6-bookworm
+assert_db_image_required postgres:18.7-trixie
 set_config HA_MODE 0
 printf 'PASS: internal MySQL/PostgreSQL databases, HA, and missing hosts retain required image checks during upgrade\n'
 
@@ -197,16 +197,16 @@ unset SKIP_BACKUP_DB
 main >"${test_dir}/load.log"
 assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Docker image not found'
 assert_contains "$(cat "${test_dir}/load.log")" 'continuing to the backup step'
-installed_db_image=postgres:18.6-bookworm
+installed_db_image=postgres:18.7-trixie
 main >"${test_dir}/load.log"
 if [[ "$(cat "${test_dir}/load.log")" == *WARNING* ]]; then
   fail 'an existing external PostgreSQL client must be reused without an archive'
 fi
 installed_db_image=''
 IMAGE_DIR="${test_dir}/no-offline-images"
-fail_pull_image=postgres:18.6-bookworm
+fail_pull_image=postgres:18.7-trixie
 main >"${test_dir}/pull.log" 2>&1
-assert_contains "$(cat "${test_dir}/pull.log")" 'WARNING: Failed to pull Docker image: postgres:18.6-bookworm'
+assert_contains "$(cat "${test_dir}/pull.log")" 'WARNING: Failed to pull Docker image: postgres:18.7-trixie'
 export SKIP_BACKUP_DB=1
 : >"${docker_calls}"
 main >"${test_dir}/pull.log" 2>&1

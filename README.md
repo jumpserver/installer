@@ -39,12 +39,12 @@ $ ./jmsctl.sh install
 
 ## 管理命令
 
-新安装默认使用 `postgres:18.6-bookworm`。统一的 `compose/postgresql.yml` 显式设置
+新安装默认使用 `postgres:18.7-trixie`。统一的 `compose/postgresql.yml` 显式设置
 `PGDATA=/var/lib/postgresql/data`，继续把 `${VOLUME_DIR}/postgresql/data`
 挂载到该目录，以兼容 JDMC 的主备重建、回切和启动写入隔离。同时显式挂载
 `${VOLUME_DIR}/postgresql:/var/lib/postgresql`，避免 PostgreSQL 18 镜像自动创建
 额外匿名卷，导致 JDMC 的 Compose 挂载一致性校验失败。
-主 Compose 的镜像固定为 `postgres:18.6-bookworm`，不需要数据库镜像配置项。
+主 Compose 的镜像固定为 `postgres:18.7-trixie`，不需要数据库镜像配置项。
 旧版本按实际数据版本选择镜像，仅在迁移前自动生成 `${CONFIG_DIR}/postgresql/image-<tag>.yml`
 运行时镜像覆盖文件，使用相同的 `PGDATA`；迁移完成后使用主 Compose 中的 18 镜像。
 运行时文件会保留，避免影响 JDMC 已记录的 Compose 绑定。JDMC 升级已有主备时继续使用
@@ -53,7 +53,7 @@ $ ./jmsctl.sh install
 无法访问；数据目录 `postgresql/data` 的权限保持不变。
 
 从 JumpServer 5.0 等旧应用版本升级时，内置 PostgreSQL 10–17 会在同一次维护中
-迁移到 `postgres:18.6-bookworm`。安装器先加载旧镜像和 18 镜像，停止应用写入并禁用
+迁移到 `postgres:18.7-trixie`。安装器先加载旧镜像和 18 镜像，停止应用写入并禁用
 自动重启，使用 18 客户端导出全部数据库和角色，在隔离目录恢复并校验后再切换数据目录。
 迁移前仍按 `PG_VERSION` 选择旧镜像；不能让 18 直接打开旧数据。
 迁移完成后更新业务表结构并恢复原先运行的应用。外置数据库不会被升级。
@@ -184,7 +184,7 @@ JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。安
 `get_offline_image_manifest` 会逐行输出以 Tab 分隔的源镜像和离线包目标镜像：
 
 ```text
-redis:7.4.10-bookworm<TAB>redis:7.4.10-bookworm
+redis:8.10.3-trixie<TAB>redis:8.10.3-trixie
 registry.example.com/jumpserver/core:VERSION<TAB>jumpserver/core:VERSION
 ```
 

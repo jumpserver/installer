@@ -13,7 +13,7 @@ cp "${TEST_ROOT}/config-example.txt" "${test_dir}/config.txt"
 IMAGE_DIR="${test_dir}/images"
 mkdir -p "${IMAGE_DIR}"
 set_config VOLUME_DIR "${test_dir}/volume"
-assert_eq 'postgres:18.6-bookworm' "$(get_db_images)" 'new installations must default to PostgreSQL'
+assert_eq 'postgres:18.7-trixie' "$(get_db_images)" 'new installations must default to PostgreSQL'
 
 set_config DB_ENGINE mysql
 set_config DB_HOST mysql
@@ -84,7 +84,7 @@ for test_image in mysql:8.0 mariadb:10.6; do
 done
 printf 'PASS: offline upgrades reuse local MySQL/MariaDB images and legacy tags\n'
 
-for test_image in postgres:18.6-bookworm jumpserver/core:test; do
+for test_image in postgres:18.7-trixie jumpserver/core:test; do
   installed_image=${test_image}
   if load_image_files >"${test_dir}/load.log"; then
     fail 'non-legacy images must still require their packaged archives'

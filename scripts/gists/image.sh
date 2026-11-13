@@ -44,7 +44,7 @@ function reuse_local_db_image() {
     mysql:8.0|mariadb:10.6) ;;
     postgres:*)
       if ! is_external_db_image "${image}"; then
-        [[ -n "$(get_internal_postgresql_data_version)" && ( "${image}" == "$(get_db_images)" || ( "${POSTGRESQL_MAJOR_UPGRADE:-0}" == 1 && "${image}" == postgres:18.6-bookworm ) ) ]] || return 1
+        [[ -n "$(get_internal_postgresql_data_version)" && ( "${image}" == "$(get_db_images)" || ( "${POSTGRESQL_MAJOR_UPGRADE:-0}" == 1 && "${image}" == postgres:18.7-trixie ) ) ]] || return 1
       fi
       ;;
     *) return 1 ;;
@@ -96,14 +96,14 @@ function get_image_mappings() {
 
   use_xpack=$(get_config_or_env USE_XPACK)
   namespace=$(get_image_namespace)
-  emit_image_mapping "redis:7.4.10-bookworm" "redis:7.4.10-bookworm"
+  emit_image_mapping "redis:8.10.3-trixie" "redis:8.10.3-trixie"
   db_image=$(get_db_images)
   if [[ -n "${db_image}" ]] && ! should_skip_external_db_image "${db_image}"; then
     emit_image_mapping "${db_image}" "${db_image}"
   fi
   if [[ "${POSTGRESQL_MAJOR_UPGRADE:-0}" == 1 && "$(get_config DB_ENGINE)" == postgresql &&
-    ( "$(get_config DB_HOST)" == postgresql || "$(get_config HA_MODE)" == 1 ) && "${db_image}" != postgres:18.6-bookworm ]]; then
-    emit_image_mapping postgres:18.6-bookworm postgres:18.6-bookworm
+    ( "$(get_config DB_HOST)" == postgresql || "$(get_config HA_MODE)" == 1 ) && "${db_image}" != postgres:18.7-trixie ]]; then
+    emit_image_mapping postgres:18.7-trixie postgres:18.7-trixie
   fi
 
   enabled_services=${OFFLINE_IMAGE_SERVICES:-$(get_enabled_services)}
