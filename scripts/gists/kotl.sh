@@ -21,14 +21,22 @@ function should_include_kotl_image() {
 }
 
 function get_kotl_image() {
-  echo "${NAMESPACE:-jumpserver}/kotl:${VERSION}"
+  # The v4 source lives in jdmc; the artifact retains the KOTL host layout.
+  echo "${NAMESPACE:-jumpserver}/jdmc:${VERSION}"
 }
 
 function configure_kotl() {
-  is_kotl_enabled || return 0
-  set_config KOTL_ENABLED 1
-  set_config JDMC_ENABLED 1
-  set_config JDMC_SOCK_PATH "${KOTL_CORE_SOCKET_PATH}"
+  if is_kotl_enabled; then
+    set_config KOTL_ENABLED 1 || return 1
+    set_config JDMC_ENABLED 1 || return 1
+    # Preserve custom socket paths when starting, restarting, or upgrading.
+    if [[ -z "$(get_config JDMC_SOCK_PATH)" ]]; then
+      set_config JDMC_SOCK_PATH "${KOTL_CORE_SOCKET_PATH}" || return 1
+    fi
+  else
+    # Clear the Core flag left by an earlier enabled installation.
+    set_config JDMC_ENABLED 0 || return 1
+  fi
   gen_safe_config >/dev/null
 }
 
@@ -39,8 +47,17 @@ function check_kotl_runtime() {
   fi
 }
 
+function check_kotl_service_installed() {
+  local unit_dir
+
+  for unit_dir in /etc/systemd/system /run/systemd/system /usr/local/lib/systemd/system /usr/lib/systemd/system /lib/systemd/system; do
+    [[ -f "${unit_dir}/${KOTL_SERVICE_NAME}" ]] && return 0
+  done
+  return 1
+}
+
 function check_kotl_installed() {
-  [[ -x /opt/kotl/kotl && -f "/etc/systemd/system/${KOTL_SERVICE_NAME}" ]]
+  [[ -x /opt/kotl/kotl ]] && check_kotl_service_installed
 }
 
 function run_kotl_package_action() {
@@ -86,6 +103,18 @@ function run_kotl_package_action() {
       log_error "KOTL package script not found: scripts/${action}.sh"
       exit 1
     fi
+
+    # When VOLUME_DIR is directly under /opt, KOTL's persistent config
+    # directory resolves to /opt/kotl, which is also the package install
+    # directory. Older KOTL packages then try to replace each persistent file
+    # with a symlink to itself and abort with "are the same file". Guard those
+    # legacy link commands in the extracted package before running it.
+    sed -i \
+      -e 's#^  ln -sfn "\${CONFIG_FILE}" "\${INSTALL_CONFIG_LINK}"$#  [[ "${CONFIG_FILE}" == "${INSTALL_CONFIG_LINK}" ]] || ln -sfn "${CONFIG_FILE}" "${INSTALL_CONFIG_LINK}"#' \
+      -e 's#^  ln -sfn "\${AFTER_START_HOOK}" "\${INSTALL_AFTER_START_LINK}"$#  [[ "${AFTER_START_HOOK}" == "${INSTALL_AFTER_START_LINK}" ]] || ln -sfn "${AFTER_START_HOOK}" "${INSTALL_AFTER_START_LINK}"#' \
+      -e 's#^  ln -sfn "\${CONFIG_FILE}" "\${CONFIG_LINK}"$#  [[ "${CONFIG_FILE}" == "${CONFIG_LINK}" ]] || ln -sfn "${CONFIG_FILE}" "${CONFIG_LINK}"#' \
+      -e 's#^  ln -sfn "\${AFTER_START_HOOK_TARGET}" "\${AFTER_START_LINK}"$#  [[ "${AFTER_START_HOOK_TARGET}" == "${AFTER_START_LINK}" ]] || ln -sfn "${AFTER_START_HOOK_TARGET}" "${AFTER_START_LINK}"#' \
+      "${script_path}" || exit 1
 
     chmod +x "${script_path}" || exit 1
     cd "${temp_dir}" || exit 1
@@ -135,9 +164,9 @@ function start_kotl() {
 }
 
 function stop_kotl() {
-  is_kotl_enabled || return 0
+  # A disabled component or a missing binary can still have a running unit.
+  check_kotl_service_installed || return 0
   check_kotl_runtime || return 1
-  check_kotl_installed || return 0
   systemctl stop "${KOTL_SERVICE_NAME}"
 }
 
@@ -148,20 +177,20 @@ function restart_kotl() {
 }
 
 function status_kotl() {
-  is_kotl_enabled || return 0
+  check_kotl_service_installed || return 0
   check_kotl_runtime || return 1
-  systemctl status "${KOTL_SERVICE_NAME}" --no-pager || true
+  systemctl status "${KOTL_SERVICE_NAME}" --no-pager
 }
 
 function tail_kotl() {
-  is_kotl_enabled || return 0
+  check_kotl_service_installed || return 0
   check_kotl_runtime || return 1
   journalctl -u "${KOTL_SERVICE_NAME}" -n 100 -f -o cat
 }
 
 function disable_kotl() {
-  check_kotl_installed || return 0
+  check_kotl_service_installed || return 0
   check_kotl_runtime || return 1
-  systemctl stop "${KOTL_SERVICE_NAME}" || true
+  systemctl stop "${KOTL_SERVICE_NAME}" || return 1
   systemctl disable "${KOTL_SERVICE_NAME}"
 }

@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-export BAO_ADDR="${BAO_ADDR:-http://openbao:8200}"
+export BAO_ADDR="${BAO_ADDR:-https://openbao:8200}"
+export BAO_CACERT="${BAO_CACERT:-/openbao/bootstrap/tls/ca.crt}"
 
 VAULT_ENABLED="${VAULT_ENABLED:-false}"
 VAULT_BACKEND="${VAULT_BACKEND:-openbao}"

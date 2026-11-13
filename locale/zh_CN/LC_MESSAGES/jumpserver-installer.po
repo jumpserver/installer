@@ -689,3 +689,9 @@ msgstr "macOS 安装请参考"
 #: jmsctl.sh:162
 msgid "Windows installer please see"
 msgstr "Windows 安装请参考"
+
+msgid "OpenBao TLS certificate files are incomplete"
+msgstr "OpenBao TLS 证书文件不完整"
+
+msgid "OpenSSL is required to generate the OpenBao certificate"
+msgstr "生成 OpenBao 证书需要 OpenSSL"

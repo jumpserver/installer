@@ -29,7 +29,7 @@ function get_pull_images() {
     images+=("$(get_openbao_image)")
   fi
   if should_include_kotl_image; then
-    images+=("jumpserver/kotl:${VERSION}")
+    images+=("jumpserver/jdmc:${VERSION}")
   fi
   echo "${images[@]}"
 }
@@ -157,7 +157,7 @@ function pull_image() {
     to_image=${to_image/jumpserver/${NAMESPACE}}
   fi
   if [[ "$(check_image_exists "${full_image_path}")" != "1" || "$IMAGE_PULL_POLICY" == "Always" ]]; then
-    docker pull -q ${pull_args} "${full_image_path}"
+    docker pull ${pull_args} "${full_image_path}"
   fi
   
   if [[ "${full_image_path}" != "${to_image}" ]]; then
