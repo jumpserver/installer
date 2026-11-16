@@ -81,18 +81,54 @@ upgrade_internal_postgresql() {
   pg18_save phase switched
 }
 
+# Wait for a recovered service using the shared recovery deadline.
+pg18_wait_recovered_container() {
+  local container=$1 state
+  while :; do
+    state=$(docker inspect -f '{{if not .State.Running}}{{.State.Status}}{{else if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${container}") || return 1
+    [[ "${state}" != healthy && "${state}" != running ]] || return 0
+    if [[ "${state}" == exited || "${state}" == dead ]] || (( SECONDS >= deadline )); then
+      log_error "Failed to recover ${container}: ${state}"
+      return 1
+    fi
+    sleep 2
+  done
+}
+
 complete_internal_postgresql_upgrade() {
-  local container running policy retries service cmd state deadline timeout
-  local -a services=()
+  local container running policy retries service cmd deadline timeout enabled_services candidate recorded
+  local -a services=() recorded_services=() new_services=() new_containers=()
   [[ "${PG18_UPGRADE_ACTIVE:-0}" == 1 && -f "${PG18_WORK:-}/writers" ]] || return 0
   # Called only after application schema and JDMC upgrades have succeeded.
   while read -r container running policy retries service; do
+    recorded_services+=("${service}")
     [[ "${running}" == true ]] || continue
     services+=("${service}")
   done <"${PG18_WORK}/writers"
   if (( ${#services[@]} )); then
-    prepare_services_for_start "${services[@]}" || return 1
+    # A target release can add enabled services that did not exist when the
+    # old containers were snapshotted. Start them alongside the old running
+    # services, but do not change the intent of a recorded stopped service.
+    enabled_services=$(get_enabled_services) || return 1
+    for candidate in ${enabled_services}; do
+      recorded=0
+      for service in "${recorded_services[@]}"; do
+        [[ "${service}" != "${candidate}" ]] || recorded=1
+      done
+      [[ "${recorded}" == 0 ]] || continue
+      new_services+=("${candidate}")
+      container="jms_${candidate}"
+      [[ "${candidate}" != ansible-executor ]] || container=jms_ansible_executor
+      new_containers+=("${container}")
+    done
+    prepare_services_for_start "${services[@]}" ${new_services[@]+"${new_services[@]}"} || return 1
     cmd=$(get_docker_compose_cmd_line) || return 1
+    # A failed previous attempt may have fenced a new container with restart=no.
+    # Recreate it from Compose to restore its declared restart policy, and
+    # establish its network name before starting existing dependent services.
+    if (( ${#new_services[@]} )); then
+      ${cmd} up -d --no-deps --force-recreate "${new_services[@]}" || return 1
+    fi
     ${cmd} up -d "${services[@]}" || return 1
   fi
   timeout=$(get_config CONTAINER_HEALTH_TIMEOUT 300)
@@ -100,20 +136,15 @@ complete_internal_postgresql_upgrade() {
   deadline=$((SECONDS + timeout))
   while read -r container running policy retries service; do
     if [[ "${running}" == true ]]; then
-      while :; do
-        state=$(docker inspect -f '{{if not .State.Running}}{{.State.Status}}{{else if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${container}") || return 1
-        [[ "${state}" != healthy && "${state}" != running ]] || break
-        if [[ "${state}" == exited || "${state}" == dead ]] || (( SECONDS >= deadline )); then
-          log_error "Failed to recover ${container}: ${state}"
-          return 1
-        fi
-        sleep 2
-      done
+      pg18_wait_recovered_container "${container}" || return 1
     fi
     [[ "${policy}" =~ ^(no|always|unless-stopped|on-failure)$ && "${retries}" =~ ^[0-9]+$ ]] || return 1
     if [[ "${policy}" == on-failure && "${retries}" != 0 ]]; then policy+="${policy:+:}${retries}"; fi
     if docker inspect "${container}" >/dev/null 2>&1; then docker update --restart="${policy}" "${container}" >/dev/null || return 1; fi
   done <"${PG18_WORK}/writers"
+  for container in ${new_containers[@]+"${new_containers[@]}"}; do
+    pg18_wait_recovered_container "${container}" || return 1
+  done
   pg18_save phase complete || return 1
   log_success "PostgreSQL is now ${PG18_IMAGE}; original data and migration backup retained in ${PG18_WORK}"
 }
