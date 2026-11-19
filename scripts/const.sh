@@ -51,6 +51,10 @@ case "${DOCKER_COMPOSE_VERSION}:${ARCH}" in
   *) COMPOSE_BIN_SHA256=${COMPOSE_BIN_SHA256:-} ;;
 esac
 
+if [[ "${DOCKER_IMAGE_MIRROR:-}" == "1" ]];then
+    DOCKER_BIN_HOST=https://download.jumpserver.org
+fi
+
 if [[ -n ${DOCKER_BIN_HOST:-} ]];then
    DOCKER_BIN_URL=$(echo "$DOCKER_BIN_URL" | sed "s@https://download.docker.com@${DOCKER_BIN_HOST}@g")
    COMPOSE_BIN_URL=$(echo "$COMPOSE_BIN_URL" | sed "s@https://github.com@${DOCKER_BIN_HOST}@g" )

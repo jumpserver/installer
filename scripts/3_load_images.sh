@@ -18,12 +18,11 @@ function load_image_files() {
       filename=${filename_windows}
     fi
     if [[ ! -f ${IMAGE_DIR}/${filename} ]]; then
-      if reuse_legacy_db_image "${image}"; then
+      if reuse_local_db_image "${image}"; then
         echo "${image}: $(gettext 'Docker image loaded, skipping')"
         continue
       fi
-      echo_red "$(gettext 'Docker image not found'): ${IMAGE_DIR}/${filename}"
-      load_failed=1
+      report_image_failure "${image}" "$(gettext 'Docker image not found'): ${IMAGE_DIR}/${filename}" || load_failed=1
       continue
     fi
 
@@ -32,8 +31,7 @@ function load_image_files() {
     sha256_path=${IMAGE_DIR}/${sha256_filename}
     if [[ ! -f "${sha256_path}" ]]; then
       echo
-      echo_red "$(gettext 'Docker image ID file not found'): ${sha256_path}"
-      load_failed=1
+      report_image_failure "${image}" "$(gettext 'Docker image ID file not found'): ${sha256_path}" || load_failed=1
       continue
     fi
 
@@ -41,19 +39,16 @@ function load_image_files() {
     saved_id=$(cat "${sha256_path}")
     if [[ -z "${saved_id}" ]]; then
       echo
-      echo_red "$(gettext 'Docker image ID file is empty'): ${sha256_path}"
-      load_failed=1
+      report_image_failure "${image}" "$(gettext 'Docker image ID file is empty'): ${sha256_path}" || load_failed=1
       continue
     fi
 
     if [[ -z "${image_id}" || "${image_id}" != "${saved_id}" ]]; then
       echo
       if ! docker load <"${IMAGE_DIR}/${filename}"; then
-        echo_red "$(gettext 'Error loading image'): ${filename}"
-        load_failed=1
+        report_image_failure "${image}" "$(gettext 'Error loading image'): ${filename}" || load_failed=1
       elif ! docker image inspect "${image}" &>/dev/null; then
-        echo_red "$(gettext 'Docker image not found after loading'): ${image}"
-        load_failed=1
+        report_image_failure "${image}" "$(gettext 'Docker image not found after loading'): ${image}" || load_failed=1
       fi
     else
       echo "$(gettext 'Docker image loaded, skipping')"
@@ -65,6 +60,15 @@ function load_image_files() {
 function main() {
   # Panda belongs to remote publishers, even if packaging flags are inherited.
   local INCLUDE_PANDA_IMAGE=0
+  if [[ "$(get_config HA_MODE)" == 1 && -n "${JDMC_HA_MAINTENANCE_ID:-}" &&
+    "${JDMC_HA_PG18_COORDINATED:-0}" != 1 && "${POSTGRESQL_MAJOR_UPGRADE:-0}" != 1 && "$(get_config DB_ENGINE)" == postgresql ]]; then
+    local pg_major
+    pg_major=$(get_internal_postgresql_data_version) || return 1
+    if [[ -n "${pg_major}" && "${pg_major}" -lt 18 ]]; then
+      log_error 'This installer requires coordinated PostgreSQL 18 migration. Update JDMC on both nodes before applying this package.'
+      return 1
+    fi
+  fi
   if [[ -d "${IMAGE_DIR}" && $(find "${IMAGE_DIR}" -type f -name "*.zst" -print -quit 2>/dev/null) ]]; then
     load_image_files || return 1
   else

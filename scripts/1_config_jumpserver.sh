@@ -96,8 +96,20 @@ function set_internal_db() {
   local db_host=$2
   local db_port=$3
   local db_user=$4
-  local mysql_root_password
+  local mysql_root_password volume_dir
   if [[ "${db_engine}" == "mysql" ]]; then
+    volume_dir=$(get_config VOLUME_DIR)
+    if [[ -n "${volume_dir}" && ( -d "${volume_dir}/mysql/data" || -d "${volume_dir}/mariadb/data" ) ]]; then
+      # Image initialization does not update users in an existing database.
+      # Keep its complete connection configuration, including a custom port.
+      if [[ "$(get_config DB_ENGINE mysql)" != "mysql" || "$(get_config DB_HOST)" != "mysql" || \
+        -z "$(get_config DB_USER)" || -z "$(get_config DB_PASSWORD)" ]]; then
+        log_error "Built-in MySQL data already exists; restore its original database connection configuration before continuing"
+        return 1
+      fi
+      return 0
+    fi
+
     db_user="jumpserver"
     mysql_root_password=$(get_config MYSQL_ROOT_PASSWORD)
     if [[ -z "${mysql_root_password}" ]]; then

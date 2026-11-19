@@ -4,18 +4,55 @@ function get_db_images() {
   get_db_info "image"
 }
 
-function reuse_legacy_db_image() {
+function is_external_db_image() {
+  local image=$1 db_host
+
+  case "${image}" in
+    mysql:8.0|mariadb:10.6|postgres:*) ;;
+    *) return 1 ;;
+  esac
+
+  db_host=$(get_config DB_HOST)
+  [[ -n "${db_host}" && "${db_host}" != "mysql" &&
+    "${db_host}" != "postgresql" && "$(get_config HA_MODE)" != "1" ]]
+}
+
+function should_skip_external_db_image() {
+  # Keep client image resolution intact for explicit backup/restore commands.
+  [[ "${SKIP_BACKUP_DB:-0}" == "1" ]] && is_external_db_image "$1"
+}
+
+function report_image_failure() {
+  local image=$1 message=$2
+
+  # Upgrades defer unavailable external database clients to the backup prompt.
+  # Built-in databases and application images remain required.
+  if [[ "${ALLOW_MISSING_DB_IMAGE:-0}" == "1" ]] && is_external_db_image "${image}"; then
+    log_warn "${message}. External database backup image ${image} could not be prepared; continuing to the backup step."
+    return 0
+  fi
+  echo_red "${message}"
+  return 1
+}
+
+function reuse_local_db_image() {
   local image=$1
 
-  # New offline packages only bundle PostgreSQL. Existing MySQL/MariaDB
-  # installations retain their database image, including legacy tags.
+  # New offline packages bundle the default PostgreSQL image. Existing
+  # databases may reuse their local image when no matching archive is bundled.
   case "${image}" in
     mysql:8.0|mariadb:10.6) ;;
+    postgres:*)
+      if ! is_external_db_image "${image}"; then
+        [[ -n "$(get_internal_postgresql_data_version)" && ( "${image}" == "$(get_db_images)" || ( "${POSTGRESQL_MAJOR_UPGRADE:-0}" == 1 && "${image}" == postgres:18.7-trixie ) ) ]] || return 1
+      fi
+      ;;
     *) return 1 ;;
   esac
   if docker image inspect "${image}" &>/dev/null; then
     return 0
   fi
+  [[ "${image}" != postgres:* ]] || return 1
   if docker image inspect "jumpserver/${image}" &>/dev/null; then
     docker tag "jumpserver/${image}" "${image}"
     return $?
@@ -55,14 +92,18 @@ function emit_image_mapping() {
 }
 
 function get_image_mappings() {
-  local use_xpack enabled_services service image db_image namespace
+  local use_xpack enabled_services service image db_image namespace executor_tag
 
   use_xpack=$(get_config_or_env USE_XPACK)
   namespace=$(get_image_namespace)
-  emit_image_mapping "redis:7.4.10-bookworm" "redis:7.4.10-bookworm"
+  emit_image_mapping "redis:8.10.3-trixie" "redis:8.10.3-trixie"
   db_image=$(get_db_images)
-  if [[ -n "${db_image}" ]]; then
+  if [[ -n "${db_image}" ]] && ! should_skip_external_db_image "${db_image}"; then
     emit_image_mapping "${db_image}" "${db_image}"
+  fi
+  if [[ "${POSTGRESQL_MAJOR_UPGRADE:-0}" == 1 && "$(get_config DB_ENGINE)" == postgresql &&
+    ( "$(get_config DB_HOST)" == postgresql || "$(get_config HA_MODE)" == 1 ) && "${db_image}" != postgres:18.7-trixie ]]; then
+    emit_image_mapping postgres:18.7-trixie postgres:18.7-trixie
   fi
 
   enabled_services=${OFFLINE_IMAGE_SERVICES:-$(get_enabled_services)}
@@ -71,6 +112,12 @@ function get_image_mappings() {
   for service in ${enabled_services}; do
     case "${service}" in
       "" | celery | jdmc | panda)
+        ;;
+      ansible-executor)
+        executor_tag=$(get_ansible_executor_tag) || return 1
+        emit_image_mapping \
+          "jumpserver/ansible-executor:${executor_tag}" \
+          "${namespace}/ansible-executor:${executor_tag}"
         ;;
       *)
         emit_image_mapping \
@@ -85,9 +132,6 @@ function get_image_mappings() {
     if [[ "${INCLUDE_PANDA_IMAGE:-0}" == "1" ]]; then
       emit_image_mapping "jumpserver/panda:${VERSION}" "${namespace}/panda:${VERSION}"
     fi
-    emit_image_mapping \
-      "jumpserver/ansible-executor:latest" \
-      "${namespace}/ansible-executor:latest"
   fi
   if should_include_openbao_image; then
     image=$(get_openbao_image)
@@ -267,7 +311,8 @@ function pull_image() {
     namespace=$(get_image_namespace)
     to_image="${namespace}/${to_image#jumpserver/}"
   fi
-  if [[ "$(check_image_exists "${full_image_path}")" != "1" || "${image_pull_policy}" == "Always" ]]; then
+  if [[ "$(check_image_exists "${full_image_path}")" != "1" || "${image_pull_policy}" == "Always" ||
+        "${image}" == */ansible-executor:* ]]; then
     if ! docker pull -q ${pull_args} "${full_image_path}"; then
       echo "[${image}] pull failed" >&2
       return 1
@@ -295,7 +340,10 @@ function pull_images() {
 
   while IFS=$'\t' read -r source_image target_image; do
     [[ -n "${source_image}" && -n "${target_image}" ]] || continue
-    pull_image "${source_image}" "${target_image}" 1 &
+    (
+      pull_image "${source_image}" "${target_image}" 1 ||
+        report_image_failure "${target_image}" "Failed to pull Docker image: ${target_image}"
+    ) &
     pids+=("$!")
   done < <(get_offline_image_manifest)
   for pid in "${pids[@]}"; do

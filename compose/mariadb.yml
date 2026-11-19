@@ -7,7 +7,7 @@ services:
     environment:
       TZ: ${TZ:-Asia/Shanghai}
       DB_PORT: $DB_PORT
-      MARIADB_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-}
       MARIADB_DATABASE: $DB_NAME
       MARIADB_USER: $DB_USER
       MARIADB_PASSWORD: $DB_PASSWORD
@@ -15,7 +15,11 @@ services:
       - ${CONFIG_DIR}/mariadb/mariadb.cnf:/etc/mysql/mariadb.cnf
       - ${VOLUME_DIR}/mariadb/data:/var/lib/mysql
     healthcheck:
-      test: "mysql -h127.0.0.1 -P$$DB_PORT -uroot -p$$MARIADB_ROOT_PASSWORD -e 'SHOW DATABASES;'"
+      test:
+        - CMD-SHELL
+        - >-
+          MYSQL_PWD="$$MARIADB_PASSWORD" mysql -h127.0.0.1 -P"$$DB_PORT"
+          -u"$$MARIADB_USER" --database="$$MARIADB_DATABASE" -e 'SELECT 1;'
       interval: 10s
       timeout: 5s
       retries: 3

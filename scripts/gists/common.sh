@@ -38,6 +38,7 @@ function random_secret() {
 
 
 function read_from_input() {
+  local timeout_seconds=${5:-} read_status=0 read_started
   var=$1
   msg=$2
   choices=$3
@@ -57,14 +58,37 @@ function read_from_input() {
     msg="${msg} [${choices}]"
   fi
 
+  if [[ -n "${timeout_seconds}" ]]; then
+    msg="${msg} ($(gettext 'Timeout'): ${timeout_seconds}s, $(gettext 'default'): ${default})"
+  fi
   echo -n "${msg}: "
-  if [[ "${AUTO_INSTALL}" == "1" ]]; then
+  if [[ "${AUTO_INSTALL:-0}" == "1" ]]; then
     echo "${default}"
     export "${var}"="${default}"
     return
   fi
 
-  read -r input
+  if [[ -n "${timeout_seconds}" ]]; then
+    input=''
+    read_started=${SECONDS}
+    read -r -t "${timeout_seconds}" input || read_status=$?
+    if [[ "${read_status}" != "0" ]]; then
+      # Bash 4+ reports SIGALRM; Bash 3 reports 1 for both timeout and EOF.
+      if [[ "${read_status}" == "142" ]] ||
+        { [[ "${BASH_VERSINFO[0]}" == "3" && "${read_status}" == "1" ]] &&
+          (( SECONDS - read_started >= timeout_seconds )); }; then
+        echo
+        if [[ -z "${input}" ]]; then
+          log_warn "$(gettext 'Input timed out; using default'): ${default}"
+        fi
+      else
+        # Closed input and interrupted reads are not an elapsed timeout.
+        return "${read_status}"
+      fi
+    fi
+  else
+    read -r input
+  fi
   if [[ -n "${input}" && "${choices}" == "y/n" ]]; then
     input=$(echo "${input}" | tr '[:upper:]' '[:lower:]')
   fi

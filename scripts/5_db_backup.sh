@@ -89,6 +89,7 @@ function backup_main_db_mysql() {
   DB_FILE="${BACKUP_DIR}/${DB_NAME}${backup_type}-${CURRENT_VERSION}-$(date +%F_%T).sql"
   local dump_cmd=(
     mysqldump
+    --no-tablespaces
     --skip-add-locks
     --single-transaction
     -h"${DB_HOST}"
@@ -113,6 +114,7 @@ function backup_main_db_mysql() {
   if [[ ${#excluded_tables[@]} -gt 0 ]]; then
     local schema_cmd=(
       mysqldump
+      --no-tablespaces
       --skip-lock-tables
       --no-data
       -h"${DB_HOST}"
@@ -196,6 +198,7 @@ function backup_audits_mysql() {
   local backup_file=$1
   local dump_cmd=(
     mysqldump
+    --no-tablespaces
     -h"${DB_HOST}"
     -P"${DB_PORT}"
     -u"${DB_USER}"

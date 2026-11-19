@@ -1,5 +1,6 @@
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/postgresql-upgrade-standalone.sh"
 
-common_services=(core kael celery koko chen web)
+common_services=(core kael celery ansible-executor koko chen web)
 xpack_services=(magnus razor xrdp video-worker nec)
 
 
@@ -51,6 +52,98 @@ function get_db_images_file() {
   get_db_info "file"
 }
 
+function get_internal_postgresql_data_version() {
+  local volume_dir version_file data_version
+  [[ "$(get_config DB_ENGINE)" == "postgresql" ]] || return 0
+  [[ "$(get_config DB_HOST)" == "postgresql" || "$(get_config HA_MODE)" == "1" ]] || return 0
+  volume_dir=$(get_config VOLUME_DIR)
+  [[ -n "${volume_dir}" ]] || return 0
+  version_file="${volume_dir}/postgresql/data/PG_VERSION"
+  [[ -e "${version_file}" ]] || return 0
+  data_version=$(cat "${version_file}") || return 1
+  [[ "${data_version}" =~ ^[1-9][0-9]$ ]] || {
+    log_error "Cannot determine the existing PostgreSQL major version from ${version_file}"
+    return 1
+  }
+  printf '%s\n' "${data_version}"
+}
+
+function get_postgresql_image() {
+  local image data_version container_image candidate
+  image=postgres:18.7-trixie
+  data_version=$(get_internal_postgresql_data_version) || return 1
+  if [[ -n "${data_version}" && ! "${image}" =~ ^postgres:${data_version}([.-]|$) ]]; then
+    # Keep the installed patch/OS variant when the old container still exists.
+    container_image=$(docker inspect -f '{{.Config.Image}}' jms_postgresql 2>/dev/null || true)
+    if [[ ! "${container_image}" =~ ^postgres:${data_version}([.-]|$) ]]; then
+      # A stopped/removed container must not force an offline upgrade to fetch
+      # a different patch when a compatible local PostgreSQL image remains.
+      while IFS= read -r candidate; do
+        if [[ "${candidate}" =~ ^postgres:${data_version}([.-]|$) ]]; then
+          container_image=${candidate}
+          break
+        fi
+      done < <(docker image ls --filter "reference=postgres:${data_version}*" --format '{{.Repository}}:{{.Tag}}' 2>/dev/null || true)
+    fi
+    if [[ "${container_image}" =~ ^postgres:${data_version}([.-]|$) ]]; then
+      image=${container_image}
+    else
+      case "${data_version}" in
+        16) image=postgres:16.15-bookworm ;;
+        17) image=postgres:17.11-bookworm ;;
+        18) image=postgres:18.7-trixie ;;
+        *) image="postgres:${data_version}-bookworm" ;;
+      esac
+    fi
+  fi
+  printf '%s\n' "${image}"
+}
+
+function get_postgresql_compose_files() {
+  local image directory file content tmp
+  image=$(get_postgresql_image) || return 1
+  if [[ "${image}" == postgres:18.7-trixie ]]; then
+    printf 'compose/postgresql.yml -f compose/postgresql.port.yml\n'
+    return 0
+  fi
+  # Old data still needs its matching image until migration finishes. Keep the
+  # release Compose fixed at 18 and record this runtime override in its labels,
+  # so JDMC can render the same files without any image configuration variable.
+  [[ "${image}" =~ ^postgres:[A-Za-z0-9_][A-Za-z0-9_.-]*$ ]] || return 1
+  directory="${CONFIG_DIR}/postgresql"
+  file="${directory}/image-${image#postgres:}.yml"
+  content=$(printf 'services:\n  postgresql:\n    image: %s\n' "${image}")
+  [[ ! -L "${directory}" && ! -L "${file}" ]] || return 1
+  mkdir -p -m 700 "${directory}" || return 1
+  # A captured JDMC Compose binding may still reference this file. Never
+  # rewrite or delete it when the selected database version changes.
+  if [[ -e "${file}" ]]; then
+    [[ -f "${file}" && "$(cat "${file}")" == "${content}" ]] || return 1
+  else
+    tmp=$(mktemp "${directory}/.image.XXXXXX") || return 1
+    if ! { printf '%s\n' "${content}" >"${tmp}" && chmod 600 "${tmp}" && mv "${tmp}" "${file}"; }; then
+      rm -f "${tmp}"
+      return 1
+    fi
+  fi
+  printf 'compose/postgresql.yml -f compose/postgresql.port.yml -f %s\n' "${file}"
+}
+
+function prepare_postgresql_parent_directory() {
+  # The shared Compose now binds PGDATA's parent even while using an old image.
+  # Allow the container's postgres UID to traverse it without opening PGDATA.
+  # Existing HA mounts and permissions are changed only by coordinated cutover.
+  [[ "$(get_config DB_HOST)" == postgresql && "$(get_config HA_MODE)" != 1 ]] || return 0
+  local volume_dir parent mode
+  volume_dir=$(get_config VOLUME_DIR)
+  [[ -n "${volume_dir}" ]] || return 0
+  parent="${volume_dir}/postgresql"
+  [[ -d "${parent}" ]] || return 0
+  [[ ! -L "${parent}" ]] || return 1
+  mode=$(stat -Lc '%a' -- "${parent}") || return 1
+  (( (8#${mode} & 0111) == 0111 )) || chmod a+x -- "${parent}"
+}
+
 function get_db_info() {
   local db_image
   info_type=$1
@@ -86,6 +179,7 @@ function get_db_info() {
       ;;
     "postgresql")
       postgres_data_exists="1"
+      db_image=$(get_postgresql_image) || return 1
       ;;
   esac
 
@@ -96,7 +190,7 @@ function get_db_info() {
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "mariadb:10.6"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        echo "postgres:16.15-bookworm"
+        echo "${db_image}"
       fi
       ;;
     "file")
@@ -105,7 +199,8 @@ function get_db_info() {
       elif [[ "${mariadb_data_exists}" == "1" ]]; then
         echo "compose/mariadb.yml -f compose/mysql.port.yml"
       elif [[ "${postgres_data_exists}" == "1" ]]; then
-        echo "compose/postgresql.yml -f compose/postgresql.port.yml"
+        prepare_postgresql_parent_directory || return 1
+        get_postgresql_compose_files || return 1
       fi
       ;;
     *)
@@ -151,6 +246,7 @@ function get_docker_compose_services() {
 }
 
 function get_docker_compose_cmd_line() {
+  postgresql_upgrade_start_guard || return 1
   ignore_db=${1-}
   use_ipv6=$(get_config USE_IPV6)
   https_port=$(get_config HTTPS_PORT)
@@ -166,11 +262,16 @@ function get_docker_compose_cmd_line() {
   services=$(get_docker_compose_services "ignore_db")
 
   for service in $services; do
+      if [[ "${service}" == "ansible-executor" ]]; then
+        local executor_tag
+        executor_tag=$(get_ansible_executor_tag) || return 1
+        cmd="env ANSIBLE_EXECUTOR_TAG=${executor_tag} ${cmd}"
+      fi
       cmd+=" -f compose/${service}.yml"
   done
 
   if [[ "${ignore_db}" != "ignore_db" ]]; then
-    db_yml=$(get_db_compose_yml)
+    db_yml=$(get_db_compose_yml) || return 1
     if [[ -n "${db_yml}" ]]; then
       cmd+=" ${db_yml}"
     fi
@@ -227,6 +328,77 @@ function stop_disabled_video_worker() {
   fi
 }
 
+function prepare_services_for_start() {
+  local service enabled container image owner running metadata extra from_containers=0
+  if [[ "${1:-}" == --containers ]]; then
+    from_containers=1
+    shift
+    (( $# > 0 )) || {
+      log_error 'prepare --containers requires at least one container'
+      return 1
+    }
+  fi
+  local -a selected=("$@")
+  if (( $# == 0 )); then
+    enabled=$(get_enabled_services) || return 1
+    read -r -a selected <<<"${enabled}"
+  fi
+  for service in "${selected[@]}"; do
+    image='' owner=''
+    if [[ "${from_containers}" == 1 ]]; then
+      container=${service}
+      [[ "${container}" =~ ^/?jms_[A-Za-z0-9_.-]+$ ]] || return 1
+      metadata=$(docker inspect -f '{{.State.Running}}|{{.Image}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.Config.User}}' "${container}") || return 1
+      IFS='|' read -r running image service owner extra <<<"${metadata}"
+      [[ "${running}" == false && "${image}" =~ ^sha256:[a-f0-9]{64}$ && \
+        "${service}" =~ ^[A-Za-z0-9_.-]+$ && -z "${extra}" ]] || {
+        log_error "Cannot prepare a running or invalid service container: ${container}"
+        return 1
+      }
+    fi
+    case "${service#jms_}" in
+      chen) prepare_chen_volume "${image}" "${owner}" || return 1 ;;
+      video-worker) prepare_video_worker_volume "${image}" "${owner}" || return 1 ;;
+      ansible-executor|ansible_executor) prepare_ansible_executor "${image}" || return 1 ;;
+    esac
+  done
+}
+
+function prepare_chen_volume() {
+  [[ "$(get_config_or_env CHEN_ENABLED)" != "0" ]] || return 0
+  local image owner data_dir folder
+  image=${1:-"$(get_image_namespace)/chen:${VERSION}"}
+  owner=${2:-}
+  if [[ -z "${owner}" ]]; then
+    owner=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
+      log_error "Unable to inspect Chen image user: ${image}"
+      return 1
+    }
+  fi
+  # Legacy Java images run as root and need no ownership migration.
+  case "${owner}" in ''|root|root:root|0|0:0) return 0 ;; esac
+  if [[ ! "${owner}" =~ ^[0-9]+:[0-9]+$ ]]; then
+    owner=$(docker run --rm --network none --user "${owner}" --entrypoint /bin/sh "${image}" -c \
+      'printf "%s:%s\n" "$(id -u)" "$(id -g)"') || return 1
+  fi
+  if [[ ! "${owner}" =~ ^[0-9]+:[0-9]+$ ]]; then
+    log_error "Invalid Chen image user: ${owner}"
+    return 1
+  fi
+  data_dir="$(get_config VOLUME_DIR)/chen/data"
+  # Only Chen's runtime state is writable. Leave the shared certificate mount
+  # and legacy application files alone; never follow a state-directory symlink.
+  for folder in "${data_dir}" "${data_dir}/keys" "${data_dir}/logs" "${data_dir}/go"; do
+    if [[ -L "${folder}" ]]; then
+      log_error "Chen state directory must not be a symbolic link: ${folder}"
+      return 1
+    fi
+  done
+  mkdir -p -m 700 "${data_dir}/keys" "${data_dir}/logs" "${data_dir}/go" || return 1
+  chown -h "${owner}" "${data_dir}" || return 1
+  chown -hR "${owner}" "${data_dir}/keys" "${data_dir}/logs" "${data_dir}/go" || return 1
+}
+
 function prepare_video_worker_volume() {
   local volume_dir data_dir image user_spec owner
   if ! video_worker_can_start; then
@@ -237,15 +409,18 @@ function prepare_video_worker_volume() {
   data_dir="${volume_dir}/video-worker/data"
   mkdir -p "${data_dir}" || return 1
 
-  image="$(get_image_namespace)/video-worker:${VERSION}"
-  user_spec=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
-    log_error "Unable to inspect video-worker image user: ${image}"
-    return 1
-  }
+  image=${1:-"$(get_image_namespace)/video-worker:${VERSION}"}
+  user_spec=${2:-}
+  if [[ -z "${user_spec}" ]]; then
+    user_spec=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
+      log_error "Unable to inspect video-worker image user: ${image}"
+      return 1
+    }
+  fi
   if [[ "${user_spec}" =~ ^[0-9]+:[0-9]+$ ]]; then
     owner=${user_spec}
   else
-    owner=$(docker run --rm --entrypoint /bin/sh "${image}" -c \
+    owner=$(docker run --rm --network none --user "${user_spec:-0}" --entrypoint /bin/sh "${image}" -c \
       'printf "%s:%s\n" "$(id -u)" "$(id -g)"') || {
       log_error "Unable to resolve video-worker image user: ${image}"
       return 1
@@ -282,7 +457,7 @@ function get_db_compose_yml() {
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
   ha_mode=$(get_config HA_MODE)
-  db_images_file=$(get_db_info "file")
+  db_images_file=$(get_db_info "file") || return 1
   redis_expose_port=$(get_config REDIS_EXPOSE_PORT)
 
   if [[ -z "${target}" ]]; then
@@ -292,7 +467,7 @@ function get_db_compose_yml() {
   cmd=""
   if [[ "${target}" == "all" || "${target}" == "db" ]]; then
       if [[ "${db_host}" == "mysql" || "${db_host}" == "postgresql" || "${ha_mode}" == "1" ]]; then
-        db_images_file=$(get_db_images_file)
+        db_images_file=$(get_db_images_file) || return 1
         cmd+=" -f ${db_images_file}"
       fi
   fi
@@ -309,12 +484,13 @@ function get_db_compose_yml() {
 
 
 function get_db_compose_cmd() {
+  postgresql_upgrade_start_guard || return 1
   target=${1:-"all"}
   use_ipv6=$(get_config USE_IPV6)
   use_xpack=$(get_config_or_env USE_XPACK)
 
   cmd="docker compose "
-  yml=$(get_db_compose_yml "${target}")
+  yml=$(get_db_compose_yml "${target}") || return 1
 
   if [[ -n "${yml}" ]]; then
     cmd+=" ${yml}"
@@ -329,13 +505,13 @@ function get_db_compose_cmd() {
 }
 
 function get_db_migrate_compose_cmd() {
-  cmd=$(get_db_compose_cmd "all")
+  cmd=$(get_db_compose_cmd "all") || return 1
   cmd+=" -f compose/init-db.yml"
   echo "$cmd"
 }
 
 function create_db_ops_env() {
-  cmd=$(get_db_migrate_compose_cmd)
+  cmd=$(get_db_migrate_compose_cmd) || return 1
   ${cmd} up -d || {
     return 1
   }
@@ -348,7 +524,7 @@ function down_db_ops_env() {
 
 function db_redis_start() {
   target=$1
-  cmd=$(get_db_compose_cmd "${target}")
+  cmd=$(get_db_compose_cmd "${target}") || return 1
   ${cmd} up -d || {
     return 1
   }

@@ -6,6 +6,30 @@ JumpServer Installer 用来安装和管理 JumpServer。
   - Linux x86_64
   - Kernel 大于 4.0
 
+## Docker / Compose 下载与 OSS 同步
+
+下载地址和 SHA-256 在 `scripts/const.sh` 中配置。环境变量 `DOCKER_IMAGE_MIRROR=1`
+启用 `https://download.jumpserver.org` 加速，也可单独设置 `DOCKER_BIN_HOST`。
+
+在仓库 Actions Secrets 中配置 `OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`。
+**Sync Docker Binaries to OSS** 会同步 `x86_64`、`aarch64` 两种架构，保留官方子路径：
+
+```text
+oss://jms-pkg/linux/static/stable/<arch>/docker-<version>.tgz
+oss://jms-pkg/docker/compose/releases/download/<version>/docker-compose-linux-<arch>
+```
+
+版本配置变更时自动同步，也可手动 **Run workflow**，选择分支并填写
+`docker_version`、`docker_compose_version`（可带 `v`），留空沿用当前版本。
+新版本自动计算 SHA-256 和 MD5，原版本仍校验固定 SHA-256。
+OSS 上传成功后，将 `const.sh` 的版本和 SHA-256 提交到
+`pr@所选分支@docker-versions-…` 分支，并创建以所选分支为目标的 PR。
+参数全部留空或文件内容不变时只同步，不创建 PR。历史 OSS 文件保留。
+
+创建 PR 使用 `PRIVATE_TOKEN`，未配置时使用 `GITHUB_TOKEN`，
+需有权推送新分支和创建 PR。
+自动提交通过 `[docker-mirror-synced]` 标记避免重复同步。
+
 ## 安装部署
 
 ```bash
@@ -14,6 +38,40 @@ $ ./jmsctl.sh install
 ```
 
 ## 管理命令
+
+新安装默认使用 `postgres:18.7-trixie`。统一的 `compose/postgresql.yml` 显式设置
+`PGDATA=/var/lib/postgresql/data`，继续把 `${VOLUME_DIR}/postgresql/data`
+挂载到该目录，以兼容 JDMC 的主备重建、回切和启动写入隔离。同时显式挂载
+`${VOLUME_DIR}/postgresql:/var/lib/postgresql`，避免 PostgreSQL 18 镜像自动创建
+额外匿名卷，导致 JDMC 的 Compose 挂载一致性校验失败。
+主 Compose 的镜像固定为 `postgres:18.7-trixie`，不需要数据库镜像配置项。
+旧版本按实际数据版本选择镜像，仅在迁移前自动生成 `${CONFIG_DIR}/postgresql/image-<tag>.yml`
+运行时镜像覆盖文件，使用相同的 `PGDATA`；迁移完成后使用主 Compose 中的 18 镜像。
+运行时文件会保留，避免影响 JDMC 已记录的 Compose 绑定。JDMC 升级已有主备时继续使用
+已绑定的旧 Compose 文件，在协调迁移切换时更新数据库配置和绑定，不改写旧文件。
+单机生成数据库 Compose 命令时会补齐父目录的可穿越权限，避免旧目录为 `700` 时容器
+无法访问；数据目录 `postgresql/data` 的权限保持不变。
+
+从 JumpServer 5.0 等旧应用版本升级时，内置 PostgreSQL 10–17 会在同一次维护中
+迁移到 `postgres:18.7-trixie`。安装器先加载旧镜像和 18 镜像，停止应用写入并禁用
+自动重启，使用 18 客户端导出全部数据库和角色，在隔离目录恢复并校验后再切换数据目录。
+迁移前仍按 `PG_VERSION` 选择旧镜像；不能让 18 直接打开旧数据。
+迁移完成后更新业务表结构并恢复原先运行的应用。外置数据库不会被升级。
+
+旧目录、逻辑备份和进度保存在 `${VOLUME_DIR}/postgresql/data.upgrade18/`；
+`original/` 是原数据，`cluster.sql` 包含全库及角色凭据，目录和文件必须保持私有。
+迁移备份是必需步骤，不受 `SKIP_BACKUP_DB` 影响。中断时应用保持停止，重试同一升级
+继续处理；完成迁移前普通启动会被拒绝。恢复业务后新产生的数据不会写回旧目录，
+不能直接把旧目录切回去。空间预检按旧数据三倍加 1 GiB 估算；大对象或高压缩数据可能需要更多空间。
+自动迁移要求可验证的管理员账号、标准数据路径和配置；自定义表空间、外置配置或 SSL
+文件、逻辑复制、非 libc 模板区域设置等定制部署在预检时中止，需要单独迁移。原镜像及旧数据不会自动清理。
+
+JDMC 主备由两台协调维护：停止业务和选举，迁移主库、重新建立 18 备库，校验流复制、
+同步提交和启动写入隔离，再更新应用并退出维护。两台 JDMC 必须先具备此迁移能力；
+新的全量升级包声明 `maintenance-pg18-v1`，旧 JDMC 会拒绝该包，避免跳过数据库迁移。
+`pg_rewind` 不承担数据库大版本迁移。
+参考 [PostgreSQL 升级说明](https://www.postgresql.org/docs/18/upgrading.html)
+和 [主备版本要求](https://www.postgresql.org/docs/18/warm-standby.html)。
 
 ```
 # 启动
@@ -49,6 +107,33 @@ $ ./jmsctl.sh video-worker {start|stop|restart|status}
 `USE_XPACK` 是组件部署模式，不代表许可证校验。旧版本的
 `VIDEO_ENABLED`、`VIDEO_ENABLE` 以及 `${VOLUME_DIR}/video` 数据目录会在升级时迁移。
 
+## 升级时的数据库备份
+
+使用外置 MySQL 或 PostgreSQL 且未启用 `HA_MODE=1` 时，备份客户端镜像缺失、加载或
+拉取失败先输出警告，继续到备份步骤。本地没有可用的客户端镜像时不执行备份；镜像可用时
+正常尝试备份。内置数据库和应用必需镜像仍必须准备成功。
+
+升级过程中所有数据库备份失败统一提示：
+
+```text
+Failed to backup the database. Continue to upgrade? [Y/n] (Timeout: 30s, default: y):
+```
+
+输入 `y`（不区分大小写）或直接回车继续，输入 `n` 中止；30 秒没有输入时提示超时并继续。
+其他输入或输入流关闭会中止升级。超时仅用于此备份失败确认，其他确认保持原有行为；
+`AUTO_INSTALL=1` 按既有自动安装规则直接采用默认值 `y`。
+继续升级表示接受本次没有成功的安装器数据库备份，请由 DBA 或云数据库保障可恢复的备份。
+
+如果已自行完成备份，也可以显式跳过备份及备份客户端镜像准备：
+
+```bash
+SKIP_BACKUP_DB=1 ./jmsctl.sh upgrade
+```
+
+表结构迁移仍由 Core 连接数据库执行。单独执行 `backup_db` 失败仍返回非零状态，
+不会触发升级确认。此流程不改变备份客户端版本，PostgreSQL 客户端与服务端版本不兼容时仍可能备份失败。
+`SKIP_BACKUP_DB` 通过命令环境传入，不是 `config.txt` 配置项。
+
 ## JDMC（企业版）
 
 JDMC 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设置
@@ -82,13 +167,24 @@ JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。安
 命令行使用 `jdmc` 作为 JDMC 服务目标。
 `--skip-jdmc` 仅供 JDMC 发起 JumpServer 重启时避免停止自身，不是组件开关。
 
+组件的目录、权限和密钥初始化统一由安装器负责：
+
+```bash
+./jmsctl.sh prepare chen video-worker
+./jmsctl.sh prepare --containers jms_chen jms_video-worker
+```
+
+不指定服务时准备所有已启用服务。`--containers` 必须指定已停止的容器，按容器实际使用的
+镜像和运行用户准备，适用于 JDMC 主备及组件补丁后的启动。此命令不启动或重建业务容器，
+不改写配置或执行数据库操作。JDMC 在两端维护升级及拉起应用前调用它，继续负责主备启停。
+
 ## 离线镜像清单
 
 `scripts/gists/image.sh` 是离线镜像选择和重标记规则的唯一来源。调用
 `get_offline_image_manifest` 会逐行输出以 Tab 分隔的源镜像和离线包目标镜像：
 
 ```text
-redis:7.4.10-bookworm<TAB>redis:7.4.10-bookworm
+redis:8.10.3-trixie<TAB>redis:8.10.3-trixie
 registry.example.com/jumpserver/core:VERSION<TAB>jumpserver/core:VERSION
 ```
 
@@ -102,6 +198,63 @@ PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通�
 和 namespace，不使用 `NAMESPACE`；OpenBao 固定使用 `openbao/openbao:2.6.0`。
 `IMAGE_PULL_SCOPE` 默认为 `jumpserver`；设置为 `all` 时，基础镜像也从
 `IMAGE_PULL_PREFIX` 拉取，但拉取后仍恢复成各自的固定运行名称。
+
+## SSH Ansible 执行器
+
+安装器部署 `jumpserver/ansible-executor:<版本或分支>`，标签取自 `VERSION` 并去掉末尾的
+`-ce` / `-ee`（例如 `v5.1.0-ce` → `v5.1.0`，`dev-ce` → `dev`）。Core/Celery 复用原
+`ANSIBLE_DOCKER_ENABLED` 开关：开启时通过 SSH 使用常驻执行器，关闭时本地执行。
+页面已保存的开关值继续生效，安装器不再强制指定执行后端；需配套支持该行为的 Core 版本（[Core 适配 PR](https://github.com/jumpserver/jumpserver/pull/17797)）。
+升级在线安装时重新拉取对应标签；离线包按镜像 ID 加载更新，运行时不访问镜像仓库。
+CE 和 EE 共用同一执行器标签，离线包包含执行器。`ansible-executor:latest` 保留给旧版，
+新安装器不会使用它。CI 从已验证的 digest 打包，发版只映射版本标签，不重新构建镜像。
+自定义 `OFFLINE_IMAGE_SERVICES` 时应包含 `ansible-executor`。
+执行器地址、端口和凭据路径统一使用 Core 默认值；自定义值写入安装器配置文件，
+由现有 `env_file` 传入 Core/Celery。Compose 仅分别指定两者的网域隧道地址。
+
+`./jmsctl.sh start` 使用执行器镜像中的 `ssh-keygen` 初始化每套安装独立的密钥，
+等待执行器健康后再启动 Core/Celery。重启、升级保留现有密钥；密钥损坏或只有公钥
+而缺少私钥时启动失败，不自动轮换身份。请备份 `${CONFIG_DIR}/ansible-executor`：
+
+- `client/`：服务私钥和固定服务器 host key 的 `known_hosts`，仅只读挂载给 Core/Celery。
+- `public/`：服务公钥，只读挂载给执行器。
+- `server/`：执行器 SSH host key，持久化并仅挂载给执行器。
+
+执行器只接独立的 `executor` bridge 网络，在内网监听 2222，不发布宿主机端口，
+也不挂载 Core 数据或 Docker socket。Core/Celery 同时接入业务网 `net` 和执行网
+`executor`，Redis、数据库和其他组件只接业务网。
+业务网保留原 `DOCKER_SUBNET` 配置，执行网使用 `DOCKER_EXECUTOR_SUBNET`，默认
+`192.168.252.0/24`，须避开业务、资产、VPN 和其他 Docker 网段。Docker 的 `bip`
+只配置默认网桥，不控制执行网。已有执行网修改子网后，需先停止并移除连接它的容器，
+删除旧执行网，再通过安装器重新启动；请先等待运行中的任务完成。
+`USE_IPV6=1` 时两个网络均启用 IPv6，执行网 IPv6 地址由 Docker 自动分配。
+Core/Celery 的默认出口由 Docker 自动选择，业务网和执行网均保留出站能力。
+自定义出口防火墙规则时，需允许实际使用的网络出站。
+Core/Celery 不挂载 Docker socket。Celery 恢复 `CELERY_PRIVILEGED` 配置，默认 `true`，
+以便关闭 Ansible Docker 隔离时，普通 Playbook 仍能在 Celery 内通过 `bwrap` 创建隔离命名空间。
+Core 和 SSH 执行器不启用 privileged。只使用 SSH 执行器的部署可设置
+`CELERY_PRIVILEGED=false`；修改后需要重建 Celery 容器，单纯重启进程不会改变容器权限。
+privileged 会扩大 Celery 容器的宿主机权限，`bwrap` 隔离不能消除这项部署风险。
+关闭 Ansible Docker 隔离不会停止常驻执行器，便于从页面重新开启；本地执行不享有
+执行器提供的任务 UID 和文件隔离。`ANSIBLE_EXECUTOR_ENABLED=0` 仅控制是否部署本地
+执行器容器，与功能开关独立。
+默认整体资源上限为 4 GiB 内存、2 CPU、1024 PID，可通过配置示例中的选项调整。
+任务目录使用 `exec,nosuid,nodev` tmpfs，以支持上传的 SSH 包装脚本。
+
+资产地址须可从执行器访问，`127.0.0.1` 表示执行器自身。执行网保留访问外部资产的
+出口，不设为 `internal` 网络。普通自动化由 Celery 执行，但资产页即时账号发现和
+风险检测由 Core 同步执行，因此两者都需要连接执行器。网域隧道必须返回创建它的
+容器：Celery 默认使用 `celery`，Core 默认使用 `core`。多节点部署分别配置
+`ANSIBLE_EXECUTOR_GATEWAY_HOST`（Celery）和 `ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST`
+（Core），使执行器能访问实际执行节点及其动态隧道端口。
+使用外部执行器时设置 `ANSIBLE_EXECUTOR_ENABLED=0` 和实际
+HOST/PORT，并自行在 `client/` 提供私钥 `client` 及对应地址的可信 `known_hosts`。
+不得将服务私钥放入任务目录。任务仍通过不同 Linux UID 隔离，共享执行器内核和网络。
+分网阻止默认 bridge 之间直接互通，不能替代出口防火墙；宿主机发布的端口、外部服务、
+Core/Celery 在执行网上监听的服务仍可能可达，应保留认证并按部署环境限制访问。
+
+安装/升级不再创建 `/opt/jumpserver/data` 到宿主机数据目录的软链接；已有链接、
+目录和备份保持原状。配置文件、历史数据迁移及当前安装器路径使用的其他软链接保留。
 
 ## 配置文件说明
 

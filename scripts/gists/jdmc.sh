@@ -42,13 +42,16 @@ function configure_jdmc() {
     return 0
   fi
 
-  socket_path="${JDMC_CORE_SOCKET_PATH}"
+  socket_path=$(get_config_or_env JDMC_SOCK_PATH)
   if check_legacy_kotl_installed && ! check_current_jdmc_installed; then
     # Keep Core connected to a still-running legacy service until the new
     # artifact has completed its on-host migration.
-    socket_path=$(get_config_or_env JDMC_SOCK_PATH "${JDMC_LEGACY_CORE_SOCKET_PATH}")
+    socket_path="${socket_path:-${JDMC_LEGACY_CORE_SOCKET_PATH}}"
+  elif [[ -z "${socket_path}" || "${socket_path}" == "/opt/jumpserver/data/unshare/kotl.sock" ]]; then
+    # Migrate the standard legacy filename, but retain custom socket paths.
+    socket_path="${JDMC_CORE_SOCKET_PATH}"
   fi
-  set_config JDMC_SOCK_PATH "${socket_path}"
+  set_config JDMC_SOCK_PATH "${socket_path}" || return 1
   gen_safe_config >/dev/null
 }
 

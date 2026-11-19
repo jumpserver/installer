@@ -85,26 +85,116 @@ function migrate_database_expose_config() {
   check_and_set_config "MYSQL_EXPOSE_PORT" "3306"
 }
 
-function migrate_internal_mysql_business_account() {
-  local engine host user database old_password root_password business_password container_root
-  engine=$(get_config DB_ENGINE)
+function verify_internal_mysql_root_password() {
+  local password=$1 port=$2 output
+  if output=$(printf '%s\n' "${password}" | docker exec -i jms_mysql sh -ceu '
+    IFS= read -r password
+    export MYSQL_PWD="${password}"
+    exec mysql --protocol=tcp --connect-timeout=5 -h 127.0.0.1 -P "$1" -u root \
+      --batch --skip-column-names -e "SELECT 1;"
+  ' sh "${port}" 2>&1); then
+    return 0
+  fi
+  # Authentication rejection proves that the server is already accepting
+  # connections. Other failures may still be a database starting up.
+  case "${output}" in
+    *'ERROR 1045 '*|*'ERROR 1698 '*|*'ERROR 1130 '*) return 2 ;;
+  esac
+  return 1
+}
+
+function migrate_internal_mysql_root_password() {
+  local engine host user root_password container_env candidate previous duplicate
+  local container_state port timeout deadline server_ready credential_status seeded_root=0
+  local -a root_candidates=()
+  engine=$(get_config DB_ENGINE "mysql")
   host=$(get_config DB_HOST)
-  [[ "${engine,,}" == "mysql" && "${host}" == "mysql" ]] || return 0
+  [[ "${engine}" == [Mm][Yy][Ss][Qq][Ll] && "${host}" == "mysql" ]] || return 0
 
   user=$(get_config DB_USER)
-  old_password=$(get_config DB_PASSWORD)
   root_password=$(get_config MYSQL_ROOT_PASSWORD)
-  if [[ -z "${root_password}" ]]; then
-    container_root=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' jms_mysql 2>/dev/null |
-      awk -F= '$1 == "MYSQL_ROOT_PASSWORD" || $1 == "MARIADB_ROOT_PASSWORD" {sub(/^[^=]*=/, ""); print; exit}' || true)
-    root_password="${container_root:-${old_password}}"
-    [[ -n "${root_password}" ]] || {
-      log_error "Built-in MySQL root password is missing"
-      return 1
-    }
-    set_config MYSQL_ROOT_PASSWORD "${root_password}"
+  # Snapshot this node's old environment before backup can recreate it.
+  # Prefer MariaDB's alias, but authenticate every candidate before saving it.
+  container_env=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' jms_mysql 2>/dev/null || true)
+  for candidate in "${root_password}" \
+    "$(printf '%s\n' "${container_env}" | sed -n 's/^MARIADB_ROOT_PASSWORD=//p')" \
+    "$(printf '%s\n' "${container_env}" | sed -n 's/^MYSQL_ROOT_PASSWORD=//p')" \
+    "$(get_config MARIADB_ROOT_PASSWORD)"; do
+    [[ -n "${candidate}" && "${candidate}" != *$'\n'* && "${candidate}" != *$'\r'* ]] || continue
+    duplicate=0
+    for previous in "${root_candidates[@]}"; do
+      [[ "${candidate}" != "${previous}" ]] || duplicate=1
+    done
+    [[ "${duplicate}" == "1" ]] || root_candidates+=("${candidate}")
+  done
+  # Only a legacy standalone root login shared DB_PASSWORD. Application and
+  # HA accounts never supply a fallback administrator credential.
+  if [[ "${user}" == [Rr][Oo][Oo][Tt] && "$(get_config HA_MODE)" != "1" ]]; then
+    candidate=$(get_config DB_PASSWORD)
+    if [[ -n "${candidate}" && "${candidate}" != *$'\n'* && "${candidate}" != *$'\r'* ]]; then
+      root_candidates+=("${candidate}")
+    fi
   fi
-  [[ "${user,,}" == "root" ]] || return 0
+
+  if (( ${#root_candidates[@]} > 0 )); then
+    port=$(get_config DB_PORT 3306)
+    container_state=$(docker inspect -f '{{.State.Status}}' jms_mysql 2>/dev/null || true)
+    case "${container_state}" in
+      created|exited) docker start jms_mysql >/dev/null || return 1 ;;
+      '')
+        # An absent old container has no environment left to preserve. Seed
+        # startup from a local root candidate; existing data keeps its users.
+        set_config MYSQL_ROOT_PASSWORD "${root_candidates[0]}" || return 1
+        seeded_root=1
+        db_redis_start db || return 1
+        ;;
+    esac
+    timeout=$(get_config CONTAINER_HEALTH_TIMEOUT 300)
+    [[ "${timeout}" =~ ^[0-9]+$ ]] || timeout=300
+    deadline=$((SECONDS + timeout))
+    while :; do
+      server_ready=0
+      for candidate in "${root_candidates[@]}"; do
+        if verify_internal_mysql_root_password "${candidate}" "${port}"; then
+          set_config MYSQL_ROOT_PASSWORD "${candidate}"
+          return $?
+        else
+          credential_status=$?
+        fi
+        [[ "${credential_status}" != "2" ]] || server_ready=1
+      done
+      [[ "${server_ready}" == "0" ]] && (( SECONDS < deadline )) || break
+      sleep 2
+    done
+  fi
+
+  if [[ "${seeded_root}" == "1" ]]; then
+    set_config MYSQL_ROOT_PASSWORD "${root_password}" || return 1
+  fi
+  if [[ "${user}" != [Rr][Oo][Oo][Tt] ]]; then
+    # Existing application accounts need no administrator for schema upgrades.
+    # Keep their credentials and let the business health check validate them.
+    if (( ${#root_candidates[@]} > 0 )); then
+      log_warn "Built-in MySQL root credential could not be verified; continuing with the existing application account"
+    fi
+    return 0
+  fi
+  log_error "Built-in MySQL root authentication failed; recover a valid local root credential before upgrading a legacy root login"
+  return 1
+}
+
+function migrate_internal_mysql_business_account() {
+  local engine host user database root_password business_password business_user
+  engine=$(get_config DB_ENGINE "mysql")
+  host=$(get_config DB_HOST)
+  [[ "${engine}" == [Mm][Yy][Ss][Qq][Ll] && "${host}" == "mysql" ]] || return 0
+
+  [[ "$(get_config HA_MODE)" != "1" ]] || return 0
+  user=$(get_config DB_USER)
+  [[ "${user}" == [Rr][Oo][Oo][Tt] ]] || return 0
+
+  migrate_internal_mysql_root_password || return 1
+  root_password=$(get_config MYSQL_ROOT_PASSWORD)
 
   database=$(get_config DB_NAME jumpserver)
   [[ "${database}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || {
@@ -116,29 +206,42 @@ function migrate_internal_mysql_business_account() {
     return 1
   }
   business_password=$(random_str 32)
-  printf '%s\n%s\n' "${old_password}" "${business_password}" | docker exec -i \
-    -e JMS_MIGRATE_DB_NAME="${database}" jms_mysql bash -ceu '
-      IFS= read -r fallback_root_password
+  business_user=$(printf '%s\n%s\n' "${root_password}" "${business_password}" | docker exec -i \
+    -e JMS_MIGRATE_DB_NAME="${database}" -e JMS_MIGRATE_DB_PORT="$(get_config DB_PORT 3306)" \
+    -e JMS_MIGRATE_DB_ALT_USER="jumpserver_$(random_str 12)" jms_mysql bash -ceu '
+      IFS= read -r root_password
       IFS= read -r business_password
-      root_password="${MARIADB_ROOT_PASSWORD:-${MYSQL_ROOT_PASSWORD:-${fallback_root_password}}}"
       [ -n "${root_password}" ] && [ -n "${business_password}" ]
       export MYSQL_PWD="${root_password}"
+      mysql_args=(--protocol=tcp --connect-timeout=5 -h 127.0.0.1 -P "${JMS_MIGRATE_DB_PORT}" --batch --skip-column-names)
       quote="$(printf "\\047")"
+      # Any same-name account could have broader privileges or a more-specific
+      # host match. Leave it intact and create a fresh application identity.
+      existing=$(mysql "${mysql_args[@]}" -u root -e "SELECT COUNT(*) FROM mysql.user WHERE User = ${quote}jumpserver${quote};" 2>/dev/null)
+      business_user=jumpserver
+      if [[ "${existing}" != "0" ]]; then
+        business_user="${JMS_MIGRATE_DB_ALT_USER}"
+      fi
       escaped_password="${business_password//${quote}/${quote}${quote}}"
-      sql="CREATE USER IF NOT EXISTS ${quote}jumpserver${quote}@${quote}%${quote} IDENTIFIED BY ${quote}${escaped_password}${quote}; ALTER USER ${quote}jumpserver${quote}@${quote}%${quote} IDENTIFIED BY ${quote}${escaped_password}${quote}; GRANT ALL PRIVILEGES ON \`${JMS_MIGRATE_DB_NAME}\`.* TO ${quote}jumpserver${quote}@${quote}%${quote}; FLUSH PRIVILEGES;"
-      printf "%s\n" "${sql}" | mysql -h 127.0.0.1 -u root --batch --skip-column-names >/dev/null 2>&1
-    ' || {
+      sql="CREATE USER ${quote}${business_user}${quote}@${quote}%${quote} IDENTIFIED BY ${quote}${escaped_password}${quote}; GRANT ALL PRIVILEGES ON \`${JMS_MIGRATE_DB_NAME}\`.* TO ${quote}${business_user}${quote}@${quote}%${quote};"
+      printf "%s\n" "${sql}" | mysql "${mysql_args[@]}" -u root >/dev/null 2>&1
+      MYSQL_PWD="${business_password}" mysql "${mysql_args[@]}" -u "${business_user}" \
+        --database="${JMS_MIGRATE_DB_NAME}" -e "SELECT 1;" >/dev/null 2>&1
+      printf "%s\n" "${business_user}"
+    ') || {
       log_error "Failed to create the non-privileged built-in MySQL application account"
       return 1
     }
-  set_config DB_USER jumpserver
+  set_config DB_USER "${business_user}"
   set_config DB_PASSWORD "${business_password}"
   echo_check "Migrated built-in MySQL from the root login to a dedicated JumpServer account"
 }
 
 function remove_obsolete_containers() {
   local container existing_containers
-  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_kael" "jms_magnus" "jms_video" "jms_lion" "jms_facelive" "jms_panda")
+  # Kael and Magnus are current services. Keep their containers until the normal
+  # stop/recreate flow so PostgreSQL migration can record their restart intent.
+  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_video" "jms_lion" "jms_facelive" "jms_panda")
 
   # XRDP is still supported when explicitly enabled in the enterprise edition.
   if [[ "$(get_config_or_env USE_XPACK)" != "1" || "$(get_config_or_env XRDP_ENABLED)" != "1" ]]; then
@@ -354,6 +457,7 @@ function cleanup_failed_upgrade() {
   local status=$? safe_to_restore=1
 
   if [[ "${status}" != "0" && "${UPGRADE_COMMITTED}" != "1" ]]; then
+    fence_internal_postgresql_upgrade || log_error "Could not stop all application containers after the interrupted PostgreSQL migration"
     if [[ "${UPGRADE_CONFIG_CHANGED}" == "1" && \
       "${UPGRADE_DATABASE_MIGRATION_STARTED}" == "0" && \
       -f "${backup_config_file:-}" ]]; then
@@ -383,17 +487,40 @@ function cleanup_failed_upgrade() {
 }
 
 function backup_db() {
-  if [[ "${SKIP_BACKUP_DB}" != "1" ]]; then
-    if ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
-      confirm="n"
-      read_from_input confirm "$(gettext 'Failed to backup the database. Continue to upgrade')?" "y/n" "${confirm}"
-      if [[ "${confirm}" == "n" ]]; then
-        exit 1
-      fi
-    fi
-  else
+  local db_image migration_backup backup_failed=0 confirm="y"
+
+  if [[ "${SKIP_BACKUP_DB:-0}" == "1" ]]; then
     echo "SKIP_BACKUP_DB=${SKIP_BACKUP_DB}, $(gettext 'Skip database backup')"
+    return 0
   fi
+
+  migration_backup="$(get_config VOLUME_DIR)/postgresql/data.upgrade18/cluster.sql"
+  if postgresql_upgrade_pending && [[ -s "${migration_backup}" ]]; then
+    # A retry must not start the temporary Core container while migration is
+    # fenced. The atomic full-cluster export still contains the original data.
+    log_success "Resuming PostgreSQL migration; retained full-cluster backup: ${migration_backup}"
+    return 0
+  fi
+
+  if ! db_image=$(get_db_images) || [[ -z "${db_image}" ]]; then
+    log_warn 'Could not determine the database backup image.'
+    backup_failed=1
+  elif is_external_db_image "${db_image}" && ! reuse_local_db_image "${db_image}"; then
+    # Avoid an implicit docker run pull when the offline client is unavailable.
+    log_warn "External database backup image ${db_image} is unavailable."
+    backup_failed=1
+  elif ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
+    backup_failed=1
+  fi
+
+  if [[ "${backup_failed}" == "1" ]]; then
+    log_warn 'No successful installer database backup was created.'
+    if ! read_from_input confirm "$(gettext 'Failed to backup the database. Continue to upgrade')?" "y/n" "${confirm}" 30 ||
+      [[ "${confirm}" != "y" ]]; then
+      exit 1
+    fi
+  fi
+  return 0
 }
 
 function db_migrations() {
@@ -420,6 +547,10 @@ function db_migrations() {
   fi
   if ! perform_db_migrations; then
     log_error "$(gettext 'Failed to change the table structure')!"
+    if [[ "${PG18_UPGRADE_ACTIVE:-0}" == 1 ]]; then
+      log_error 'PostgreSQL migrated, but application schema migration failed; keep business stopped and retry the same upgrade'
+      exit 1
+    fi
     confirm="n"
     read_from_input confirm "$(gettext 'Failed to change the table structure. Continue to upgrade')?" "y/n" "${confirm}"
     if [[ "${confirm}" != "y" ]]; then
@@ -544,16 +675,17 @@ function main() {
   # Database backup starts a Core container using the target version.
   # Load the offline images before that container is created.
   echo_yellow "\n3. $(gettext 'Loading Docker Image')"
-  if ! bash "${BASE_DIR}/3_load_images.sh"; then
+  if ! POSTGRESQL_MAJOR_UPGRADE=1 ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh"; then
     log_error "$(gettext 'Failed to load Docker images')"
     exit 1
   fi
 
   echo_yellow "\n4. $(gettext 'Backup database')"
+  UPGRADE_CONFIG_CHANGED=1
+  migrate_internal_mysql_root_password || exit 1
   backup_db
 
   echo_yellow "\n5. $(gettext 'Update Configuration File')"
-  UPGRADE_CONFIG_CHANGED=1
   update_config_if_need
   configure_jdmc || {
     log_error "Failed to configure JDMC"
@@ -564,12 +696,19 @@ function main() {
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
   write_upgrade_recovery_state recovery_required || exit 1
   UPGRADE_DATABASE_MIGRATION_STARTED=1
+  upgrade_internal_postgresql || {
+    log_error "PostgreSQL migration did not complete; business remains stopped. Retry the same upgrade."
+    exit 1
+  }
+  # Remove the former image setting only after cutover; an old HA Compose
+  # binding may still require it while its database is being migrated.
+  remove_config POSTGRESQL_IMAGE || exit 1
+  gen_safe_config >/dev/null || exit 1
   db_migrations
 
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
   upgrade_docker
   upgrade_compose
-  ensure_core_data_symlink || log_warn "Failed to prepare host core data symlink, continue upgrade"
   ensure_current_installer_link || {
     log_error "Failed to update /opt/current/installer"
     exit 1
@@ -592,6 +731,10 @@ function main() {
     log_error "Failed to update CURRENT_VERSION"
     exit 1
   fi
+  complete_internal_postgresql_upgrade || {
+    log_error "PostgreSQL migrated, but application recovery is incomplete; retry the same upgrade"
+    exit 1
+  }
   UPGRADE_COMMITTED=1
   trap - EXIT
   installation_log "upgrade"

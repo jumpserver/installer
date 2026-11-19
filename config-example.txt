@@ -65,6 +65,9 @@ LOG_LEVEL=ERROR
 #
 DOCKER_SUBNET=192.168.250.0/24
 
+# Executor network; must not overlap business, asset, VPN or other Docker networks
+DOCKER_EXECUTOR_SUBNET=192.168.252.0/24
+
 # ipv6 nat, no need to enable under normal circumstances
 # If the host does not support ipv6, enabling this option will prevent the real client ip address from being obtained
 #
@@ -80,6 +83,8 @@ DB_HOST=postgresql
 # For a new built-in DB_ENGINE=mysql installation, choose mysql:8.0 or
 # mariadb:10.6. Existing mysql/data or mariadb/data takes precedence.
 DB_IMAGE=mariadb:10.6
+# New PostgreSQL installations use 18.7-trixie. Upgrades select the old image
+# from the existing data version until migration to 18 has completed.
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=
@@ -168,7 +173,27 @@ DOMAINS=
 # CHEN_ENABLED=0
 # WEB_ENABLED=0
 # VIDEO_WORKER_ENABLED=0
-# CELERY_PRIVILEGED=false
+
+# Celery keeps privileged mode for local Ansible execution with bwrap.
+# SSH-only deployments can disable it; changing this requires recreating Celery.
+# CELERY_PRIVILEGED=true
+
+# Ansible Docker isolation uses the persistent SSH executor (no Docker socket or privileged mode).
+# The existing ANSIBLE_DOCKER_ENABLED feature setting controls SSH versus local execution.
+# Disabling isolation does not stop the executor container.
+# ANSIBLE_EXECUTOR_ENABLED=0 disables the local executor; provision trusted client
+# credentials in CONFIG_DIR/ansible-executor/client before using an external one.
+# Connection defaults come from Core; uncomment only to override them.
+# ANSIBLE_EXECUTOR_HOST=ansible-executor
+# ANSIBLE_EXECUTOR_PORT=2222
+# ANSIBLE_EXECUTOR_PRIVATE_KEY=/run/jms-executor/client
+# ANSIBLE_EXECUTOR_KNOWN_HOSTS=/run/jms-executor/known_hosts
+# Tunnel addresses must point back to the process creating the tunnel.
+# ANSIBLE_EXECUTOR_GATEWAY_HOST=celery
+# ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST=core
+# ANSIBLE_EXECUTOR_MEMORY=4g
+# ANSIBLE_EXECUTOR_CPUS=2
+# ANSIBLE_EXECUTOR_PIDS=1024
 
 # VIDEO_WORKER_ENABLED only controls the local container. To send recordings
 # from KoKo to a worker, set ENABLE_VIDEO_WORKER=true. For the local container,
