@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 
-VERSION=${VERSION:-dev}
+VERSION=v5.2.0
 DOWNLOAD_URL=${DOWNLOAD_URL:-https://resource.fit2cloud.com}
 OS=$(uname -s)
 
