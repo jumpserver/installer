@@ -270,7 +270,10 @@ function main() {
     echo ""
   else
     pre_check || return 3
-    EXE=$(get_docker_compose_cmd_line) || return 1
+    # Upgrade can resume a pending PostgreSQL migration.
+    if [[ "${action}" != upgrade ]]; then
+      EXE=$(get_docker_compose_cmd_line) || return 1
+    fi
   fi
   case "${action}" in
   install)
