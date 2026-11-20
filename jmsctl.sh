@@ -106,7 +106,7 @@ function start() {
   gen_safe_config >/dev/null
   stop_disabled_video_worker || return 1
   prepare_services_for_start || return 1
-  EXE=$(get_docker_compose_cmd_line)
+  EXE=$(get_docker_compose_cmd_line) || return 1
   if [[ "$(get_config_or_env ANSIBLE_EXECUTOR_ENABLED)" != "0" ]]; then
     ${EXE} up -d --wait --wait-timeout 60 ansible-executor || return 1
   fi
@@ -126,7 +126,7 @@ function stop() {
     if should_manage_jdmc; then
       stop_jdmc || return 1
     fi
-    cmd=$(get_docker_compose_cmd_line "ignore_db")
+    cmd=$(get_docker_compose_cmd_line "ignore_db") || return 1
     ${cmd} down -v
   elif [[ -n "${target}" ]]; then
     ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
@@ -270,7 +270,17 @@ function main() {
     echo ""
   else
     pre_check || return 3
-    EXE=$(get_docker_compose_cmd_line)
+    case "${action}:${target}" in
+      stop:jdmc|close:jdmc|down:jdmc|restart:jdmc|tail:?*)
+        # These commands use systemd or docker logs directly.
+        ;;
+      start:*|stop:*|restart:*|close:*|status:*|down:*|pull:*|cmd:*|tail:*|raw:*)
+        EXE=$(get_docker_compose_cmd_line) || return 1
+        ;;
+      backup_db:*|backup_no_audit:*|backup_audit:*|restore_db:*|video-worker:start|video-worker:restart)
+        postgresql_upgrade_start_guard || return 1
+        ;;
+    esac
   fi
   case "${action}" in
   install)

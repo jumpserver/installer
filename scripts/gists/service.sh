@@ -532,7 +532,7 @@ function db_redis_start() {
 
 function db_redis_stop() {
   target=$1
-  cmd=$(get_db_compose_cmd "${target}")
+  cmd=$(get_db_compose_cmd "${target}") || return 1
   ${cmd} down
 }
 

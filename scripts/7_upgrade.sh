@@ -707,8 +707,10 @@ function main() {
   db_migrations
 
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
-  upgrade_docker
-  upgrade_compose
+  # Binary updates can change into scripts/. Keep subsequent Compose calls
+  # in the installer root, where their relative configuration paths resolve.
+  (upgrade_docker) || exit 1
+  (upgrade_compose) || exit 1
   ensure_current_installer_link || {
     log_error "Failed to update /opt/current/installer"
     exit 1
