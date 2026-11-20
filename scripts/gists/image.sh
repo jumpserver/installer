@@ -23,12 +23,17 @@ function should_skip_external_db_image() {
 }
 
 function report_image_failure() {
-  local image=$1 message=$2
+  local image=$1 message=$2 continuation
 
-  # Upgrades defer unavailable external database clients to the backup prompt.
-  # Built-in databases and application images remain required.
-  if [[ "${ALLOW_MISSING_DB_IMAGE:-0}" == "1" ]] && is_external_db_image "${image}"; then
-    log_warn "${message}. External database backup image ${image} could not be prepared; continuing to the backup step."
+  # Installation has no backup step. Upgrades defer an unavailable client to
+  # the backup prompt. Required images remain fatal in both cases.
+  case "${ALLOW_MISSING_DB_IMAGE:-0}" in
+    install) continuation='continuing installation' ;;
+    1) continuation='continuing to the backup step' ;;
+    *) continuation='' ;;
+  esac
+  if [[ -n "${continuation}" ]] && is_external_db_image "${image}"; then
+    log_warn "${message}. External database backup image ${image} could not be prepared; ${continuation}."
     return 0
   fi
   echo_red "${message}"
@@ -91,6 +96,19 @@ function emit_image_mapping() {
   printf '%s\t%s\t%s\n' "${source_image}" "${target_image}" "${exact_source}"
 }
 
+function emit_app_image_mapping() {
+  local service=$1 namespace=$2 override=''
+  case "$service" in
+    core) override=$(get_container_jdmc_image_override JDMC_CORE_IMAGE) ;;
+    jdmc) override=$(get_container_jdmc_image_override JDMC_IMAGE) ;;
+  esac
+  if [[ -n "$override" ]]; then
+    emit_image_mapping "$override" "$override" 1
+  else
+    emit_image_mapping "jumpserver/${service}:${VERSION}" "${namespace}/${service}:${VERSION}"
+  fi
+}
+
 function get_image_mappings() {
   local use_xpack enabled_services service image db_image namespace executor_tag
 
@@ -120,9 +138,7 @@ function get_image_mappings() {
           "${namespace}/ansible-executor:${executor_tag}"
         ;;
       *)
-        emit_image_mapping \
-          "jumpserver/${service}:${VERSION}" \
-          "${namespace}/${service}:${VERSION}"
+        emit_app_image_mapping "$service" "$namespace"
         ;;
     esac
   done
@@ -138,9 +154,7 @@ function get_image_mappings() {
     emit_image_mapping "${image}" "${image}"
   fi
   if should_include_jdmc_image; then
-    emit_image_mapping \
-      "jumpserver/jdmc:${VERSION}" \
-      "${namespace}/jdmc:${VERSION}"
+    emit_app_image_mapping jdmc "$namespace"
   fi
 }
 

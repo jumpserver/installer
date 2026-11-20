@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# JDMC is a mandatory host-side component in Enterprise Edition. Community
-# Edition does not install it. JDMC_SOCK_PATH is kept for Core integration.
+# Single-node EE uses the container. Existing HA deployments retain their
+# native lifecycle until HA container migration is available.
 JDMC_SERVICE_NAME=${JDMC_SERVICE_NAME:-jdmc.service}
 JDMC_CORE_SOCKET_PATH=${JDMC_CORE_SOCKET_PATH:-/opt/jumpserver/data/unshare/jdmc.sock}
 JDMC_INSTALL_DIR=${JDMC_INSTALL_DIR:-/opt/jdmc}
@@ -12,19 +12,37 @@ JDMC_HA_CLI=${JDMC_HA_CLI:-${JDMC_INSTALL_DIR}/current/ha/ha.sh}
 JDMC_SYSTEMD_DIRS=${JDMC_SYSTEMD_DIRS:-/etc/systemd/system:/run/systemd/system:/usr/local/lib/systemd/system:/usr/lib/systemd/system:/lib/systemd/system}
 
 function is_enterprise_edition() {
-  [[ "$(get_config_or_env USE_XPACK 0)" == "1" ]]
+  [[ "${VERSION:-}" != *-ce && "$(get_config_or_env USE_XPACK 0)" == "1" ]]
 }
 
 function is_jdmc_enabled() {
   is_enterprise_edition
 }
 
+function can_manage_existing_jdmc() {
+  # A lost config.txt must not bypass HA protection or strand an EE uninstall.
+  is_jdmc_enabled || [[ "${VERSION:-}" == *-ee && ! -f "${CONFIG_FILE}" ]]
+}
+
 function should_include_jdmc_image() {
   is_jdmc_enabled
 }
 
+function get_container_jdmc_image_override() {
+  local image
+  image=$(get_config_or_env "$1")
+  if [[ -n "$image" ]] && use_container_jdmc; then
+    printf '%s\n' "$image"
+  fi
+}
+
 function get_jdmc_image() {
-  local namespace
+  local namespace image
+  image=$(get_container_jdmc_image_override JDMC_IMAGE)
+  if [[ -n "$image" ]]; then
+    printf '%s\n' "$image"
+    return
+  fi
 
   namespace=$(get_config_or_env NAMESPACE jumpserver)
   namespace=${namespace%/}
@@ -33,6 +51,10 @@ function get_jdmc_image() {
 
 function configure_jdmc() {
   local socket_path
+  if use_container_jdmc; then
+    configure_container_jdmc
+    return
+  fi
 
   # JDMC follows the edition and is no longer configurable. Legacy switches
   # are deliberately ignored here and cleaned only after install/upgrade has
@@ -144,6 +166,10 @@ function retire_jdmc_ha_lifecycle() {
 }
 
 function prepare_jdmc_uninstall() {
+  remove_jdmc_boot_unit || return 1
+  if [[ -e "$(jdmc_node_dir)/release" ]]; then
+    container_jdmc_action down || return 1
+  fi
   retire_jdmc_ha_lifecycle "$(get_current_jdmc_data_dir)" "${JDMC_HA_CLI}"
 }
 
@@ -262,6 +288,10 @@ function run_jdmc_package_action() {
 }
 
 function install_jdmc() {
+  if use_container_jdmc; then
+    container_jdmc_action up && install_jdmc_boot_unit
+    return
+  fi
   if ! is_jdmc_enabled; then
     cleanup_jdmc_legacy_switches
     return $?
@@ -297,6 +327,10 @@ function install_jdmc() {
 }
 
 function upgrade_jdmc() {
+  if use_container_jdmc; then
+    container_jdmc_action up && install_jdmc_boot_unit
+    return
+  fi
   if ! is_jdmc_enabled; then
     cleanup_jdmc_legacy_switches
     return $?
@@ -316,6 +350,10 @@ function upgrade_jdmc() {
 }
 
 function start_jdmc() {
+  if use_container_jdmc; then
+    container_jdmc_action up
+    return
+  fi
   local service_name
 
   is_jdmc_enabled || return 0
@@ -329,6 +367,10 @@ function start_jdmc() {
 }
 
 function stop_jdmc() {
+  if use_container_jdmc; then
+    container_jdmc_action stop
+    return
+  fi
   local failed=0
 
   check_jdmc_service_installed || return 0
@@ -344,6 +386,10 @@ function stop_jdmc() {
 }
 
 function restart_jdmc() {
+  if use_container_jdmc; then
+    container_jdmc_action restart
+    return
+  fi
   local service_name
 
   if ! is_jdmc_enabled; then
@@ -360,6 +406,10 @@ function restart_jdmc() {
 }
 
 function status_jdmc() {
+  if use_container_jdmc; then
+    container_jdmc_action ps
+    return
+  fi
   local service_name
 
   check_jdmc_service_installed || return 0
@@ -369,6 +419,10 @@ function status_jdmc() {
 }
 
 function tail_jdmc() {
+  if use_container_jdmc; then
+    container_jdmc_action logs
+    return
+  fi
   local service_name
 
   check_jdmc_runtime || return 1
@@ -391,6 +445,7 @@ function disable_jdmc_service() {
 }
 
 function disable_jdmc() {
+  remove_jdmc_boot_unit || return 1
   local failed=0
 
   check_jdmc_runtime || return 1
@@ -460,3 +515,5 @@ function cleanup_jdmc_host_integration() {
   remove_jdmc_main_service_unit "${JDMC_LEGACY_SERVICE_NAME}" "${JDMC_LEGACY_INSTALL_DIR}" || failed=1
   return "${failed}"
 }
+
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/jdmc-container.sh"

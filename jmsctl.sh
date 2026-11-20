@@ -72,6 +72,7 @@ function usage() {
   echo "More Commands: "
   echo "  prepare [service ...]  Prepare service files and permissions without starting services"
   echo "  prepare --containers <container ...>  Prepare stopped containers using their installed images"
+  echo "  application-{start|restart} [service] Apply application configuration while JDMC stays online"
   echo "  load_image        $(gettext 'Loading docker image')"
   echo "  backup_db         $(gettext 'Backup database')"
   echo "  backup_no_audit   $(gettext 'Backup database without audit data')"
@@ -93,28 +94,68 @@ function service_to_docker_name() {
 EXE=""
 
 function should_manage_jdmc() {
-  [[ "${skip_jdmc}" != "true" ]]
+  [[ "${skip_jdmc}" != "true" ]] && is_jdmc_enabled
 }
 
 function is_jdmc_target() {
   [[ "${target}" == "jdmc" ]]
 }
 
-function start() {
-  set_openbao || return 1
-  configure_jdmc || return 1
-  gen_safe_config >/dev/null
-  stop_disabled_video_worker || return 1
-  prepare_services_for_start || return 1
-  EXE=$(get_docker_compose_cmd_line)
-  if [[ "$(get_config_or_env ANSIBLE_EXECUTOR_ENABLED)" != "0" ]]; then
-    ${EXE} up -d --wait --wait-timeout 60 ansible-executor || return 1
+# Apply the application's lifecycle without controlling the independent JDMC
+# project. These entry points are also called by the container's manager.
+function start_applications() {
+  local operation=$1 service=${2:-} enabled name
+  local -a flags=(up -d) remaining=()
+  [[ "${operation}" != restart ]] || flags+=(--force-recreate)
+  if [[ -n "${service}" ]]; then
+    [[ "${service}" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]] || return 2
+    prepare_services_for_start "${service}" || return 1
+    ${EXE} "${flags[@]}" "${service}" || return 1
+  else
+    set_openbao || return 1
+    gen_safe_config >/dev/null || return 1
+    stop_disabled_video_worker || return 1
+    prepare_services_for_start || return 1
+    EXE=$(get_docker_compose_cmd_line) || return 1
+    if [[ "$(get_config_or_env ANSIBLE_EXECUTOR_ENABLED)" != 0 ]]; then
+      ${EXE} "${flags[@]}" --wait --wait-timeout 60 ansible-executor || return 1
+      if [[ "${operation}" == restart ]]; then
+        enabled=$(${EXE} config --services) || return 1
+        [[ -n "$enabled" ]] || return 1
+        while IFS= read -r name; do
+          [[ "${name}" == ansible-executor ]] || remaining+=("${name}")
+        done <<<"${enabled}"
+        if (( ${#remaining[@]} )); then
+          ${EXE} "${flags[@]}" --no-deps "${remaining[@]}" || return 1
+        fi
+        remove_stopped_openbao_init_container
+        return
+      fi
+    fi
+    ${EXE} "${flags[@]}" || return 1
   fi
-  ${EXE} up -d || return 1
   remove_stopped_openbao_init_container
+}
 
+function start() {
+  if is_jdmc_target; then
+    start_jdmc
+    return
+  fi
+  local jdmc_started=false
+  # Start JDMC before Core on a fresh or already-published standalone node.
+  # During a release switch, keep the working installer until Compose succeeds.
+  local current=/opt/current/installer
+  if should_manage_jdmc && { [[ ! -e "$current" && ! -L "$current" ]] || [[ "$PROJECT_DIR" -ef "$current" ]]; } && use_container_jdmc; then
+    # This entry point prepares the identity or starts the PAM recovery UI.
+    start_jdmc || return 1
+    jdmc_started=true
+  elif is_jdmc_enabled; then
+    configure_jdmc || return 1
+  fi
+  start_applications start || return 1
   ensure_current_installer_link || return 1
-  if should_manage_jdmc; then
+  if should_manage_jdmc && [[ "$jdmc_started" == false ]]; then
     start_jdmc
   fi
 }
@@ -123,15 +164,15 @@ function stop() {
   if is_jdmc_target; then
     stop_jdmc
   elif [[ "${target}" == "ignore_db" ]]; then
-    if should_manage_jdmc; then
+    if should_manage_jdmc && ! use_container_jdmc; then
       stop_jdmc || return 1
     fi
-    cmd=$(get_docker_compose_cmd_line "ignore_db")
+    cmd=$(get_docker_compose_cmd_line "ignore_db") || return 1
     ${cmd} down -v
   elif [[ -n "${target}" ]]; then
     ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
   else
-    if should_manage_jdmc; then
+    if should_manage_jdmc && ! use_container_jdmc; then
       stop_jdmc || return 1
     fi
     ${EXE} down -v
@@ -147,7 +188,7 @@ function close() {
     ${EXE} stop "${target}"
     return
   fi
-  if should_manage_jdmc; then
+  if should_manage_jdmc && ! use_container_jdmc; then
     stop_jdmc || return 1
   fi
   services=$(get_docker_compose_services ignore_db)
@@ -207,6 +248,9 @@ function video-worker() {
     log_error "video-worker is only available in the enterprise edition"
     return 1
   fi
+  if [[ "${target}" == start || "${target}" == restart ]]; then
+    postgresql_upgrade_start_guard || return 1
+  fi
   case "${target}" in
     start)
       if ! video_worker_can_start; then
@@ -253,6 +297,40 @@ function check_os() {
 function main() {
   check_os || return 3
 
+  # Standalone management must work before any Core/DB compose can render.
+  if is_jdmc_target; then
+    local jdmc_action=''
+    case "${action}" in
+      start|restart|status|tail) jdmc_action="${action}_jdmc" ;;
+      stop|close|down) jdmc_action=stop_jdmc ;;
+    esac
+    if [[ -n "${jdmc_action}" ]]; then
+      if ! is_jdmc_enabled; then
+        log_error "JDMC is only available in the enterprise edition"
+        return 1
+      fi
+      "${jdmc_action}"
+      return
+    fi
+  fi
+
+  # JDMC_CONTAINER_HANDOFF_V1. A transfer may have stopped only some writers
+  # before a reboot. The persisted record owns service startup until recovery.
+  if can_manage_existing_jdmc && jdmc_path_exists "$(get_current_jdmc_data_dir)/management/ha/handoff.json"; then
+    case "${action}" in
+      status|tail|help|h|-h|--help) ;;
+      start)
+        if [[ -z "${target}" && "${skip_jdmc}" == false ]]; then
+          start_jdmc || return 1
+        fi
+        log_error "JDMC HA controls application startup on this node. Open HA management for its handoff state."
+        return 1 ;;
+      *)
+        log_error "JDMC HA controls service changes during an independent-data handoff."
+        return 1 ;;
+    esac
+  fi
+
   # Preparation also runs on an HA standby. Do not render Compose, rewrite
   # configuration, or enter any service/database lifecycle action here.
   if [[ "${action}" == prepare ]]; then
@@ -270,7 +348,14 @@ function main() {
     echo ""
   else
     pre_check || return 3
-    EXE=$(get_docker_compose_cmd_line)
+    case "${action}" in
+      start|application-start|application-restart|stop|restart|close|status|down|pull|cmd|tail|raw)
+        EXE=$(get_docker_compose_cmd_line) || return 1
+        ;;
+      backup_db|backup_no_audit|backup_audit|restore_db)
+        postgresql_upgrade_start_guard || return 1
+        ;;
+    esac
   fi
   case "${action}" in
   install)
@@ -289,6 +374,9 @@ function main() {
     ${EXE} down -v
     bash "${SCRIPT_DIR}/1_config_jumpserver.sh"
     ;;
+  application-start|application-restart)
+    start_applications "${action#application-}" "${target}"
+    ;;
   start)
     start
     ;;
@@ -305,6 +393,7 @@ function main() {
     close
     ;;
   status)
+    if is_jdmc_target; then status_jdmc; return; fi
     ${EXE} ps
     if should_manage_jdmc; then
       status_jdmc
@@ -312,7 +401,7 @@ function main() {
     ;;
   down)
     if [[ -z "${target}" ]]; then
-      if should_manage_jdmc; then
+      if should_manage_jdmc && ! use_container_jdmc; then
         stop_jdmc || exit 1
       fi
       ${EXE} down -v

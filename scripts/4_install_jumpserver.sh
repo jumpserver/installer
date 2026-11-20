@@ -97,14 +97,22 @@ function main() {
   if ! bash "${BASE_DIR}/1_config_jumpserver.sh"; then
     exit 1
   fi
-  if ! configure_jdmc; then
+  # The container prepares its Core identity during install_jdmc, with an
+  # offline PAM fallback if the node credentials are not ready yet.
+  if is_jdmc_enabled && ! use_container_jdmc && ! configure_jdmc; then
     log_error "Failed to configure JDMC"
     exit 1
   fi
 
   echo_green "\n>>> $(gettext 'Loading Docker Image')"
-  if ! bash "${BASE_DIR}/3_load_images.sh"; then
+  if ! ALLOW_MISSING_DB_IMAGE=install bash "${BASE_DIR}/3_load_images.sh"; then
     exit 1
+  fi
+
+  # The EE migration command boots Django and reads JDMC's license before
+  # it can touch the business database.
+  if use_container_jdmc; then
+    ensure_current_installer_link && install_jdmc || exit 1
   fi
 
   echo_green "\n>>> $(gettext 'Initialize Database')"
@@ -117,11 +125,13 @@ function main() {
     log_error "Failed to update /opt/current/installer"
     exit 1
   }
-  install_jdmc || {
-    jdmc_status=$?
-    log_error "Failed to install JDMC"
-    exit "${jdmc_status}"
-  }
+  if is_jdmc_enabled && ! use_container_jdmc; then
+    install_jdmc || {
+      jdmc_status=$?
+      log_error "Failed to install JDMC"
+      exit "${jdmc_status}"
+    }
+  fi
 
   if ! set_current_version; then
     log_error "Failed to update CURRENT_VERSION"

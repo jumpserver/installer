@@ -58,9 +58,12 @@ function load_image_files() {
 }
 
 function main() {
+  # An upgrade can target a different tag from the one in static.env.
+  local -x VERSION=${1:-${VERSION}}
   # Panda belongs to remote publishers, even if packaging flags are inherited.
   local INCLUDE_PANDA_IMAGE=0
-  if [[ "$(get_config HA_MODE)" == 1 && -n "${JDMC_HA_MAINTENANCE_ID:-}" &&
+  if [[ -n "${JDMC_HA_MAINTENANCE_ID:-}" ]] && is_jdmc_enabled &&
+    [[ "$(get_config HA_MODE)" == 1 &&
     "${JDMC_HA_PG18_COORDINATED:-0}" != 1 && "${POSTGRESQL_MAJOR_UPGRADE:-0}" != 1 && "$(get_config DB_ENGINE)" == postgresql ]]; then
     local pg_major
     pg_major=$(get_internal_postgresql_data_version) || return 1
@@ -81,5 +84,5 @@ function main() {
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
-  main
+  main "$@"
 fi

@@ -675,7 +675,7 @@ function main() {
   # Database backup starts a Core container using the target version.
   # Load the offline images before that container is created.
   echo_yellow "\n3. $(gettext 'Loading Docker Image')"
-  if ! POSTGRESQL_MAJOR_UPGRADE=1 ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh"; then
+  if ! POSTGRESQL_MAJOR_UPGRADE=1 ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh" "${to_version}"; then
     log_error "$(gettext 'Failed to load Docker images')"
     exit 1
   fi
@@ -683,14 +683,17 @@ function main() {
   echo_yellow "\n4. $(gettext 'Backup database')"
   UPGRADE_CONFIG_CHANGED=1
   migrate_internal_mysql_root_password || exit 1
+  if use_container_jdmc; then
+    ensure_current_installer_link && upgrade_jdmc || exit 1
+  fi
   backup_db
 
   echo_yellow "\n5. $(gettext 'Update Configuration File')"
   update_config_if_need
-  configure_jdmc || {
+  if is_jdmc_enabled && ! configure_jdmc; then
     log_error "Failed to configure JDMC"
     exit 1
-  }
+  fi
 
   echo_yellow "\n6. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
@@ -707,17 +710,21 @@ function main() {
   db_migrations
 
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
-  upgrade_docker
-  upgrade_compose
+  # These helpers may cd into scripts/ to install binaries. Recovery runs
+  # Compose with paths relative to the installer root.
+  (upgrade_docker) || exit 1
+  (upgrade_compose) || exit 1
   ensure_current_installer_link || {
     log_error "Failed to update /opt/current/installer"
     exit 1
   }
-  upgrade_jdmc || {
-    jdmc_status=$?
-    log_error "Failed to upgrade JDMC"
-    exit "${jdmc_status}"
-  }
+  if is_jdmc_enabled && ! use_container_jdmc; then
+    upgrade_jdmc || {
+      jdmc_status=$?
+      log_error "Failed to upgrade JDMC"
+      exit "${jdmc_status}"
+    }
+  fi
 
   persist_installer_version || {
     log_error "Failed to update ${STATIC_ENV}"

@@ -171,7 +171,7 @@ function start_jms_core() {
   [[ "${CELERY_WAS_RUNNING}" == "1" ]] && services+=(celery)
   [[ ${#services[@]} -gt 0 ]] || return 0
 
-  cmd=$(get_docker_compose_cmd_line)
+  cmd=$(get_docker_compose_cmd_line) || return 1
   ${cmd} up -d "${services[@]}" || return 1
   remove_stopped_openbao_init_container
 }

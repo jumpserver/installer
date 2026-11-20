@@ -1,0 +1,18 @@
+services:
+  core:
+    image: ${JDMC_CORE_IMAGE:-${NAMESPACE:-jumpserver}/core:${VERSION}}
+    environment:
+      JDMC_HTTPS_URL: ${JDMC_HTTPS_URL:-https://jdmc.host.internal:${JDMC_CALLBACK_PORT:-9898}}
+      JDMC_HTTPS_CA_FILE: ${JDMC_HTTPS_CA_FILE:-}
+      JDMC_CORE_NODE_NAME: ${JDMC_CORE_NODE_NAME:-}
+      JDMC_CORE_ENROLLMENT_SECRET_FILE: /run/jdmc-core/enrollment-secret
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "jdmc.host.internal=${JDMC_CALLBACK_HOST:-host-gateway}"
+    volumes:
+      - type: bind
+        source: ${JDMC_NODE_DIR:-/etc/jdmc/node}/identity/core
+        target: /run/jdmc-core
+        read_only: true
+        bind:
+          create_host_path: false

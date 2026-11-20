@@ -165,7 +165,7 @@ function log_warn() {
 }
 
 function log_error() {
-  echo_red "[ERROR] $1"
+  echo_red "[ERROR] $1" >&2
 }
 
 

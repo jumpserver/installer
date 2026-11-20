@@ -254,6 +254,10 @@ function get_docker_compose_cmd_line() {
   cap_addon=$(get_config CAP_ADDON)
 
   cmd="docker compose"
+  # Older Web images select the JDMC proxy using USE_XPACK from Compose.
+  if [[ "$(get_config_or_env USE_XPACK)" == 1 ]] && ! is_enterprise_edition; then
+    cmd="env USE_XPACK=0 ${cmd}"
+  fi
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
   else
@@ -268,6 +272,10 @@ function get_docker_compose_cmd_line() {
         cmd="env ANSIBLE_EXECUTOR_TAG=${executor_tag} ${cmd}"
       fi
       cmd+=" -f compose/${service}.yml"
+      case "${service}" in
+        core|celery|web)
+          if use_container_jdmc; then cmd+=" -f compose/${service}.jdmc.yml"; fi ;;
+      esac
   done
 
   if [[ "${ignore_db}" != "ignore_db" ]]; then
@@ -507,6 +515,7 @@ function get_db_compose_cmd() {
 function get_db_migrate_compose_cmd() {
   cmd=$(get_db_compose_cmd "all") || return 1
   cmd+=" -f compose/init-db.yml"
+  if use_container_jdmc; then cmd+=" -f compose/core.jdmc.yml"; fi
   echo "$cmd"
 }
 
@@ -532,7 +541,7 @@ function db_redis_start() {
 
 function db_redis_stop() {
   target=$1
-  cmd=$(get_db_compose_cmd "${target}")
+  cmd=$(get_db_compose_cmd "${target}") || return 1
   ${cmd} down
 }
 

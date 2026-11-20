@@ -132,7 +132,7 @@ cat >"${SCRIPT_DIR}/3_load_images.sh" <<'EOF'
 #!/usr/bin/env bash
 . "${UPGRADE_TEST_ROOT}/scripts/3_load_images.sh"
 IMAGE_DIR=${UPGRADE_TEST_IMAGES}
-main
+main "$@"
 EOF
 export USE_XPACK=0 OFFLINE_IMAGE_SERVICES=core
 export VAULT_ENABLED=false SSH_CA_ENABLED=false
@@ -146,8 +146,11 @@ backup_config() { :; }
 update_config_if_need() { :; }
 configure_jdmc() { :; }
 db_migrations() { printf 'migrations\n' >>"${BACKUP_EVENTS}"; }
-upgrade_docker() { :; }
-upgrade_compose() { :; }
+upgrade_docker() { cd "${BASE_DIR}"; }
+upgrade_compose() { cd "${BASE_DIR}"; }
+complete_internal_postgresql_upgrade() {
+  assert_eq "${PROJECT_DIR}" "${PWD}" 'application recovery must run from the installer root after binary upgrades'
+}
 ensure_current_installer_link() { :; }
 upgrade_jdmc() { :; }
 persist_installer_version() { :; }
@@ -201,12 +204,31 @@ printf 'PASS: unanswered backup confirmation waits 30 seconds and then completes
 AUTO_INSTALL=1 backup_db </dev/null >"${test_dir}/backup.log"
 assert_contains "$(cat "${test_dir}/backup.log")" 'default: y): y'
 
+# A CE release can inherit an old EE deployment switch without having a JDMC image.
+(
+  . "${TEST_ROOT}/scripts/gists/jdmc.sh"
+  export USE_XPACK=1 AUTO_INSTALL=1 SKIP_BACKUP_DB=1 OFFLINE_IMAGE_SERVICES=core,jdmc
+  target=v5.2.1-ce
+  printf 'mock archive\n' >"${UPGRADE_TEST_IMAGES}/core:${target}.zst"
+  printf 'sha256:installed\n' >"${UPGRADE_TEST_IMAGES}/core:${target}.sha256"
+  container_jdmc_action() { fail 'CE must not manage the JDMC container'; }
+  check_jdmc_runtime() { fail 'CE must not require the JDMC host runtime'; }
+  set_config CURRENT_VERSION v4.10.21-ce
+  : >"${BACKUP_EVENTS}"
+  (main) </dev/null >"${test_dir}/ce-upgrade.log" 2>&1
+  assert_contains "$(cat "${test_dir}/ce-upgrade.log")" "jumpserver/core:${target}"
+  assert_eq "${target}" "$(get_config CURRENT_VERSION)"
+  assert_eq $'migrations\nsuccess' "$(cat "${BACKUP_EVENTS}")"
+)
+printf 'PASS: CE upgrades without a JDMC image even with inherited enterprise switches\n'
+
 # JDMC's full-upgrade worker exports AUTO_INSTALL=1 and has no interactive
 # stdin. Run the real upgrade_jdmc function, mocking only its host operations.
 (
   . "${TEST_ROOT}/scripts/gists/jdmc.sh"
-  export USE_XPACK=1 AUTO_INSTALL=1
+  export VERSION=v5.2.1-ee USE_XPACK=1 AUTO_INSTALL=1
   jdmc_action_result=0
+  use_container_jdmc() { return 1; }  # Exercise the retained native HA package path.
   check_jdmc_runtime() { :; }
   check_jdmc_installed() { return 0; }
   run_jdmc_package_action() {
@@ -214,8 +236,10 @@ assert_contains "$(cat "${test_dir}/backup.log")" 'default: y): y'
     return "${jdmc_action_result}"
   }
   ensure_jdmc_ha_dependencies() { :; }
-  printf 'mock archive\n' >"${UPGRADE_TEST_IMAGES}/jdmc:${VERSION}.zst"
-  printf 'sha256:installed\n' >"${UPGRADE_TEST_IMAGES}/jdmc:${VERSION}.sha256"
+  for service in core jdmc; do
+    printf 'mock archive\n' >"${UPGRADE_TEST_IMAGES}/${service}:${VERSION}.zst"
+    printf 'sha256:installed\n' >"${UPGRADE_TEST_IMAGES}/${service}:${VERSION}.sha256"
+  done
 
   for selected_db_image in mariadb:10.6 postgres:18.7-trixie; do
     select_database "${selected_db_image}"

@@ -20,6 +20,7 @@ function prepare_case() {
   export CONFIG_FILE="${JS_CONFIG_DIR}/config.txt"
   export INSTALL_FLOW_EVENTS="${case_dir}/events"
   export FAIL_STAGE=''
+  export INSTALL_FLOW_VERSION=v5.1.0-ce
   mkdir -p "${installer_dir}/scripts" "${installer_dir}/compose" "${case_dir}/bin" \
     "${JS_CONFIG_DIR}" "${case_dir}/volume"
   : >"${INSTALL_FLOW_EVENTS}"
@@ -43,10 +44,11 @@ SCRIPT_DIR=${BASE_DIR}
 CONFIG_DIR=${JS_CONFIG_DIR}
 CONFIG_FILE="${CONFIG_DIR}/config.txt"
 CONFIG_SAFE_FILE="${CONFIG_DIR}/config_safe.txt"
-VERSION=v5.1.0-ce
+VERSION=${INSTALL_FLOW_VERSION}
 OS=$(/usr/bin/uname -s)
 . "${INSTALLER_SOURCE_ROOT}/scripts/gists/conf.sh"
 . "${INSTALLER_SOURCE_ROOT}/scripts/gists/service.sh"
+. "${INSTALLER_SOURCE_ROOT}/scripts/gists/jdmc.sh"
 gettext() { printf '%s\n' "$1"; }
 echo_logo() { :; }
 echo_green() { :; }
@@ -59,7 +61,8 @@ read_from_input() { :; }
 random_str() { printf 'generated-%s\n' "$1"; }
 get_host_ip() { printf '127.0.0.1\n'; }
 set_openbao() { :; }
-configure_jdmc() { :; }
+configure_jdmc() { record_stage jdmc-configure; }
+use_container_jdmc() { return 1; }
 record_stage() {
   printf '%s:%s\n' "$1" "$(get_config CURRENT_VERSION)" >>"${INSTALL_FLOW_EVENTS}"
 }
@@ -73,8 +76,12 @@ prepare_chen_volume() { :; }
 prepare_video_worker_volume() { :; }
 prepare_ansible_executor() { :; }
 get_docker_compose_cmd_line() { printf 'docker compose\n'; }
-docker() { :; }
-start_jdmc() { record_stage start; }
+docker() { if [[ "$*" == 'compose up -d' ]]; then record_stage start; fi; }
+start_jdmc() { record_stage jdmc-start; }
+stop_jdmc() { record_stage jdmc-stop; }
+status_jdmc() { record_stage jdmc-status; }
+tail_jdmc() { record_stage jdmc-tail; }
+restart_jdmc() { record_stage jdmc-restart; }
 if [[ "${FAIL_STAGE}" == version ]]; then
   set_current_version() { return 1; }
 fi
@@ -127,7 +134,7 @@ for quick_script in quick_start.sh cn-quick_start.sh; do
   set_config DB_PORT 4406
   sed "s@/opt@${case_dir}/opt@g" "${TEST_ROOT}/${quick_script}" >"${case_dir}/quick.sh"
   VERSION=regression bash "${case_dir}/quick.sh" >"${case_dir}/output.log" 2>&1
-  assert_eq $'prepare:v5.0.0-ce\ndocker-prepare:v5.0.0-ce\nimages:v5.0.0-ce\nmigrations:v5.0.0-ce\njdmc:v5.0.0-ce\nsuccess-install:v5.1.0-ce\nstart:v5.1.0-ce' \
+  assert_eq $'prepare:v5.0.0-ce\ndocker-prepare:v5.0.0-ce\nimages:v5.0.0-ce\nmigrations:v5.0.0-ce\nsuccess-install:v5.1.0-ce\nstart:v5.1.0-ce' \
     "$(cat "${INSTALL_FLOW_EVENTS}")" "${quick_script} must preserve the install entry point when a version marker exists"
   assert_eq root "$(get_config DB_USER)" 'bootstrap must preserve the existing database user'
   assert_eq legacy-password "$(get_config DB_PASSWORD)" 'bootstrap must preserve the existing database password'
@@ -195,13 +202,41 @@ assert_eq jumpserver "$(get_config DB_USER)" 'new installation must still create
 assert_eq generated-26 "$(get_config DB_PASSWORD)" 'new installation must generate its business password'
 assert_eq generated-32 "$(get_config MYSQL_ROOT_PASSWORD)" 'new installation must generate its root password'
 assert_eq v5.1.0-ce "$(get_config CURRENT_VERSION)" 'successful installation must persist its version'
-assert_eq $'prepare:\ndocker-prepare:\nimages:\nmigrations:\njdmc:\nsuccess-install:v5.1.0-ce' \
+assert_eq $'prepare:\ndocker-prepare:\nimages:\nmigrations:\nsuccess-install:v5.1.0-ce' \
   "$(cat "${INSTALL_FLOW_EVENTS}")" 'the version must be written only after all installation stages succeed'
 printf 'PASS: new installation writes its version only after successful setup\n'
+
+prepare_case external-mysql-without-backup-image
+set_config DB_HOST db.example.test
+mkdir -p "${installer_dir}/scripts/images"
+cp "${TEST_ROOT}/scripts/3_load_images.sh" "${installer_dir}/scripts/"
+printf 'mock archive\n' >"${installer_dir}/scripts/images/core:v5.1.0-ce.zst"
+printf 'sha256:installed\n' >"${installer_dir}/scripts/images/core:v5.1.0-ce.sha256"
+cat >>"${installer_dir}/scripts/utils.sh" <<'EOF'
+. "${INSTALLER_SOURCE_ROOT}/scripts/gists/image.sh"
+get_images() { printf '%s\n' "$(get_db_images)" "jumpserver/core:${VERSION}"; }
+echo_red() { printf '%s\n' "$*" >&2; }
+docker() {
+  [[ "$*" == "image inspect -f {{.ID}} jumpserver/core:${VERSION}" ]] || return 1
+  printf 'sha256:installed\n'
+}
+EOF
+bash "${installer_dir}/jmsctl.sh" install >"${case_dir}/output.log" 2>&1 || {
+  cat "${case_dir}/output.log"
+  fail 'a missing backup image must not prevent installation with an external MySQL database'
+}
+assert_contains "$(cat "${case_dir}/output.log")" 'External database backup image mariadb:10.6 could not be prepared; continuing installation.'
+assert_eq $'prepare:\ndocker-prepare:\nmigrations:\nsuccess-install:v5.1.0-ce' \
+  "$(cat "${INSTALL_FLOW_EVENTS}")" 'external MySQL initialization must complete without JDMC'
+printf 'PASS: new installation continues when the external MySQL backup image is unavailable\n'
 
 for stage in docker images migrations jdmc version; do
   prepare_case "failed-${stage}"
   export FAIL_STAGE=${stage}
+  if [[ "${stage}" == jdmc ]]; then
+    export INSTALL_FLOW_VERSION=v5.1.0-ee
+    set_config USE_XPACK 1
+  fi
   if bash "${installer_dir}/jmsctl.sh" install >"${case_dir}/output.log" 2>&1; then
     fail "installation must fail when ${stage} fails"
   fi
@@ -211,3 +246,60 @@ for stage in docker images migrations jdmc version; do
   fi
 done
 printf 'PASS: installation failures and version-write failures never record success\n'
+
+prepare_case jdmc-edition
+mkdir -p "${case_dir}/jdmc/management/ha"
+printf '%s\n' '{}' >"${case_dir}/jdmc/management/ha/handoff.json"
+for action in start restart stop status down prepare; do
+  bash "${installer_dir}/jmsctl.sh" "${action}" >"${case_dir}/output.log" 2>&1
+done
+assert_eq $'start:\nstart:' "$(cat "${INSTALL_FLOW_EVENTS}")" 'CE must manage its applications without consulting the JDMC handoff or lifecycle'
+for action in start stop close down restart status tail; do
+  if bash "${installer_dir}/jmsctl.sh" "${action}" jdmc >"${case_dir}/output.log" 2>&1; then
+    fail "CE must reject ${action} jdmc"
+  fi
+  assert_contains "$(cat "${case_dir}/output.log")" 'JDMC is only available in the enterprise edition'
+done
+assert_eq $'start:\nstart:' "$(cat "${INSTALL_FLOW_EVENTS}")" 'explicit CE targets must not control JDMC'
+
+export INSTALL_FLOW_VERSION=v5.1.0-ee
+set_config USE_XPACK 1
+if bash "${installer_dir}/jmsctl.sh" restart >"${case_dir}/output.log" 2>&1; then
+  fail 'EE must honor the JDMC handoff'
+fi
+assert_contains "$(cat "${case_dir}/output.log")" 'JDMC HA controls service changes'
+bash "${installer_dir}/jmsctl.sh" restart jdmc
+assert_eq $'start:\nstart:\njdmc-restart:' "$(cat "${INSTALL_FLOW_EVENTS}")" 'EE must allow direct JDMC recovery during a handoff'
+export VOLUME_DIR="$(get_config VOLUME_DIR)"
+mv "${CONFIG_FILE}" "${CONFIG_FILE}.saved"
+if bash "${installer_dir}/jmsctl.sh" install >"${case_dir}/output.log" 2>&1; then
+  fail 'a missing EE config must not allow installation during a JDMC handoff'
+fi
+assert_contains "$(cat "${case_dir}/output.log")" 'JDMC HA controls service changes'
+unset VOLUME_DIR
+printf 'PASS: CE lifecycle excludes JDMC and EE retains handoff protection and recovery\n'
+
+prepare_case pending-postgresql
+set_config DB_ENGINE postgresql
+set_config DB_HOST postgresql
+mkdir -p "${case_dir}/volume/postgresql/data.upgrade18"
+printf 'switched\n' >"${case_dir}/volume/postgresql/data.upgrade18/phase"
+cat >>"${installer_dir}/scripts/utils.sh" <<'EOF'
+. "${INSTALLER_SOURCE_ROOT}/scripts/gists/common.sh"
+. "${INSTALLER_SOURCE_ROOT}/scripts/gists/service.sh"
+configure_jdmc() { record_stage unexpected-start; return 1; }
+EOF
+if bash "${installer_dir}/jmsctl.sh" start >"${case_dir}/stdout" 2>"${case_dir}/stderr"; then
+  fail 'start must fail while PostgreSQL recovery is pending'
+fi
+assert_contains "$(cat "${case_dir}/stderr")" 'retry the same upgrade before starting services'
+[[ ! -s "${case_dir}/stdout" && ! -s "${INSTALL_FLOW_EVENTS}" ]] ||
+  fail 'a blocked start must exit before changing services and write its diagnostic to stderr'
+
+cat >"${installer_dir}/scripts/7_upgrade.sh" <<'EOF'
+printf '%s\n' "$1" >>"${INSTALL_FLOW_EVENTS}"
+EOF
+bash "${installer_dir}/jmsctl.sh" upgrade v5.2.0-ce >"${case_dir}/stdout" 2>"${case_dir}/stderr"
+assert_eq v5.2.0-ce "$(cat "${INSTALL_FLOW_EVENTS}")" 'a pending upgrade must reach the upgrade script with the requested version'
+[[ ! -s "${case_dir}/stderr" ]] || fail 'upgrade must not trigger the ordinary start guard'
+printf 'PASS: pending PostgreSQL recovery blocks start and permits the upgrade retry\n'

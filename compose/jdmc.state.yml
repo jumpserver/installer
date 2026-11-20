@@ -1,0 +1,26 @@
+services:
+  jdmc:
+    environment:
+      JDMC_CORE_ENROLLMENT_SECRET_FILE: /run/jdmc/registration/enrollment-secret
+    volumes:
+      - type: bind
+        source: ${JDMC_INSTALLER_SOURCE:-/opt/current/installer}
+        target: /opt/current/installer
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${JDMC_STATE_DIR}/config
+        target: /data/jdmc/config
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${JDMC_STATE_DIR}/state
+        target: /data/jdmc/state
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${JDMC_STATE_DIR}/management
+        target: /data/jdmc/management
+        bind:
+          create_host_path: false

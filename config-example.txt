@@ -23,6 +23,11 @@
 #
 # NAMESPACE=jumpserver
 
+# Optional image references for standalone enterprise container deployments.
+# JDMC_CORE_IMAGE applies to both Core and Celery.
+# JDMC_IMAGE=
+# JDMC_CORE_IMAGE=
+
 # The connection to docker.io in China will timeout or the download speed will be slow, enable this option to use Huawei Cloud image acceleration
 # Legacy mirror configuration. IMAGE_PULL_PREFIX takes precedence when set.
 #
@@ -204,7 +209,8 @@ DOMAINS=
 # ENABLE_VIDEO_WORKER=true
 # VIDEO_WORKER_HOST=http://video-worker:9000
 
-# JDMC is installed as a mandatory host-side systemd service when USE_XPACK=1.
+# Single-node EE starts JDMC as an independent container before Core.
+# Existing HA installations keep their native lifecycle.
 # Community Edition does not download or install JDMC. JDMC inherits VOLUME_DIR
 # from the installer and has no separate enable/disable switch.
 

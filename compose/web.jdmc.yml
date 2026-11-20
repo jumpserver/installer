@@ -1,0 +1,17 @@
+services:
+  web:
+    ports:
+      - "127.0.0.1:${JDMC_API_PORT:-9897}:9897"
+    volumes:
+      - type: bind
+        source: ${JDMC_NODE_DIR:-/etc/jdmc/node}/identity/transport/web
+        target: /run/jdmc-api
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./jdmc-api.conf
+        target: /etc/nginx/conf.d/jdmc-api.conf
+        read_only: true
+        bind:
+          create_host_path: false
