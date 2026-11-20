@@ -270,17 +270,10 @@ function main() {
     echo ""
   else
     pre_check || return 3
-    case "${action}:${target}" in
-      stop:jdmc|close:jdmc|down:jdmc|restart:jdmc|tail:?*)
-        # These commands use systemd or docker logs directly.
-        ;;
-      start:*|stop:*|restart:*|close:*|status:*|down:*|pull:*|cmd:*|tail:*|raw:*)
-        EXE=$(get_docker_compose_cmd_line) || return 1
-        ;;
-      backup_db:*|backup_no_audit:*|backup_audit:*|restore_db:*|video-worker:start|video-worker:restart)
-        postgresql_upgrade_start_guard || return 1
-        ;;
-    esac
+    # Upgrade can resume a pending PostgreSQL migration.
+    if [[ "${action}" != upgrade ]]; then
+      EXE=$(get_docker_compose_cmd_line) || return 1
+    fi
   fi
   case "${action}" in
   install)
