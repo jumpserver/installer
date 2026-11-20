@@ -12,6 +12,7 @@ services:
       - ${CONFIG_FILE}
     environment:
       LC_ALL: C.UTF-8
+      TIME_ZONE: ${TZ:-Asia/Shanghai}
       ANSIBLE_EXECUTOR_GATEWAY_HOST: ${ANSIBLE_EXECUTOR_GATEWAY_HOST:-celery}
     volumes:
       - ${CONFIG_DIR}/certs:/opt/jumpserver/data/certs
