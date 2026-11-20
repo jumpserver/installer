@@ -106,6 +106,9 @@ complete_internal_postgresql_upgrade() {
     services+=("${service}")
   done <"${PG18_WORK}/writers"
   if (( ${#services[@]} )); then
+    # Updating Docker can remove the database and Redis after schema migration.
+    db_redis_start all || return 1
+    wait_db_redis_healthy || return 1
     # A target release can add enabled services that did not exist when the
     # old containers were snapshotted. Start them alongside the old running
     # services, but do not change the intent of a recorded stopped service.
