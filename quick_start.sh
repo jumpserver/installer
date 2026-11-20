@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 
-VERSION=${VERSION:-dev}
+VERSION=v5.2.1
 DOWNLOAD_URL=${DOWNLOAD_URL:-https://github.com}
 OS=$(uname -s)
 
