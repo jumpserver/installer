@@ -211,3 +211,28 @@ for stage in docker images migrations jdmc version; do
   fi
 done
 printf 'PASS: installation failures and version-write failures never record success\n'
+
+prepare_case pending-postgresql
+set_config DB_ENGINE postgresql
+set_config DB_HOST postgresql
+mkdir -p "${case_dir}/volume/postgresql/data.upgrade18"
+printf 'switched\n' >"${case_dir}/volume/postgresql/data.upgrade18/phase"
+cat >>"${installer_dir}/scripts/utils.sh" <<'EOF'
+. "${INSTALLER_SOURCE_ROOT}/scripts/gists/common.sh"
+. "${INSTALLER_SOURCE_ROOT}/scripts/gists/service.sh"
+configure_jdmc() { record_stage unexpected-start; return 1; }
+EOF
+if bash "${installer_dir}/jmsctl.sh" start >"${case_dir}/stdout" 2>"${case_dir}/stderr"; then
+  fail 'start must fail while PostgreSQL recovery is pending'
+fi
+assert_contains "$(cat "${case_dir}/stderr")" 'retry the same upgrade before starting services'
+[[ ! -s "${case_dir}/stdout" && ! -s "${INSTALL_FLOW_EVENTS}" ]] ||
+  fail 'a blocked start must exit before changing services and write its diagnostic to stderr'
+
+cat >"${installer_dir}/scripts/7_upgrade.sh" <<'EOF'
+printf '%s\n' "$1" >>"${INSTALL_FLOW_EVENTS}"
+EOF
+bash "${installer_dir}/jmsctl.sh" upgrade v5.2.0-ce >"${case_dir}/stdout" 2>"${case_dir}/stderr"
+assert_eq v5.2.0-ce "$(cat "${INSTALL_FLOW_EVENTS}")" 'a pending upgrade must reach the upgrade script with the requested version'
+[[ ! -s "${case_dir}/stderr" ]] || fail 'upgrade must not trigger the ordinary start guard'
+printf 'PASS: pending PostgreSQL recovery blocks start and permits the upgrade retry\n'
