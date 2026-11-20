@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/test_helper.sh"
-. "${TEST_ROOT}/scripts/gists/postgresql-upgrade-standalone.sh"
+. "${TEST_ROOT}/scripts/gists/service.sh"
 
 PG18_WORK="${TEST_TMP_ROOT}/pg18-recovery"
 mkdir -p "${PG18_WORK}"
@@ -10,8 +10,19 @@ PG18_IMAGE=postgres:test
 calls="${PG18_WORK}/calls"
 enabled='core web celery kael ansible-executor future-service'
 failed_container=''
+dependency_failure=''
+test_redis_host=redis
 get_enabled_services() { printf '%s\n' "${enabled}"; }
-get_config() { printf '%s\n' "${2:-}"; }
+get_config() {
+  case "$1" in
+    DB_HOST) printf 'postgresql\n' ;;
+    REDIS_HOST) printf '%s\n' "${test_redis_host}" ;;
+    *) printf '%s\n' "${2:-}" ;;
+  esac
+}
+get_db_compose_cmd() { [[ "$1" == all ]] && printf 'mock_db_compose\n'; }
+mock_db_compose() { printf 'db %s\n' "$*" >>"${calls}"; [[ "${dependency_failure}" != start ]]; }
+wait_container_healthy() { printf 'wait %s\n' "$1" >>"${calls}"; [[ "$1" != "${dependency_failure}" ]]; }
 get_docker_compose_cmd_line() { printf '%s\n' mock_compose; }
 prepare_services_for_start() { printf 'prepare %s\n' "$*" >>"${calls}"; }
 mock_compose() { printf 'compose %s\n' "$*" >>"${calls}"; }
@@ -33,6 +44,7 @@ WRITERS
 : >"${calls}"
 complete_internal_postgresql_upgrade
 calls_text=$(cat "${calls}")
+assert_contains "${calls_text}" $'db up -d\nwait jms_postgresql\nwait jms_redis\nprepare ' 'datastores must be restored and healthy before applications start'
 assert_contains "${calls_text}" 'prepare core web kael ansible-executor future-service' 'recovery must prepare enabled new services'
 assert_contains "${calls_text}" 'compose up -d --no-deps --force-recreate kael ansible-executor future-service' 'new services must start from Compose with their restart policies'
 assert_contains "${calls_text}" 'compose up -d core web' 'previously running services must be restored'
@@ -42,6 +54,21 @@ assert_contains "${calls_text}" 'jms_ansible_executor' 'executor container name 
 [[ "${calls_text}" != *'disabled-service'* ]] || fail 'disabled services must not start'
 assert_eq complete "$(cat "${PG18_WORK}/phase")" 'all recovered services must be healthy before completion'
 printf 'PASS: recovery starts and checks new enabled services while preserving recorded intent\n'
+
+printf 'switched\n' >"${PG18_WORK}/phase"
+for dependency_failure in start jms_postgresql jms_redis; do
+  : >"${calls}"
+  if complete_internal_postgresql_upgrade; then fail "recovery succeeded despite dependency failure: ${dependency_failure}"; fi
+  [[ "$(cat "${calls}")" != *'compose up'* ]] || fail 'applications must stay stopped on dependency failure'
+  assert_eq switched "$(cat "${PG18_WORK}/phase")" 'failed dependency recovery must keep migration pending'
+done
+dependency_failure=''
+test_redis_host=external-redis
+: >"${calls}"
+complete_internal_postgresql_upgrade
+assert_contains "$(cat "${calls}")" $'db up -d\nwait jms_postgresql\nprepare ' 'recovery must not wait for a local Redis when Redis is external'
+test_redis_host=redis
+printf 'PASS: datastore failures block applications and recovery can retry with external Redis\n'
 
 # Retry after an interrupted attempt: recreate new containers, including kael,
 # and do not mark migration complete if a newly introduced service is unhealthy.
@@ -58,7 +85,7 @@ failed_container=''
 printf '/jms_core false always 0 core\n' >"${PG18_WORK}/writers"
 : >"${calls}"
 complete_internal_postgresql_upgrade
-[[ "$(cat "${calls}")" != *'compose up'* ]] || fail 'idle deployment must stay stopped'
+[[ "$(cat "${calls}")" != *'up -d'* ]] || fail 'idle deployment must stay stopped'
 assert_eq complete "$(cat "${PG18_WORK}/phase")" 'idle deployment recovery should complete'
 printf 'PASS: idle deployment remains stopped\n'
 

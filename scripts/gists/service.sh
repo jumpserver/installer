@@ -532,7 +532,7 @@ function db_redis_start() {
 
 function db_redis_stop() {
   target=$1
-  cmd=$(get_db_compose_cmd "${target}")
+  cmd=$(get_db_compose_cmd "${target}") || return 1
   ${cmd} down
 }
 
@@ -570,11 +570,11 @@ function wait_container_healthy() {
   return 1
 }
 
-function perform_db_migrations() {
+function wait_db_redis_healthy() {
+  local db_host redis_host
   db_host=$(get_config DB_HOST)
   redis_host=$(get_config REDIS_HOST)
 
-  create_db_ops_env || return 1
   case "${db_host}" in
     mysql|postgresql)
       wait_container_healthy "jms_${db_host}" || return 1
@@ -584,7 +584,11 @@ function perform_db_migrations() {
   if [[ "${redis_host}" == "redis" ]]; then
     wait_container_healthy jms_redis || return 1
   fi
+}
 
+function perform_db_migrations() {
+  create_db_ops_env || return 1
+  wait_db_redis_healthy || return 1
   docker exec -i jms_core bash -c './jms upgrade_db' || {
     log_error "$(gettext 'Failed to change the table structure')!"
     return 1

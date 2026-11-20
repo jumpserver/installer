@@ -146,8 +146,11 @@ backup_config() { :; }
 update_config_if_need() { :; }
 configure_jdmc() { :; }
 db_migrations() { printf 'migrations\n' >>"${BACKUP_EVENTS}"; }
-upgrade_docker() { :; }
-upgrade_compose() { :; }
+upgrade_docker() { cd "${BASE_DIR}"; }
+upgrade_compose() { cd "${BASE_DIR}"; }
+complete_internal_postgresql_upgrade() {
+  assert_eq "${PROJECT_DIR}" "${PWD}" 'application recovery must run from the installer root after binary upgrades'
+}
 ensure_current_installer_link() { :; }
 upgrade_jdmc() { :; }
 persist_installer_version() { :; }
