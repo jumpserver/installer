@@ -607,7 +607,7 @@ function upgrade_docker() {
 }
 
 function upgrade_compose() {
-  local plugin current_version package staged
+  local plugin current_version
   check_root || return 0
   plugin="$HOME/.docker/cli-plugins/docker-compose"
   if [[ ! -f "${plugin}" ]]; then
@@ -622,24 +622,8 @@ function upgrade_compose() {
   read_from_input confirm "$(gettext 'Do you need upgrade Docker Compose')?" "y/n" "${confirm}"
   [[ "${confirm}" == "y" ]] || return 0
 
-  package="${BASE_DIR}/docker/docker-compose"
-  if [[ ! -f "${package}" ]]; then
-    prepare_compose_bin || return 1
-  fi
-  staged=$(mktemp "${plugin}.XXXXXX") || return 1
-  if ! install -m 0755 "${package}" "${staged}" ||
-     ! current_version=$("${staged}" version --short) ||
-     [[ "${current_version#v}" != "${DOCKER_COMPOSE_VERSION#v}" ]]; then
-    rm -f "${staged}"
-    log_error "Invalid Docker Compose package: expected ${DOCKER_COMPOSE_VERSION}"
-    return 1
-  fi
-  mv -f "${staged}" "${plugin}" || return 1
-  current_version=$(docker compose version --short) || return 1
-  if [[ "${current_version#v}" != "${DOCKER_COMPOSE_VERSION#v}" ]]; then
-    log_error "Active Docker Compose version is ${current_version}, expected ${DOCKER_COMPOSE_VERSION}"
-    return 1
-  fi
+  check_compose_install "${plugin}" || return 1
+  check_docker_compose "${DOCKER_COMPOSE_VERSION}"
 }
 
 function main() {
@@ -684,7 +668,7 @@ function main() {
   echo
   verify_upgrade_version || exit 1
   echo
-  check_compose_install
+  check_compose_install || exit 1
 
   echo_yellow "\n2. $(gettext 'Backup Configuration File')"
   if ! backup_config; then

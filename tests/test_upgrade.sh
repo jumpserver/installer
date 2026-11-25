@@ -42,7 +42,7 @@ cp "${TEST_ROOT}/config-example.txt" "${test_dir}/config.txt"
   system_dir="${BASE_DIR}/system"
   user_dir="${BASE_DIR}/user"
   mkdir -p "${system_dir}" "${user_dir}" "${BASE_DIR}/docker"
-  eval "$(declare -f upgrade_compose | sed -e "s|/usr/local/libexec/docker/cli-plugins|${system_dir}|g" -e "s|[$]HOME/.docker/cli-plugins|${user_dir}|g")"
+  eval "$(declare -f upgrade_compose check_compose_install | sed -e "s|/usr/local/libexec/docker/cli-plugins|${system_dir}|g" -e "s|[$]HOME/.docker/cli-plugins|${user_dir}|g")"
   check_root() { return 0; }
   read_from_input() { confirm="${answer}"; }
   docker() {
@@ -55,8 +55,13 @@ cp "${TEST_ROOT}/config-example.txt" "${test_dir}/config.txt"
     chmod +x "$1"
   }
   DOCKER_COMPOSE_VERSION=v2.40.3
-  write_plugin "${system_dir}/docker-compose" 2.40.30
   write_plugin "${BASE_DIR}/docker/docker-compose" 2.40.3
+  check_compose_install
+  assert_eq 2.40.3 "$(docker compose version --short)" 'fresh install must install the system plugin'
+  write_plugin "${system_dir}/docker-compose" 2.40.30
+  check_compose_install
+  check_docker_compose
+  assert_eq 2.40.30 "$(docker compose version --short)" 'normal install must preserve working Compose'
   answer=n
   upgrade_compose
   assert_eq 2.40.30 "$(docker compose version --short)" 'declining must preserve Compose'
