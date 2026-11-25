@@ -253,8 +253,7 @@ function get_docker_compose_cmd_line() {
   http_port=$(get_config HTTP_PORT)
   cap_addon=$(get_config CAP_ADDON)
 
-  # Re-evaluate for upgrades that selected a different target after startup.
-  cmd="env JDMC_COMPOSE_SUFFIX=$(jdmc_compose_suffix)"
+  cmd="env"
   # Older Web images select the JDMC proxy using USE_XPACK from Compose.
   if [[ "$(get_config_or_env USE_XPACK)" == 1 ]] && ! is_enterprise_edition; then
     cmd+=" USE_XPACK=0"
@@ -274,6 +273,12 @@ function get_docker_compose_cmd_line() {
   for service in ${services}; do
     cmd+=" -f compose/${service}.yml"
   done
+  if is_jdmc_enabled; then
+    if [[ " ${services} " == *" core "* ]]; then
+      cmd+=" -f compose/jdmc.yml -f compose/core.jdmc-port.yml"
+    fi
+    if [[ " ${services} " == *" celery "* ]]; then cmd+=" -f compose/jdmc-celery.yml"; fi
+  fi
 
   if [[ "${ignore_db}" != "ignore_db" ]]; then
     db_yml=$(get_db_compose_yml) || return 1
@@ -512,7 +517,9 @@ function get_db_compose_cmd() {
 
 function get_db_migrate_compose_cmd() {
   cmd=$(get_db_compose_cmd "all") || return 1
-  echo "env JDMC_COMPOSE_SUFFIX=$(jdmc_compose_suffix) ${cmd} -f compose/init-db.yml"
+  cmd+=" -f compose/init-db.yml"
+  if is_jdmc_enabled; then cmd+=" -f compose/jdmc.yml"; fi
+  echo "${cmd}"
 }
 
 function create_db_ops_env() {

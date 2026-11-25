@@ -37,6 +37,7 @@ UNCHECK_DEPENDENCIES=1
 gen_safe_config() { :; }
 get_config() { printf '%s\n' "${2:-}"; }
 get_config_or_env() { printf '1\n'; }
+postgresql_upgrade_start_guard() { :; }
 set_openbao() { :; }
 configure_jdmc() { :; }
 stop_disabled_video_worker() { :; }
@@ -70,9 +71,10 @@ for COMPOSE_FAILURE_OUTPUT in '' unexpected_compose; do
     case "${scenario}" in
       main)
         export COMPOSE_FAIL_AT=1
-        bash +e +u "${fixture}/jmsctl.sh" start >"${test_dir}/stdout" 2>"${test_dir}/stderr" || status=$?
+        bash +e +u "${fixture}/jmsctl.sh" cmd >"${test_dir}/stdout" 2>"${test_dir}/stderr" || status=$?
         ;;
       start)
+        export COMPOSE_FAIL_AT=1
         bash +e +u "${fixture}/jmsctl.sh" start >"${test_dir}/stdout" 2>"${test_dir}/stderr" || status=$?
         ;;
       stop)

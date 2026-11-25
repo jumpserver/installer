@@ -136,17 +136,21 @@ SKIP_BACKUP_DB=1 ./jmsctl.sh upgrade
 
 ## JDMC（企业版）
 
-设置 `USE_XPACK=1` 的单机节点使用同版本的 JDMC **运行镜像**。安装器提取该镜像自带的 Compose 部署文件，以独立的 `jdmc` 项目启动一个容器。社区版（`-ce` 安装包）跳过 JDMC 镜像、服务和宿主目录，即使旧配置保留了 `USE_XPACK=1`。卸载社区版时保留同机的 JDMC 和 KOTL 数据。在已有 HA 生命周期或 HA_MODE=1 的节点上，安装器继续使用原主备流程。
+设置 `USE_XPACK=1` 的企业版节点使用同版本的 JDMC 运行镜像。安装器提取镜像自带的 Compose 文件，以独立的 `jdmc` 项目启动一个容器。社区版（`-ce` 安装包）跳过 JDMC，卸载时保留同机的 JDMC 和 KOTL 数据。
 
-首次安装、升级和迁移会在运行 Core 数据库命令前启动 JDMC。Core、Celery 和临时迁移服务默认通过 `https://jdmc.host.internal:9898` 调用 JDMC，共用管理端口。客户端校验节点证书和主机名，JDMC 验证请求的 HMAC 签名。变更 `JDMC_WEB_ADDR` 后，安装器同步生成回调端口。JDMC 通过独立的回环 HTTPS 代理（默认 `127.0.0.1:9897`）向 Core 注册 AK/SK 和调用 API；该地址独立于用户访问 JumpServer 的 Web 端口。安装器使用宿主 Docker、OpenSSL 和 Python 3，无需常驻 JDMC 程序或 JDMC sock。
+宿主版单机 JDMC 和 v4 KOTL 可以原地升级。使用旧宿主版主备的集群须按原版本流程备份、退役，再全新安装并在 JDMC 中配置容器版主备。安装器通过 `HA_MODE=1` 或原节点的 HA 状态文件识别旧集群。
 
-首次迁移停用旧 `jdmc.service` / `kotl.service`，保留原文件。安装器从正在使用的容器挂载或旧安装目录迁移数据。宿主目录为 `$(dirname "$VOLUME_DIR")/jdmc/{config,state,management,backup}`，四个容器内目录固定为 `/data/jdmc/{config,state,management,backup}`。配置与 Core AK/SK 保存在 config，许可证和 JDMC API 密钥保存在 state，宿主管理状态保存在 management。已显式配置的外部备份盘继续挂载到容器的 backup 目录。切换前会检查目标镜像能否在本机执行，并校验 Compose 配置。停用宿主版后，若新容器启动失败，安装器会报错并保留已迁移的数据。修复错误后，从同一目标安装包重试原命令，继续启动容器。应用备份沿用宿主原目录。迁移会从 root 持有且不可被其他用户改写的旧备份配置中恢复可信日志和录像目录，无法确认的保留在计划中，可分别通过 `JDMC_HOST_BACKUP_LOG_DIRS`、`JDMC_HOST_BACKUP_REPLAY_DIRS` 声明，多个绝对路径以逗号分隔。备份 JDMC 状态时同时保存 `/etc/jdmc/node` 中的节点身份和部署信息。卸载后保留节点身份，便于用原身份重新安装。永久退役节点时，备份或销毁该目录中的凭据。
+首次安装、升级和迁移会在运行 Core 数据库命令前启动 JDMC。每台机器上的 JDMC 通过 `http://core.host.internal:8080` 调用本机 Core。安装器只将 Core 的 8080 端口发布到宿主机 `127.0.0.1:8080`。JDMC 使用安装时的本机节点密钥签名，Core 在 xpack 的节点接口验证签名。每台机器的节点名和密钥位于 `$(dirname "$VOLUME_DIR")/jdmc/config/core/`，以只读方式挂入 Core 和 JDMC。保持节点名不变，在此目录原子替换权限为 `0400` 的 `enrollment-secret` 即可在本机轮换密钥。Core 未启动或证书未就绪时，宿主机 root 仍可通过 PAM 登录 JDMC。
+
+Core、Celery 和临时迁移容器通过 `jdmc.host.internal` 和 JDMC 的 HTTPS 管理端口回调。安装器在迁移前准备好节点名、回调证书和节点令牌。Core 校验服务端证书，并使用节点令牌进行 Bearer 认证。安装器将端口写入容器内的 `/run/jdmc-core/port`。调整 `JDMC_WEB_ADDR` 后运行 `jmsctl start jdmc`，原有 Core 即可读取新端口。Core、Celery 和迁移容器均以只读方式挂载回调目录。每个容器化主备节点使用本机身份和本机 Core。
+
+首次迁移停用旧 `jdmc.service` / `kotl.service`，保留原文件。安装器从正在使用的容器挂载或旧安装目录迁移数据。宿主目录为 `$(dirname "$VOLUME_DIR")/jdmc/{config,state,management,backup}`，四个容器内目录固定为 `/data/jdmc/{config,state,management,backup}`。JDMC 配置保存在 config，许可证和 JDMC API 密钥保存在 state，宿主管理状态保存在 management。已显式配置的外部备份盘继续挂载到容器的 backup 目录。切换前会检查目标镜像能否在本机执行，并校验 Compose 配置。停用宿主版后，若新容器启动失败，安装器会报错并保留已迁移的数据。修复错误后，从同一目标安装包重试原命令，继续启动容器。应用备份沿用宿主原目录。迁移会从 root 持有且不可被其他用户改写的旧备份配置中恢复可信日志和录像目录，无法确认的保留在计划中，可分别通过 `JDMC_HOST_BACKUP_LOG_DIRS`、`JDMC_HOST_BACKUP_REPLAY_DIRS` 声明，多个绝对路径以逗号分隔。备份 JDMC 时同时保存同一数据根目录下的 `config/core/` 和 `.installer/`，以保留节点身份、HTTPS 服务端私钥和安装记录。主备两台使用各自本地的目录。卸载时选择清理 JDMC 数据会一并删除这些文件。
 
 原服务是 v4 KOTL 时，安装器保留业务配置和备份数据。默认的 `kotl/backup` 整目录迁到 `jdmc/backup`，旧的独立备份盘继续挂载使用。SFTP 目标、加密登录凭据、备份计划、历史记录、增量进度和本地归档随备份目录保留。V4 的许可证留在旧目录，V5 使用对应的授权。旧 KOTL 没有保存远端 SFTP 主机指纹时，请在「数据备份」的 SFTP 主机设置中核对并保存服务器的 SHA256 指纹，随后该目标才能传输。
 
 `./jmsctl.sh stop` 或 `down` 停止应用后仍可用宿主 root 登录 JDMC。单独操作管理容器可使用 `./jmsctl.sh start jdmc`、`stop jdmc`、`restart jdmc`、`status jdmc` 或 `tail jdmc`。JDMC 页面里的应用启停共享安装器的 `application-start`、`application-restart` 入口。
 
-JDMC 的宿主管理进程通过只读宿主根目录挂载访问宿主机的 `/var/run/docker.sock`。自定义路径使用 `JDMC_DOCKER_SOCK`。升级时沿用已有的 Unix 路径，旧 TCP 配置会切换到宿主标准 socket。安装器在 systemd 上启用一次性启动单元，宿主重启后会重新探测管理挂载并恢复 JDMC。
+JDMC 的宿主管理进程通过只读宿主根目录挂载访问宿主机的 `/var/run/docker.sock`。自定义路径使用 `JDMC_DOCKER_SOCK`。开机时，宿主机现有的 `systemd-tmpfiles` 按 `/etc/tmpfiles.d/zz-jumpserver-jdmc.conf` 准备需要挂入容器的 `/run` 文件和目录，Docker 按 `unless-stopped` 策略恢复之前运行的 JDMC 容器。更改宿主资源后，运行 `jmsctl start jdmc` 重新探测挂载。
 
 组件的目录、权限和密钥初始化统一由安装器负责：
 

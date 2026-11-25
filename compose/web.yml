@@ -1,8 +1,5 @@
 services:
   web:
-    extends:
-      file: jdmc.yml
-      service: web${JDMC_COMPOSE_SUFFIX:-}
     image: ${NAMESPACE:-jumpserver}/web:${VERSION}
     container_name: jms_web
     hostname: jms_web

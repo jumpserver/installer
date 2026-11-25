@@ -163,12 +163,13 @@ function remove_jumpserver() {
 }
 
 function main() {
+  check_jdmc_deployment || return 1
   echo_yellow "\n>>> $(gettext 'Uninstall JumpServer')"
   local include_jdmc=false
   if can_manage_existing_jdmc; then
     include_jdmc=true
     prepare_jdmc_uninstall || {
-      log_error "Failed to safely retire JDMC HA"
+      log_error "Failed to prepare JDMC for uninstall"
       return 1
     }
   fi

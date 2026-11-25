@@ -386,7 +386,7 @@ function migrate_data_folder() {
 function migrate_config() {
   local component
 
-  prepare_jmsctl || exit 1
+  prepare_jmsctl || log_warn "Could not update /usr/bin/jmsctl. Use ${PROJECT_DIR}/jmsctl.sh instead."
   migrate_compat_config "KOKO_SSH_PORT" "SSH_PORT" "2222"
   migrate_compat_config "RAZOR_RDP_PORT" "RDP_PORT" "3389"
   migrate_compat_config "VIDEO_WORKER_ENABLED" "VIDEO_ENABLED" ""
@@ -625,6 +625,7 @@ function upgrade_compose() {
 
 function main() {
   local installer_version_before_upgrade target_version
+  check_jdmc_deployment "${target:-}" || exit 1
   trap cleanup_failed_upgrade EXIT
   write_upgrade_recovery_state running || exit 1
   cd "${PROJECT_DIR}" || exit 1
@@ -682,15 +683,15 @@ function main() {
 
   echo_yellow "\n4. $(gettext 'Backup database')"
   UPGRADE_CONFIG_CHANGED=1
-  migrate_internal_mysql_root_password || exit 1
-  if use_container_jdmc; then
-    upgrade_jdmc && ensure_current_installer_link || exit 1
+  if is_jdmc_enabled; then
+    container_jdmc_action deploy || exit 1
   fi
+  migrate_internal_mysql_root_password || exit 1
   backup_db
 
   echo_yellow "\n5. $(gettext 'Update Configuration File')"
   update_config_if_need
-  if is_jdmc_enabled && ! configure_jdmc; then
+  if is_jdmc_enabled && ! configure_container_jdmc; then
     log_error "Failed to configure JDMC"
     exit 1
   fi
@@ -714,17 +715,6 @@ function main() {
   # Compose with paths relative to the installer root.
   (upgrade_docker) || exit 1
   (upgrade_compose) || exit 1
-  ensure_current_installer_link || {
-    log_error "Failed to update /opt/current/installer"
-    exit 1
-  }
-  if is_jdmc_enabled && ! use_container_jdmc; then
-    upgrade_jdmc || {
-      jdmc_status=$?
-      log_error "Failed to upgrade JDMC"
-      exit "${jdmc_status}"
-    }
-  fi
 
   persist_installer_version || {
     log_error "Failed to update ${STATIC_ENV}"
@@ -740,6 +730,10 @@ function main() {
   fi
   complete_internal_postgresql_upgrade || {
     log_error "PostgreSQL migrated, but application recovery is incomplete; retry the same upgrade"
+    exit 1
+  }
+  ensure_current_installer_link || {
+    log_error "Failed to update /opt/current/installer"
     exit 1
   }
   UPGRADE_COMMITTED=1

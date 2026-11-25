@@ -1,0 +1,5 @@
+services:
+  celery:
+    extends:
+      file: jdmc.yml
+      service: core

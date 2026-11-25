@@ -232,6 +232,7 @@ printf 'PASS: CE upgrades without a JDMC image even with inherited enterprise sw
   check_jdmc_runtime() { :; }
   check_jdmc_installed() { return 0; }
   run_jdmc_package_action() {
+    if [[ "${2:-}" == --check ]]; then return 0; fi
     printf 'jdmc-%s\n' "$1" >>"${BACKUP_EVENTS}"
     return "${jdmc_action_result}"
   }

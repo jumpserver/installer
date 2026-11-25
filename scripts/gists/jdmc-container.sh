@@ -1,90 +1,132 @@
 #!/usr/bin/env bash
 
-function jdmc_node_dir() { get_config_or_env JDMC_NODE_DIR /etc/jdmc/node; }
+function jdmc_installer_dir() { printf '%s/.installer\n' "$(get_current_jdmc_data_dir)"; }
 
-function use_container_jdmc() {
-  is_jdmc_enabled || return 1
-  [[ "$(get_config_or_env HA_MODE 0)" != 1 ]] || return 1
-  ! jdmc_ha_lifecycle_present "$(get_current_jdmc_data_dir)/ha" &&
-    ! jdmc_ha_lifecycle_present "$(get_legacy_kotl_data_dir)/ha"
+# Labels select candidates. Bind mounts identify the installation, including
+# its previous data root when VOLUME_DIR and the installer release both change.
+function jdmc_container_id() {
+  local state=$1 cid management origin release installer
+  cid=$(docker ps -aq --filter label=com.docker.compose.project=jdmc --filter label=com.docker.compose.service=jdmc) || return 1
+  [[ "$cid" != *$'\n'* ]] || { log_error "Ambiguous JDMC containers"; return 1; }
+  [[ -n "$cid" ]] || return 0
+  management=$(docker inspect -f '{{range .Mounts}}{{if and (eq .Type "bind") (eq .Destination "/data/jdmc/management")}}{{.Source}}{{end}}{{end}}' "$cid") || return 1
+  if [[ ! "$management" -ef "$state/management" ]]; then
+    origin=$(docker inspect -f '{{println (index .Config.Labels "com.docker.compose.project.working_dir")}}{{range .Mounts}}{{if and (eq .Type "bind") (eq .Destination "/opt/current/installer")}}{{.Source}}{{end}}{{end}}' "$cid") || return 1
+    release=${origin%%$'\n'*}
+    installer=${origin#*$'\n'}
+    if [[ "$management" != /*/management || "${release%/*}" != "${management%/management}/.installer/releases" ||
+          ! ( "$installer" -ef "$PROJECT_DIR" || "$installer" -ef /opt/current/installer ) ]]; then
+      log_error "Cannot confirm the JDMC container belongs to this installation: $cid"
+      return 1
+    fi
+  fi
+  printf '%s\n' "$cid"
 }
 
-# Provision the shared Core/JDMC enrollment secret and persistent node name.
-# Publish the complete initial bundle by directory rename so interrupted or
-# concurrent installs never rotate an existing node.
+function jdmc_mounted_config_root() {
+  local cid source
+  cid=${1-$(jdmc_container_id "$(get_current_jdmc_data_dir)")} || return 1
+  [[ -n "$cid" ]] || return 0
+  source=$(docker inspect -f '{{range .Mounts}}{{if and (eq .Type "bind") (eq .Destination "/data/jdmc/config/core")}}{{.Source}}{{end}}{{end}}' "$cid") || return 1
+  case "$source" in
+    /*/config/core) printf '%s\n' "${source%/config/core}" ;;
+    /*/.installer/offline/core) printf '%s\n' "${source%/.installer/offline/core}" ;;
+  esac
+}
+
+# Publish each prepared file by rename. Both directory bind mounts and existing
+# credentials survive an interrupted first installation or a repeated prepare.
+function jdmc_publish_file() (
+  local source=$1 dest=$2 tmp
+  [[ -f "$source" && ! -L "$source" && ! -L "$dest" ]] || return 1
+  if [[ -e "$dest" ]]; then
+    [[ -f "$dest" && "$(stat -c %u "$dest")" == 0 ]] && cmp -s "$source" "$dest"
+    return
+  fi
+  tmp=$(mktemp -- "${dest}.XXXXXX") || return 1
+  trap 'rm -f -- "$tmp"' EXIT
+  install -m 0400 -- "$source" "$tmp" && mv -fT -- "$tmp" "$dest"
+)
+
 function jdmc_create_identity() (
   set -eu
-  local node=$1 tmp requested
-  [[ ! -e "${node}/identity" ]] || return 0
-  umask 077
-  tmp=$(mktemp -d "${node}/.identity.XXXXXX")
-  trap 'rm -rf -- "$tmp"' EXIT
-  cd "$tmp"
-  mkdir core registration
-  openssl rand -hex 32 > core/enrollment-secret || return 1
-  install -m 0440 -g 10001 core/enrollment-secret registration/enrollment-secret
-  chgrp 10001 registration
-  chmod 0750 registration
-  requested=$(get_config_or_env JDMC_CORE_NODE_NAME)
-  [[ -n "$requested" ]] || requested="jdmc-$(openssl rand -hex 12)"
-  [[ "$requested" =~ ^[[:alnum:]_-]{1,64}$ ]] || { echo "Invalid JDMC_CORE_NODE_NAME" >&2; return 1; }
-  printf '%s\n' "$requested" > node-name
-  [[ -s core/enrollment-secret && -s registration/enrollment-secret && -s node-name ]] || return 1
-  mv -T "$tmp" "${node}/identity"
+  local core=$1 source=$2 node=$3 pending="$3/.pending-identity" tmp file suffix
+  if [[ ! -d "$pending" ]]; then
+    if [[ -s "$core/node-name" && -s "$core/enrollment-secret" ]]; then return 0; fi
+    [[ ! -e "$core/node-name" && ! -e "$core/enrollment-secret" ]] || return 1
+    umask 077
+    tmp=$(mktemp -d "$node/.identity.XXXXXX") || return 1
+    trap 'rm -rf -- "$tmp"' EXIT
+    if [[ ! "$source" -ef "$core" ]]; then
+      for file in node-name enrollment-secret; do
+        jdmc_publish_file "$source/$file" "$tmp/$file" || return 1
+      done
+    else
+      openssl rand -hex 32 > "$tmp/enrollment-secret" || return 1
+      suffix=$(openssl rand -hex 12) || return 1
+      printf 'jdmc-%s\n' "$suffix" > "$tmp/node-name" || return 1
+    fi
+    mv -T -- "$tmp" "$pending" || return 1
+  fi
+  for file in node-name enrollment-secret; do
+    jdmc_publish_file "$pending/$file" "$core/$file" || return 1
+  done
+  rm -rf -- "$pending"
 )
 
-# The Web UI and Core use the same listener. The internal SNI certificate is
-# independent of uploaded Web certificates. Keep both node TLS roles in one
-# immutable, atomically published bundle, including when upgrading older nodes.
+# Core authenticates the JDMC listener using this persistent node CA.
 function jdmc_prepare_transport() (
   set -eu
-  local identity=$1 stage bundle="$1/transport" role san
+  local node=$1 core=$2 source=$3 stage file bundle="$1/transport" pending="$1/.pending-transport"
   umask 077
-  if [[ ! -d "$bundle" ]]; then
-    stage=$(mktemp -d "$identity/.transport.XXXXXX") || return 1
+  for file in "$bundle" "$bundle/callback"; do
+    [[ ! -L "$file" ]] || return 1
+    [[ -d "$file" ]] || install -d -m 0700 "$file" || return 1
+    [[ "$(find "$file" -maxdepth 0 -uid 0 ! -perm /022 -print)" == "$file" ]] || return 1
+  done
+  if [[ ! -d "$pending" && ! -s "$bundle/ca.crt" ]]; then
+    [[ ! -e "$bundle/ca.crt" && ! -e "$bundle/callback/server.crt" && ! -e "$bundle/callback/server.key" ]] || return 1
+    stage=$(mktemp -d "$node/.transport.XXXXXX") || return 1
     trap 'rm -rf -- "$stage"' EXIT
     cd "$stage" || return 1
-    mkdir callback web || return 1
-    openssl req -x509 -newkey rsa:3072 -nodes -sha256 -days 3650 \
-      -subj '/CN=JumpServer JDMC node CA' -keyout issuer.key -out ca.crt \
-      -config <(printf '%s\n' '[req]' 'distinguished_name=dn' 'x509_extensions=ca' '[dn]' '[ca]' \
-        'basicConstraints=critical,CA:TRUE,pathlen:0' 'keyUsage=critical,keyCertSign,cRLSign') \
-      >/dev/null 2>&1 || return 1
-    for role in callback web; do
-      if [[ "$role" == callback ]]; then
-        san='DNS:jdmc.host.internal,DNS:host.docker.internal'
-      elif [[ -s "$identity/web/server.crt" && -s "$identity/web/server.key" && -s "$identity/tls/core-ca.crt" ]]; then
-        # Keep the existing private proxy identity during a rolling upgrade.
-        cp -- "$identity/web/server.crt" "$identity/web/server.key" web/ || return 1
-        cp -- "$identity/tls/core-ca.crt" core-ca.crt || return 1
-        continue
-      else
-        san='IP:127.0.0.1,DNS:localhost'
-        cp ca.crt core-ca.crt || return 1
-      fi
+    mkdir callback || return 1
+    if [[ ! "$source" -ef "$bundle" ]]; then
+      for file in ca.crt callback/server.crt callback/server.key; do
+        [[ -f "$source/$file" && ! -L "$source/$file" ]] || return 1
+        install -m 0400 -- "$source/$file" "$file" || return 1
+      done
+    else
+      openssl req -x509 -newkey rsa:3072 -nodes -sha256 -days 3650 \
+        -subj '/CN=JumpServer JDMC node CA' -keyout issuer.key -out ca.crt \
+        -config <(printf '%s\n' '[req]' 'distinguished_name=dn' 'x509_extensions=ca' '[dn]' '[ca]' \
+          'basicConstraints=critical,CA:TRUE,pathlen:0' 'keyUsage=critical,keyCertSign,cRLSign') \
+        >/dev/null 2>&1 || return 1
       printf '%s\n' 'basicConstraints=critical,CA:FALSE' 'keyUsage=critical,digitalSignature,keyEncipherment' \
-        'extendedKeyUsage=serverAuth' "subjectAltName=$san" > extensions || return 1
-      openssl req -new -newkey rsa:2048 -nodes -subj "/CN=JDMC $role" \
-        -keyout "$role/server.key" -out request.csr >/dev/null 2>&1 || return 1
+        'extendedKeyUsage=serverAuth' 'subjectAltName=DNS:jdmc.host.internal' > extensions || return 1
+      openssl req -new -newkey rsa:2048 -nodes -subj '/CN=JDMC callback' \
+        -keyout callback/server.key -out request.csr >/dev/null 2>&1 || return 1
       openssl x509 -req -sha256 -days 1825 -in request.csr -CA ca.crt -CAkey issuer.key \
-        -CAcreateserial -extfile extensions -out "$role/server.crt" >/dev/null 2>&1 || return 1
-    done
-    rm -f issuer.key ca.srl extensions request.csr || return 1
-    chmod 0444 ca.crt core-ca.crt callback/server.crt web/server.crt || return 1
-    chgrp 10001 callback callback/server.key && chmod 0750 callback && chmod 0440 callback/server.key || return 1
-    mv -T "$stage" "$bundle" || return 1
+        -CAcreateserial -extfile extensions -out callback/server.crt >/dev/null 2>&1 || return 1
+      rm -f issuer.key ca.srl extensions request.csr || return 1
+    fi
+    chmod 0400 ca.crt callback/server.crt callback/server.key || return 1
+    mv -T "$stage" "$pending" || return 1
   fi
-  # Only the public trust anchor crosses from each server to its TLS client.
-  local pair source dest
-  for pair in 'ca.crt:core/callback-ca.crt' 'core-ca.crt:registration/core-ca.crt'; do
-    source="$bundle/${pair%%:*}"; dest="$identity/${pair#*:}"
-    if [[ ! -e "$dest" ]]; then ln -- "$source" "$dest" || return 1; fi
-    cmp -s "$source" "$dest" || { log_error "Conflicting JDMC trust file: $dest"; return 1; }
+  if [[ -d "$pending" ]]; then
+    for file in ca.crt callback/server.crt callback/server.key; do
+      jdmc_publish_file "$pending/$file" "$bundle/$file" || return 1
+    done
+    rm -rf -- "$pending" || return 1
+  fi
+  for file in ca.crt callback/server.crt callback/server.key; do
+    [[ "$(find "$bundle/$file" -maxdepth 0 -type f -uid 0 ! -perm /022 -print)" == "$bundle/$file" ]] || return 1
   done
+  chmod 0400 "$bundle/callback/server.key" || return 1
+  jdmc_publish_file "$bundle/ca.crt" "$core/callback-ca.crt"
 )
 
-function jdmc_configure_callback() {
-  local addr host port bridge_ip=''
+function jdmc_configure_callback() (
+  local directory=$1 addr host port tmp bridge_ip=''
   addr=$(get_config_or_env JDMC_WEB_ADDR 0.0.0.0:9898)
   host=${addr%:*}
   port=${addr##*:}
@@ -96,16 +138,13 @@ function jdmc_configure_callback() {
     ''|'::'|0.0.0.0) host=host-gateway ;;
     127.*|'::1'|localhost)
       host=host-gateway
-      if [[ -z "$(get_config_or_env JDMC_HTTPS_URL)" ]]; then
-        # The host-network JDMC can bind the gateway directly without making
-        # its loopback-only management routes available on any other address.
-        bridge_ip=$(timeout 4 docker network inspect bridge --format '{{range .IPAM.Config}}{{println .Gateway}}{{end}}' 2>/dev/null |
-          awk '/^[0-9a-fA-F:.]+$/ && !found {print; found=1}') || bridge_ip=''
-        if [[ -n "$bridge_ip" ]]; then
-          host=$bridge_ip
-        else
-          log_warn "Docker bridge gateway unavailable; host login is available on $addr. Run jmsctl start jdmc after Docker is ready to enable Core callbacks."
-        fi
+      # Bind only the callback routes on the Docker gateway for a loopback Web listener.
+      bridge_ip=$(timeout 4 docker network inspect bridge --format '{{range .IPAM.Config}}{{println .Gateway}}{{end}}' 2>/dev/null |
+        awk '/^[0-9a-fA-F:.]+$/ && !found {print; found=1}') || bridge_ip=''
+      if [[ -n "$bridge_ip" ]]; then
+        host=$bridge_ip
+      else
+        log_warn "Docker bridge gateway unavailable; host login is available on $addr. Run jmsctl start jdmc after Docker is ready to enable Core callbacks."
       fi
       ;;
     *)
@@ -114,133 +153,89 @@ function jdmc_configure_callback() {
         [[ -n "$host" ]] || { log_error "Cannot resolve JDMC_WEB_ADDR: $addr"; return 1; }
       fi ;;
   esac
-  set_config JDMC_CALLBACK_PORT "$((10#$port))" && set_config JDMC_CALLBACK_HOST "$host" &&
-    set_config JDMC_CALLBACK_BRIDGE_IP "$bridge_ip"
-}
+  port=$((10#$port))
+  [[ ! -L "$directory/port" && ( ! -e "$directory/port" || -f "$directory/port" ) ]] || return 1
+  if [[ ! -f "$directory/port" || "$(< "$directory/port")" != "$port" ]]; then
+    tmp=$(mktemp "$directory/.port.XXXXXX") || return 1
+    trap 'rm -f -- "$tmp"' EXIT
+    printf '%s\n' "$port" > "$tmp" && chmod 0400 "$tmp" && mv -fT -- "$tmp" "$directory/port" || return 1
+  fi
+  set_config JDMC_CALLBACK_HOST "$host" && set_config JDMC_CALLBACK_BRIDGE_IP "$bridge_ip"
+)
 
 function configure_container_jdmc() (
   set -e
-  local node token configured enrolled tmp
-  node=$(jdmc_node_dir)
-  [[ "$node" == /* && "$node" != / && ! -L "$node" ]] || return 1
-  if [[ -e "$node" ]]; then
-    [[ -d "$node" && "$(stat -c '%u:%a' "$node")" == 0:700 ]] ||
-      { log_error "JDMC_NODE_DIR must be a root-owned private directory"; return 1; }
-  else
-    install -d -m 0700 "$node" || return 1
-  fi
+  local state node core source_root dir
+  state=$(get_current_jdmc_data_dir) || return 1
+  node="$state/.installer"
+  core="$state/config/core"
+  for dir in "$state" "$node" "$state/config" "$core"; do
+    [[ "$dir" == /* && "$dir" != / && "$(realpath -m -- "$dir")" == "$dir" ]] || return 1
+    if [[ -e "$dir" ]]; then
+      [[ "$(find "$dir" -maxdepth 0 -type d -uid 0 ! -perm /022 -print)" == "$dir" ]] || return 1
+    else
+      install -d -m 0700 "$dir" || return 1
+    fi
+  done
+  chmod 0700 "$node" "$core" || return 1
   exec 9>"$node/.identity.lock"
   flock -x 9 || return 1
-  [[ ! -L "$node/identity" ]] && jdmc_create_identity "$node" || return 1
-  jdmc_prepare_transport "$node/identity" || return 1
-  jdmc_configure_callback || return 1
-  enrolled=$(cat "$node/identity/node-name") || return 1
-  configured=$(get_config_or_env JDMC_CORE_NODE_NAME)
-  [[ -z "$configured" || "$configured" == "$enrolled" ]] || { log_error "JDMC node identity differs from the saved node name"; return 1; }
-  set_config JDMC_CORE_NODE_NAME "$enrolled" || return 1
-  # Keep the token out of CLI arguments, Compose config and process output.
-  token=$(get_config_or_env BOOTSTRAP_TOKEN)
-  [[ -n "$token" && "$token" != *[[:space:]]* ]] || { log_error "Missing or invalid BOOTSTRAP_TOKEN"; return 1; }
-  tmp=$(mktemp "$node/identity/registration/.bootstrap.XXXXXX") || return 1
-  trap 'rm -f -- "$tmp"' EXIT
-  printf '%s\n' "$token" > "$tmp" && chgrp 10001 "$tmp" && chmod 0440 "$tmp" &&
-    mv -fT "$tmp" "$node/identity/registration/bootstrap-token" || return 1
+  source_root=$state
+  if [[ ! -s "$core/enrollment-secret" || ! -s "$node/transport/ca.crt" ]]; then
+    source_root=$(jdmc_mounted_config_root "$@") || return 1
+    source_root=${source_root:-$state}
+    if [[ "$source_root" != "$state" ]]; then
+      for dir in "$source_root/config/core" "$source_root/.installer"; do
+        [[ "$(readlink -e -- "$dir")" == "$dir" && "$(stat -c '%u:%a' "$dir")" == 0:700 ]] || return 1
+      done
+    fi
+  fi
+  jdmc_create_identity "$core" "$source_root/config/core" "$node" || return 1
+  [[ -f "$core/node-name" && ! -L "$core/node-name" && "$(< "$core/node-name")" =~ ^[a-zA-Z0-9_-]{1,64}$ ]] || return 1
+  [[ -s "$core/enrollment-secret" && "$(find "$core/enrollment-secret" -maxdepth 0 -type f -uid 0 -print)" == "$core/enrollment-secret" ]] || return 1
+  chmod 0400 "$core/enrollment-secret" || return 1
+  jdmc_prepare_transport "$node" "$core" "$source_root/.installer/transport" || return 1
+  jdmc_configure_callback "$core" || return 1
   gen_safe_config >/dev/null
 )
 
 function jdmc_extract_release() (
   set -eu
-  local image=$1 dir=$2 staging file cid=''
-  [[ ! -d "$dir" ]] || return 0
-  staging=$(mktemp -d "${dir}.XXXXXX") || return 1
-  trap 'if [[ -n "$cid" ]]; then docker rm "$cid" >/dev/null || :; fi; rm -rf -- "$staging"' EXIT
-  cid=$(docker create --network none --entrypoint /bin/true "$image") || return 1
-  docker cp "$cid:/opt/jdmc/deploy/docker/." "$staging/" || return 1
-  for file in host-compose.sh compose.yml compose.host-management.yml compose.halcli.yml compose.g2hproxy.yml; do
-    [[ -f "$staging/$file" && ! -L "$staging/$file" ]] || { log_error "Missing JDMC deployment file: $file"; return 1; }
+  local image=$1 dir=$2 source=$2 file cid=''
+  [[ ! -L "$dir" ]] || { log_error "Invalid JDMC release directory: $dir"; return 1; }
+  if [[ ! -d "$dir" ]]; then
+    source=$(mktemp -d "${dir}.XXXXXX") || return 1
+    trap 'if [[ -n "$cid" ]]; then docker rm "$cid" >/dev/null || :; fi; rm -rf -- "$source"' EXIT
+    cid=$(docker create --network none --entrypoint /bin/true "$image") || return 1
+    docker cp "$cid:/opt/jdmc/deploy/docker/." "$source/" || return 1
+  fi
+  for file in host-compose.sh jdmc-layout.py compose.yml compose.host-management.yml compose.halcli.yml compose.g2hproxy.yml; do
+    [[ -f "$source/$file" && -s "$source/$file" && ! -L "$source/$file" ]] || {
+      log_error "Missing or invalid JDMC deployment file $file in release $image"
+      return 1
+    }
   done
-  mv -T "$staging" "$dir"
-)
-
-function jdmc_migrate_backup_mounts() (
-  local node=$1 state=$2 old=$3 image=$4 legacy config candidate default stage
-  # A failed native KOTL preflight may have cached an empty or obsolete
-  # store. Rediscover it until the data migration actually starts.
-  if [[ -e "$node/backup-mounts" && ( "$old" == "$state" || -n ${5:-} || -L "$node/release" || -d "$state/.jdmc-layout-transition" ) ]]; then
-    return 0
-  fi
-  stage=$(mktemp -d "$node/.backup-mounts.XXXXXX") || return 1
-  trap 'rm -rf -- "$stage"' EXIT
-  if [[ -n ${5:-} ]]; then
-    # Use the running deployment's approved mount list before considering
-    # any of the native files left beside its volumes.
-    docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$5" |
-      python3 -c 'import pathlib,sys
-values = dict(line.rstrip("\n").split("=",1) for line in sys.stdin if "=" in line)
-for key, field in (("root","JDMC_HOST_BACKUP_DIR"),("logs","JDMC_HOST_BACKUP_LOG_DIRS"),("replays","JDMC_HOST_BACKUP_REPLAY_DIRS")):
-    (pathlib.Path(sys.argv[1]) / key).write_text(values.get(field, "") + "\n")' "$stage" || return 1
-    mv -T "$stage" "$node/backup-mounts"
-    return
-  fi
-  default="$old/backup"
-  config="$old/jdmc.yaml"
-  [[ -f "$config" || ! -f "$old/kotl.yaml" ]] || config="$old/kotl.yaml"
-  candidate=$default
-  if [[ -f "$config" && ! -L "$config" && "$(stat -c %u "$config")" == 0 ]]; then
-    legacy=$(docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
-      --mount "type=bind,source=$config,target=/legacy.yaml,readonly" --entrypoint /usr/local/bin/cfgcli \
-      "$image" get backup-path /legacy.yaml) || return 1
-    [[ -z "$legacy" ]] || candidate=$legacy
-  fi
-  python3 "$PROJECT_DIR/scripts/gists/jdmc-backup.py" "$stage" "$state" "$node" \
-    "$(get_config_or_env VOLUME_DIR /data/jumpserver)" "$candidate" "$default" "$config" "${6:-}" || return 1
-  local root
-  root=$(cat "$stage/root") || return 1
-  # Default stores in older native installations were created with mode 0755.
-  # Tighten only a real root-owned native backup store, never a configured
-  # arbitrary parent such as /srv or /var.
-  if [[ -d "$root" && ! -L "$root" && "$(stat -c '%u:%g' "$root")" == 0:0 &&
-        "$(readlink -e "$root")" == "$root" && ( "$root" == "$default" || -f "$root/backup_config.json" ) ]]; then
-    chmod 0700 "$root" || return 1
-  fi
-  if [[ -d "$node/backup-mounts" ]]; then
-    local field
-    for field in logs replays root; do
-      mv -fT "$stage/$field" "$node/backup-mounts/$field" || return 1
-    done
-  else
-    mv -T "$stage" "$node/backup-mounts"
-  fi
+  [[ "$source" == "$dir" ]] || mv -T "$source" "$dir"
 )
 
 function jdmc_compose() (
-  local node=$1 release=$2 local_core_url
+  local node=$1 release=$2
   export JDMC_HOST_BACKUP_DIR="$3"
   shift 3
-  export JDMC_IMAGE JDMC_REGISTRATION_DIR="$node/identity/registration"
-  export JDMC_CORE_ENROLLMENT_SECRET_FILE=/run/jdmc/registration/enrollment-secret
-  export JDMC_TLS_DIR="$node/identity/transport/callback"
-  export JDMC_CORE_NODE_NAME JDMC_CORE_URL JDMC_CORE_CA_FILE JDMC_WEB_ADDR JUMPSERVER_VOLUME_DIR
-  JDMC_IMAGE="sha256:${release##*/}"
+  export JDMC_STATE_DIR
+  JDMC_STATE_DIR=$(get_current_jdmc_data_dir) || return 1
+  export JDMC_IMAGE="sha256:${release##*/}" JDMC_REGISTRATION_DIR="$JDMC_STATE_DIR/config/core"
+  export JDMC_TLS_DIR="$node/transport/callback" JDMC_WEB_ADDR JUMPSERVER_VOLUME_DIR
   if [[ -n ${JDMC_OFFLINE_IDENTITY:-} ]]; then
-    JDMC_REGISTRATION_DIR="$JDMC_OFFLINE_IDENTITY/registration"
+    JDMC_REGISTRATION_DIR="$JDMC_OFFLINE_IDENTITY/core"
     JDMC_TLS_DIR="$JDMC_OFFLINE_IDENTITY/tls"
-    JDMC_CORE_NODE_NAME=$(get_config_or_env JDMC_CORE_NODE_NAME)
-  else
-    JDMC_CORE_NODE_NAME=$(cat "$node/identity/node-name") || return 1
-  fi
-  local_core_url="https://127.0.0.1:$(get_config_or_env JDMC_API_PORT 9897)"
-  JDMC_CORE_URL=$(get_config_or_env JDMC_CORE_URL "$local_core_url")
-  JDMC_CORE_CA_FILE=$(get_config_or_env JDMC_CORE_CA_FILE)
-  if [[ "${JDMC_CORE_URL%/}" == "$local_core_url" && -z "$JDMC_CORE_CA_FILE" ]]; then
-    JDMC_CORE_CA_FILE=/run/jdmc/registration/core-ca.crt
   fi
   JDMC_WEB_ADDR=$(get_config_or_env JDMC_WEB_ADDR 0.0.0.0:9898)
   export JDMC_CALLBACK_BRIDGE_IP
   JDMC_CALLBACK_BRIDGE_IP=$(get_config JDMC_CALLBACK_BRIDGE_IP)
   JUMPSERVER_VOLUME_DIR=$(get_config_or_env VOLUME_DIR /data/jumpserver)
   local name
-  for name in JDMC_HOST_DISK_DEVICES JDMC_HOST_DISK_MOUNTPOINTS JDMC_HOST_DISK_SHARED_PARENT JDMC_HOST_LV_MINORS JDMC_DOCKER_HOST JDMC_DOCKER_SOCK; do
+  for name in JDMC_HOST_DISK_DEVICES JDMC_HOST_DISK_MOUNTPOINTS JDMC_HOST_DISK_SHARED_PARENT JDMC_HOST_LV_MINORS JDMC_DOCKER_SOCK; do
     export "$name=$(get_config_or_env "$name")"
   done
   export JDMC_HOST_BACKUP_LOG_DIRS JDMC_HOST_BACKUP_REPLAY_DIRS
@@ -252,8 +247,6 @@ function jdmc_compose() (
   # Bind the release whose command is running, including during the first upgrade.
   export JDMC_INSTALLER_SOURCE
   JDMC_INSTALLER_SOURCE=$(cd -- "$PROJECT_DIR" && pwd -P) || return 1
-  export JDMC_NODE_DIR="$node" JDMC_STATE_DIR
-  JDMC_STATE_DIR=$(get_current_jdmc_data_dir) || return 1
   bash "$release/host-compose.sh" --project-name jdmc -f - "$@" <<'YAML'
 services:
   jdmc:
@@ -271,72 +264,42 @@ services:
 YAML
 )
 
-function container_jdmc_action() (
-  set -eo pipefail
-  local operation=$1 node image id dir old state kotl unit ids live source work mode storage_backup backup_override legacy_state
-  local -a flags=()
-  node=$(jdmc_node_dir)
-  case "$operation" in
-    ps|logs|stop|down)
-      ids=$(docker ps -a -q --filter label=com.docker.compose.project=jdmc --filter label=com.docker.compose.service=jdmc) || return 1
-      [[ -n "$ids" ]] || return 0
-      case "$operation" in
-        ps) docker ps -a --filter label=com.docker.compose.project=jdmc --filter label=com.docker.compose.service=jdmc ;;
-        logs) docker logs --tail 100 -f "${ids%%$'\n'*}" ;;
-        stop) docker stop $ids ;;
-        down)
-          state=$(get_current_jdmc_data_dir) || return 1
-          legacy_state=$(get_config_or_env JDMC_STATE_DIR "$state/container") || return 1
-          for id in $ids; do
-            dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$id") || return 1
-            [[ "${dir%/*}" != "$node/releases" ]] || continue
-            source=$(docker inspect --format '{{range .Mounts}}{{if or (eq .Destination "/data/jdmc/management") (eq .Destination "/var/lib/jdmc-host-state")}}{{.Source}}{{end}}{{end}}' "$id") || return 1
-            if [[ -z "$source" || ( ! "$source" -ef "$state/management" && ! "$source" -ef "$legacy_state/management" ) ]]; then
-              log_error "Cannot confirm the JDMC container belongs to this installation: $id"
-              return 1
-            fi
-          done
-          docker stop $ids && docker rm $ids ;;
-      esac
-      return
-      ;;
-  esac
-  if ! configure_container_jdmc; then
-    # An unhealthy Core identity cannot prevent access to the host recovery UI.
-    # Keep this mount separate so the next successful preparation can atomically
-    # install the real keys without treating an empty directory as an identity.
-    [[ -d "$node" && ! -L "$node" && "$(stat -c '%u:%a' "$node")" == 0:700 ]] || return 1
-    export JDMC_OFFLINE_IDENTITY="$node/offline"
-    install -d -m 0750 -g 10001 "$JDMC_OFFLINE_IDENTITY"/{tls,registration} || return 1
-    log_warn "Core identity unavailable; starting JDMC with host PAM. Restore the node credentials and run jmsctl start jdmc."
-  fi
-  exec 8>"$node/.lifecycle.lock"
-  flock -x 8 || return 1
-  image=$(get_jdmc_image)
-  id=$(docker image inspect --format '{{.Id}}' "$image") || return 1
-  [[ "$id" =~ ^sha256:[a-f0-9]{64}$ ]] || return 1
-  dir="$node/releases/${id#sha256:}"
-  install -d -m 0700 "$node/releases" || return 1
-  jdmc_extract_release "$id" "$dir" || return 1
-  state=$(get_current_jdmc_data_dir) || return 1
-  kotl=$(get_legacy_kotl_data_dir) || return 1
-  old=$state
-  grep -Fq '/data/jdmc/state' "$dir/compose.yml" || { log_error "The selected JDMC image does not support the new storage layout"; return 1; }
-  live=$(docker ps -aq --filter label=com.docker.compose.project=jdmc --filter label=com.docker.compose.service=jdmc) || return 1
-  [[ "$live" != *$'\n'* ]] || { log_error "Ambiguous JDMC containers"; return 1; }
-  if [[ -z "$live" && ! -L "$node/release" && ! -e "$state/jdmc.yaml" && -d "$kotl" ]]; then
-    old=$kotl
-  fi
-  legacy_state=$(get_config_or_env JDMC_STATE_DIR "$state/container")
-  backup_override=$(get_config_or_env JDMC_HOST_BACKUP_DIR)
+# Return the backup bind only if the published release and all four live
+# data mounts still match. A stopped container retains the same mount spec.
+function jdmc_current_backup() {
+  local node=$1 release=$2 state=$3 cid=$4 requested=$5 backup info part source journal
+  [[ -n "$cid" && -d "$state" && -L "$node/release" && "$node/release" -ef "$release" ]] || return 1
+  for journal in "$state"/.jdmc-layout-{transition,committed}; do
+    jdmc_path_exists "$journal" && return 1
+  done
+  [[ ! -L "$node/backup-mounts" ]] || return 1
+  for source in "$node/backup-mounts"/{root,logs,replays}; do
+    [[ -f "$source" && ! -L "$source" ]] || return 1
+  done
+  IFS= read -r backup < "$node/backup-mounts/root" || return 1
+  [[ -z "$requested" || "$requested" == "$backup" ]] || return 1
+  [[ "$(find "$state" -maxdepth 0 -type d -uid 0 ! -perm /022 -print)" == "$state" ]] || return 1
+  info=$(docker inspect --format '{{println .Image}}{{range .Mounts}}{{if eq .Type "bind"}}{{println .Destination .Source}}{{end}}{{end}}' "$cid") || return 1
+  [[ "${info%%$'\n'*}" == "sha256:${release##*/}" ]] || return 1
+  for part in config state management backup; do
+    source="$state/$part"
+    [[ "$part" != backup ]] || source=$backup
+    [[ -d "$source" && "$(readlink -e -- "$source")" == "$source" ]] || return 1
+    grep -Fxq -- "/data/jdmc/$part $source" <<< "$info" || return 1
+  done
+  printf '%s\n' "$backup"
+}
+
+function jdmc_migrate_and_start() (
+  local node=$1 dir=$2 state=$3 live=$4 backup_override=$5
+  shift 5
+  local id="sha256:${dir##*/}" layout="$dir/jdmc-layout.py"
+  local work storage_backup unit
+  grep -Fq '/data/jdmc/state' "$dir/compose.yml" || { log_error "The selected JDMC image does not declare the required /data/jdmc/state volume"; return 1; }
   work=$(mktemp -d "$node/.layout-run.XXXXXX") || return 1
   trap 'rm -rf -- "$work"' EXIT
-  jdmc_migrate_backup_mounts "$node" "$state" "$old" "$id" "$live" "$backup_override" || return 1
-  local layout="$PROJECT_DIR/scripts/gists/jdmc-layout.py"
-  python3 "$layout" plan "$state" "$work" "$legacy_state" "$old" \
-    "$(cat "$node/backup-mounts/root")" "$backup_override" "$live" "$id" "$node/release" || return 1
-  storage_backup=$(cat "$work/new-backup") || return 1
-  mode=$(cat "$work/mode") || return 1
+  storage_backup=$(python3 "$layout" plan "$state" "$work" "$node" \
+    "$(get_config_or_env VOLUME_DIR /data/jumpserver)" "$backup_override" "$live" "$id") || return 1
   # Validate the target on this host while the native service can still serve.
   jdmc_compose "$node" "$dir" "$storage_backup" config --quiet || return 1
   docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
@@ -352,21 +315,8 @@ function container_jdmc_action() (
     if systemctl is-enabled --quiet "$unit"; then systemctl disable "$unit" || return 1; fi
     systemctl stop "$unit" || return 1
   done
-  if [[ "$mode" == move ]]; then
-    source=$(cat "$work/source-cid") || return 1
-    if [[ -n "$live" && "$live" == "$source" ]]; then docker stop "$live" || return 1; fi
-    python3 "$layout" apply "$state" "$work" "$id" || return 1
-  fi
-  [[ "$operation" != restart ]] || flags+=(--force-recreate)
-  if ! jdmc_compose "$node" "$dir" "$storage_backup" up -d --wait "${flags[@]}"; then
-    log_error "JDMC container did not become ready. Correct the startup error and retry the same installer operation."
-    return 1
-  fi
-  ln -sfnT "$dir" "$node/.next-release" && mv -fT "$node/.next-release" "$node/release" || return 1
-  if [[ "$storage_backup" != "$(cat "$node/backup-mounts/root")" ]]; then
-    printf '%s\n' "$storage_backup" > "$work/backup-root" && mv -fT "$work/backup-root" "$node/backup-mounts/root" || return 1
-  fi
-  python3 "$layout" commit "$state" "$work" || return 1
+  python3 "$layout" apply "$state" "$work" "$id" "$live" || return 1
+  jdmc_compose "$node" "$dir" "$storage_backup" "$@" || return 1
   local unshare socket
   unshare="$(get_config_or_env VOLUME_DIR /data/jumpserver)/core/data/unshare"
   for socket in "$unshare"/jdmc.sock{,.*} "$unshare"/kotl.sock{,.*}; do
@@ -374,24 +324,62 @@ function container_jdmc_action() (
   done
   remove_config JDMC_SOCK_PATH || return 1
   cleanup_jdmc_legacy_switches || return 1
+  ln -sfnT "$dir" "$node/.next-release" && mv -fT "$node/.next-release" "$node/release" || return 1
+  python3 "$layout" commit "$state" "$work" "$node"
 )
 
-function install_jdmc_boot_unit() {
-  local unit_dir=${JDMC_UNIT_DIR:-/etc/systemd/system} name=jumpserver-jdmc-container.service
-  local src="$PROJECT_DIR/scripts/gists/jumpserver-jdmc-container.service"
-  [[ -d /run/systemd/system ]] || { log_warn "systemd is unavailable; run jmsctl start jdmc after boot to refresh host mounts"; return 0; }
-  if [[ -e "$unit_dir/$name" || -L "$unit_dir/$name" ]]; then
-    [[ ! -L "$unit_dir/$name" ]] && grep -Fxq '# Managed by the JumpServer installer' "$unit_dir/$name" || return 1
+function container_jdmc_action() (
+  set -eo pipefail
+  local operation=$1 node image id dir state live storage_backup backup_override
+  local -a up=(up -d --wait)
+  state=$(get_current_jdmc_data_dir) || return 1
+  node="$state/.installer"
+  case "$operation" in
+    ps|logs) ;;
+    deploy|start|restart|stop|down)
+      # Install configuration may have selected a different VOLUME_DIR.
+      if [[ "$operation" == deploy ]]; then check_jdmc_deployment || return 1; fi
+      # The project is host-wide. Keep the lock stable across VOLUME_DIR changes.
+      umask 077
+      exec 8>>/run/jumpserver-jdmc.lock || return 1
+      flock -x 8 || return 1 ;;
+    *) log_error "Unknown JDMC action: $operation"; return 2 ;;
+  esac
+  live=$(jdmc_container_id "$state") || return 1
+  case "$operation" in
+    ps|logs|stop)
+      [[ -n "$live" ]] || return 0
+      case "$operation" in
+        ps) docker ps -a --filter "id=$live" ;;
+        logs) docker logs --tail 100 -f "$live" ;;
+        stop) docker stop "$live" ;;
+      esac
+      return ;;
+    down)
+      if [[ -n "$live" ]]; then docker stop "$live" && docker rm "$live" || return 1; fi
+      remove_container_jdmc_integration
+      return ;;
+  esac
+  if ! configure_container_jdmc "$live"; then
+    # An unhealthy Core identity cannot prevent access to the host recovery UI.
+    # Keep this mount separate so the next successful preparation can atomically
+    # install the real keys without treating an empty directory as an identity.
+    [[ -d "$node" && ! -L "$node" && "$(stat -c '%u:%a' "$node")" == 0:700 ]] || return 1
+    export JDMC_OFFLINE_IDENTITY="$node/offline"
+    install -d -o 0 -g 0 -m 0700 "$JDMC_OFFLINE_IDENTITY" "$JDMC_OFFLINE_IDENTITY"/{tls,core} || return 1
+    log_warn "Core identity unavailable; starting JDMC with host PAM. Restore the node credentials and run jmsctl start jdmc."
   fi
-  if ! cmp -s "$src" "$unit_dir/$name"; then
-    install -m 0644 "$src" "$unit_dir/$name" && systemctl daemon-reload || return 1
+  image=$(get_jdmc_image)
+  id=$(docker image inspect --format '{{.Id}}' "$image") || return 1
+  [[ "$id" =~ ^sha256:[a-f0-9]{64}$ ]] || return 1
+  dir="$node/releases/${id#sha256:}"
+  install -d -m 0700 "$node/releases" || return 1
+  jdmc_extract_release "$id" "$dir" || return 1
+  backup_override=$(get_config_or_env JDMC_HOST_BACKUP_DIR)
+  [[ "$operation" != restart ]] || up+=(--force-recreate)
+  if [[ "$operation" == start || "$operation" == restart ]] && storage_backup=$(jdmc_current_backup "$node" "$dir" "$state" "$live" "$backup_override"); then
+    jdmc_compose "$node" "$dir" "$storage_backup" "${up[@]}" || return 1
+  else
+    jdmc_migrate_and_start "$node" "$dir" "$state" "$live" "$backup_override" "${up[@]}" || return 1
   fi
-  systemctl enable "$name"
-}
-
-function remove_jdmc_boot_unit() {
-  local file=${JDMC_UNIT_DIR:-/etc/systemd/system}/jumpserver-jdmc-container.service
-  [[ -f "$file" ]] || return 0
-  [[ ! -L "$file" ]] && grep -Fxq '# Managed by the JumpServer installer' "$file" || return 1
-  systemctl disable --now jumpserver-jdmc-container.service && rm -- "$file" && systemctl daemon-reload
-}
+)

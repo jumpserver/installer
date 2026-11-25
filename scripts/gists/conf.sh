@@ -205,7 +205,7 @@ JMSCTL
 function prepare_config() {
   local database_config database_config_name
   cd "${PROJECT_DIR}" || exit 1
-  prepare_jmsctl || return 1
+  prepare_jmsctl || log_warn "Could not update /usr/bin/jmsctl. Use ${PROJECT_DIR}/jmsctl.sh instead."
 
   echo_yellow "1. $(gettext 'Check Configuration File')"
   echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"

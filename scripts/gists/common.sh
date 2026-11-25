@@ -291,27 +291,18 @@ function get_host_ip() {
   fi
 }
 
-function ensure_current_installer_link() {
-  local source_dir="${PROJECT_DIR}"
-  local current_dir="/opt/current"
-  local target="${current_dir}/installer"
-
-  if [[ "${source_dir}" == "${target}" ]]; then
-    return 0
-  fi
-
-  mkdir -p "${current_dir}" || return 1
-  echo "${source_dir}" > /var/run/installer.lock || return 1
-
-  if [[ -L "${target}" ]]; then
-    if [[ "$(readlink -f "${target}")" == "${source_dir}" ]]; then
-      return 0
-    fi
-    rm -f "${target}" || return 1
-  elif [[ -e "${target}" ]]; then
-    log_error "${target} exists and is not a symbolic link"
+function ensure_current_installer_link() (
+  local current_dir=/opt/current target=/opt/current/installer staging
+  [[ "$PROJECT_DIR" != "$target" ]] || return 0
+  mkdir -p -- "$current_dir" || return 1
+  if [[ -e "$target" && ! -L "$target" ]]; then
+    log_error "$target exists and is not a symbolic link"
     return 1
   fi
-
-  ln -s "${source_dir}" "${target}"
-}
+  if [[ ! "$target" -ef "$PROJECT_DIR" ]]; then
+    staging=$(mktemp -d -- "$current_dir/.installer.XXXXXX") || return 1
+    trap 'rm -rf -- "$staging"' EXIT
+    ln -s -- "$PROJECT_DIR" "$staging/installer" && mv -Tf -- "$staging/installer" "$target" || return 1
+  fi
+  printf '%s\n' "$PROJECT_DIR" > /var/run/installer.lock
+)
