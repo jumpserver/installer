@@ -281,7 +281,7 @@ Docker 與 Compose 二進位鏡像的維護說明見 [Docker 與 Compose 鏡像�
 
 - 文件：<https://www.jumpserver.com/docs>
 - Releases：<https://github.com/jumpserver/installer/releases>
-- Issues：<https://github.com/jumpserver/installer/issues>
+- Issues：<https://github.com/jumpserver/jumpserver/issues>
 - Discord：<https://discord.gg/jumpserver>
 
 ## 授權條款
