@@ -1,298 +1,289 @@
+<div align="center">
+
 # JumpServer Installer
 
-JumpServer Installer 用来安装和管理 JumpServer。
+Deploy and manage [JumpServer](https://www.jumpserver.com/) with Docker Compose.
 
-## 环境依赖
-  - Linux x86_64
-  - Kernel 大于 4.0
+[![Release](https://img.shields.io/github/v/release/jumpserver/installer?label=release)](https://github.com/jumpserver/installer/releases)
+[![License](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-jumpserver.com-2f6feb.svg)](https://www.jumpserver.com/docs)
+[![Quality](https://github.com/jumpserver/installer/actions/workflows/quality.yml/badge.svg)](https://github.com/jumpserver/installer/actions/workflows/quality.yml)
 
-## Docker / Compose 下载与 OSS 同步
+[English](README.md) · [简体中文](readmes/README.zh-hans.md) · [繁體中文](readmes/README.zh-hant.md)
 
-下载地址和 SHA-256 在 `scripts/const.sh` 中配置。环境变量 `DOCKER_IMAGE_MIRROR=1`
-启用 `https://download.jumpserver.org` 加速，也可单独设置 `DOCKER_BIN_HOST`。
+</div>
 
-在仓库 Actions Secrets 中配置 `OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`。
-**Sync Docker Binaries to OSS** 会同步 `x86_64`、`aarch64` 两种架构，保留官方子路径：
+## Overview
 
-```text
-oss://jms-pkg/linux/static/stable/<arch>/docker-<version>.tgz
-oss://jms-pkg/docker/compose/releases/download/<version>/docker-compose-linux-<arch>
-```
+JumpServer is an open-source Privileged Access Management (PAM) platform and bastion host. It provides audited, role-based access to SSH, RDP, Kubernetes, databases, websites, RemoteApp, and VirtualApp assets.
 
-版本配置变更时自动同步，也可手动 **Run workflow**，选择分支并填写
-`docker_version`、`docker_compose_version`（可带 `v`），留空沿用当前版本。
-新版本自动计算 SHA-256 和 MD5，原版本仍校验固定 SHA-256。
-OSS 上传成功后，将 `const.sh` 的版本和 SHA-256 提交到
-`pr@所选分支@docker-versions-…` 分支，并创建以所选分支为目标的 PR。
-参数全部留空或文件内容不变时只同步，不创建 PR。历史 OSS 文件保留。
+This repository contains the official installer. It prepares the host, installs Docker and Docker Compose when needed, renders the Compose stack, loads images, migrates the database schema, and manages the deployment through `jmsctl.sh`.
 
-创建 PR 使用 `PRIVATE_TOKEN`，未配置时使用 `GITHUB_TOKEN`，
-需有权推送新分支和创建 PR。
-自动提交通过 `[docker-mirror-synced]` 标记避免重复同步。
+- Application source: [jumpserver/jumpserver](https://github.com/jumpserver/jumpserver)
+- Documentation: [jumpserver.com/docs](https://www.jumpserver.com/docs)
+- Configuration reference: [environment variables](https://docs.jumpserver.org/zh/v3/guide/env/)
 
-## 安装部署
+## Table of contents
+
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [Ports](#ports)
+- [Management commands](#management-commands)
+- [Configuration](#configuration)
+- [Upgrade](#upgrade)
+- [Offline installation](#offline-installation)
+- [Enterprise edition (JDMC)](#enterprise-edition-jdmc)
+- [SSH Ansible executor](#ssh-ansible-executor)
+- [Repository layout](#repository-layout)
+- [Development](#development)
+- [Community](#community)
+- [License](#license)
+
+## Requirements
+
+| Item | Requirement |
+| --- | --- |
+| Operating system | Linux with systemd |
+| Architecture | `x86_64` or `aarch64` |
+| Kernel | 4.0 or later |
+| Privileges | `root` or a user with `sudo` |
+| Resources | 4 vCPU, 8 GiB RAM, and 100 GiB disk as a starting point for a small production deployment |
+| Network | Access to an image registry, or an offline image package |
+| Time | NTP synchronization is recommended |
+
+`./jmsctl.sh install` installs Docker 29.10.1 and Docker Compose v2.40.3 when they are missing. On hosts that cannot use systemd, install Docker and the Compose plugin before running the installer and set `UNCHECK_DEPENDENCIES=1`.
+
+## Quick start
+
+### Install from a release archive (recommended)
 
 ```bash
-# 安装，版本是在 static.env 指定的
-$ ./jmsctl.sh install
+# Replace vX.Y.Z with the latest tag from https://github.com/jumpserver/installer/releases
+VERSION=vX.Y.Z
+curl -fLO "https://github.com/jumpserver/installer/releases/download/${VERSION}/jumpserver-installer-${VERSION}.tar.gz"
+curl -fLO "https://github.com/jumpserver/installer/releases/download/${VERSION}/jumpserver-installer-${VERSION}.tar.gz.sha256"
+sha256sum -c "jumpserver-installer-${VERSION}.tar.gz.sha256"
+tar -xzf "jumpserver-installer-${VERSION}.tar.gz"
+cd "jumpserver-installer-${VERSION}"
+
+sudo ./jmsctl.sh install
+sudo ./jmsctl.sh start
 ```
 
-## 管理命令
+`install` performs first-time setup:
 
-新安装默认使用 `postgres:18.7-trixie`。统一的 `compose/postgresql.yml` 显式设置
-`PGDATA=/var/lib/postgresql/data`，继续把 `${VOLUME_DIR}/postgresql/data`
-挂载到该目录，以兼容 JDMC 的主备重建、回切和启动写入隔离。同时显式挂载
-`${VOLUME_DIR}/postgresql:/var/lib/postgresql`，避免 PostgreSQL 18 镜像自动创建
-额外匿名卷，导致 JDMC 的 Compose 挂载一致性校验失败。
-主 Compose 的镜像固定为 `postgres:18.7-trixie`，不需要数据库镜像配置项。
-旧版本按实际数据版本选择镜像，仅在迁移前自动生成 `${CONFIG_DIR}/postgresql/image-<tag>.yml`
-运行时镜像覆盖文件，使用相同的 `PGDATA`；迁移完成后使用主 Compose 中的 18 镜像。
-运行时文件会保留，避免影响 JDMC 已记录的 Compose 绑定。JDMC 升级已有主备时继续使用
-已绑定的旧 Compose 文件，在协调迁移切换时更新数据库配置和绑定，不改写旧文件。
-单机生成数据库 Compose 命令时会补齐父目录的可穿越权限，避免旧目录为 `700` 时容器
-无法访问；数据目录 `postgresql/data` 的权限保持不变。
+1. Installs and configures Docker and Docker Compose when missing.
+2. Collects settings and writes `/opt/jumpserver/config/config.txt`.
+3. Loads images and initializes or migrates the database schema.
+4. Installs JDMC on the enterprise edition.
 
-从 JumpServer 5.0 等旧应用版本升级时，内置 PostgreSQL 10–17 会在同一次维护中
-迁移到 `postgres:18.7-trixie`。安装器先加载旧镜像和 18 镜像，停止应用写入并禁用
-自动重启，使用 18 客户端导出全部数据库和角色，在隔离目录恢复并校验后再切换数据目录。
-迁移前仍按 `PG_VERSION` 选择旧镜像；不能让 18 直接打开旧数据。
-迁移完成后更新业务表结构并恢复原先运行的应用。外置数据库不会被升级。
+After `start`, open `http://<host>/`, or the HTTPS URL when TLS is configured. The default username is `admin`. The initial password is printed at the end of the installation; change it after the first login.
 
-旧目录、逻辑备份和进度保存在 `${VOLUME_DIR}/postgresql/data.upgrade18/`；
-`original/` 是原数据，`cluster.sql` 包含全库及角色凭据，目录和文件必须保持私有。
-迁移备份是必需步骤，不受 `SKIP_BACKUP_DB` 影响。中断时应用保持停止，重试同一升级
-继续处理；完成迁移前普通启动会被拒绝。恢复业务后新产生的数据不会写回旧目录，
-不能直接把旧目录切回去。空间预检按旧数据三倍加 1 GiB 估算；大对象或高压缩数据可能需要更多空间。
-自动迁移要求可验证的管理员账号、标准数据路径和配置；自定义表空间、外置配置或 SSL
-文件、逻辑复制、非 libc 模板区域设置等定制部署在预检时中止，需要单独迁移。原镜像及旧数据不会自动清理。
+### Install from source
 
-JDMC 主备由两台协调维护：停止业务和选举，迁移主库、重新建立 18 备库，校验流复制、
-同步提交和启动写入隔离，再更新应用并退出维护。两台 JDMC 必须先具备此迁移能力；
-新的全量升级包声明 `maintenance-pg18-v1`，旧 JDMC 会拒绝该包，避免跳过数据库迁移。
-`pg_rewind` 不承担数据库大版本迁移。
-参考 [PostgreSQL 升级说明](https://www.postgresql.org/docs/18/upgrading.html)
-和 [主备版本要求](https://www.postgresql.org/docs/18/warm-standby.html)。
+```bash
+git clone https://github.com/jumpserver/installer.git
+cd installer
+git checkout <tag>
 
-```
-# 启动
-$ ./jmsctl.sh start
-
-# 重启
-$ ./jmsctl.sh restart
-
-# 关闭, 不包含数据库
-$ ./jmsctl.sh stop
-
-# 关闭所有
-$ ./jmsctl.sh down
-
-# 备份数据库
-$ ./jmsctl.sh backup_db
-
-# 查看日志
-$ ./jmsctl.sh tail
-
-# 单独管理企业版 video-worker
-$ ./jmsctl.sh video-worker {start|stop|restart|status}
-
+sudo ./jmsctl.sh install
+sudo ./jmsctl.sh start
 ```
 
-`video-worker` 的 Compose service、容器名和配置键统一使用该名称；可通过
-`VIDEO_WORKER_ENABLED=0` 禁用本地容器，但不关闭 KoKo 的录像转码提交；需要同时设置
-`ENABLE_VIDEO_WORKER=true` 才会让 KoKo 提交录像。容器内默认地址为
-`VIDEO_WORKER_HOST=http://video-worker:9000`。如果 worker 独立部署，设置
-`VIDEO_WORKER_ENABLED=0`、`ENABLE_VIDEO_WORKER=true`，并将
-`VIDEO_WORKER_HOST` 设置为 KoKo 容器可访问的外部地址。安装器仅在
-`USE_XPACK=1` 时启用此功能；`USE_XPACK=0` 时会强制关闭 KoKo 的 worker 投递。
-`USE_XPACK` 是组件部署模式，不代表许可证校验。旧版本的
-`VIDEO_ENABLED`、`VIDEO_ENABLE` 以及 `${VOLUME_DIR}/video` 数据目录会在升级时迁移。
+> [!NOTE]
+> On offline hosts, prepare the image package described in [Offline installation](#offline-installation) before running `install`.
 
-## 升级时的数据库备份
+## Ports
 
-使用外置 MySQL 或 PostgreSQL 且未启用 `HA_MODE=1` 时，备份客户端镜像缺失、加载或
-拉取失败先输出警告，继续到备份步骤。本地没有可用的客户端镜像时不执行备份；镜像可用时
-正常尝试备份。内置数据库和应用必需镜像仍必须准备成功。
+| Port | Default | Service | Notes |
+| --- | --- | --- | --- |
+| `80` | HTTP | Web console and API | Set `HTTP_PORT=0` to disable |
+| `443` | HTTPS | Web console and API | Used when `HTTPS_PORT` and certificates are configured |
+| `2222` | TCP | KoKo SSH | SSH and SFTP sessions to assets |
+| `5001` | TCP | KoKo web proxy | Published on the host; restrict it with `WEB_PROXY_ALLOWED_HOSTS` |
+| `3389` | TCP | Razor RDP | Enterprise edition |
+| `3390` | TCP | XRDP | Enterprise edition; disabled by default |
+| `5525` | TCP | Magnus | Enterprise edition database proxy |
+| `15900` | TCP | NEC | Enterprise edition VNC |
 
-升级过程中所有数据库备份失败统一提示：
+The Docker networks `DOCKER_SUBNET` (default `192.168.250.0/24`) and `DOCKER_EXECUTOR_SUBNET` (default `192.168.252.0/24`) must not overlap the host, asset, VPN, or other Docker networks.
+
+## Management commands
+
+Run `sudo ./jmsctl.sh <command>` from the installer directory. `--skip-jdmc` on `start`, `stop`, `restart`, `status`, and `down` only prevents a JDMC-initiated restart from stopping JDMC itself; it is not a component switch.
+
+| Command | Description |
+| --- | --- |
+| `install` | First-time installation: configure Docker, write configuration, load images, initialize the database, and install JDMC on the enterprise edition |
+| `upgrade [version]` | Upgrade to the given version, or to the version bundled with the installer |
+| `check_update` | Check whether a newer release is available |
+| `config [ntp\|init\|port\|ssl\|env]` | Adjust NTP, configuration, service ports, TLS, or environment settings |
+| `start` | Start all enabled services |
+| `stop [service]` | Stop and remove containers; data in `VOLUME_DIR` is kept |
+| `restart [service]` | Restart all services or one service |
+| `status` | Show container status, and JDMC status on the enterprise edition |
+| `close [service]` | Stop application containers but leave database containers running |
+| `down [service]` | Stop and remove all containers, or one service |
+| `prepare [service ...]` | Prepare directories, permissions, and keys without starting services |
+| `prepare --containers <name ...>` | Prepare stopped containers using their installed images |
+| `load_image` | Load images from the offline image directory |
+| `backup_db` | Back up the database |
+| `backup_no_audit` | Back up the database without audit tables |
+| `backup_audit` | Back up only audit tables |
+| `restore_db [file]` | Restore the database from a backup file |
+| `tail [service]` | Follow logs for all services or one service |
+| `raw <compose args...>` | Run the generated `docker compose` command directly |
+| `video-worker <start\|stop\|restart\|status>` | Manage the enterprise video worker |
+| `uninstall` | Remove containers, networks, and optionally files, images, and Docker binaries; prompts before destructive steps |
+| `version` | Show the installed version |
+
+Run `./jmsctl.sh --help` for the full command summary.
+
+## Configuration
+
+Configuration is stored in `/opt/jumpserver/config` after installation:
+
+```text
+/opt/jumpserver/config/
+├── config.txt          # main configuration, mounted into containers
+├── nginx/
+│   ├── cert/
+│   │   ├── server.crt
+│   │   └── server.key
+│   ├── lb_http_server.conf
+│   └── lb_ssh_server.conf
+├── mysql/
+│   └── my.cnf
+├── mariadb/
+│   └── mariadb.cnf
+└── redis/
+    └── redis.conf
+```
+
+`config.txt` is an environment file shared by all containers, so KoKo, Core, and other components do not need separate configuration files. The installer also generates a restricted `config_safe.txt` for components that should not receive every value. See `config-example.txt` for the annotated reference.
+
+### Common settings
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `VOLUME_DIR` | `/data/jumpserver` | Persistent data, recordings, task logs, and backups |
+| `SECRET_KEY`, `BOOTSTRAP_TOKEN` | generated | Secrets that must be preserved when migrating an environment |
+| `HTTP_PORT`, `HTTPS_PORT` | `80`, `443` | Web ports; set a port to `0` to disable it |
+| `SERVER_NAME`, `SSL_CERTIFICATE`, `SSL_CERTIFICATE_KEY` | empty | Enable HTTPS |
+| `DB_ENGINE` | `postgresql` | Built-in database engine |
+| `DB_HOST` | `postgresql` | `postgresql` or `mysql` for a built-in database, or an external host |
+| `DB_IMAGE` | version-dependent | Override the built-in database image, for example `mysql:8.0` |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `redis`, `6379` | Built-in Redis connection |
+| `DOCKER_SUBNET`, `DOCKER_EXECUTOR_SUBNET` | `192.168.250.0/24`, `192.168.252.0/24` | Container networks |
+| `TZ` | `Asia/Shanghai` | Container time zone |
+| `IMAGE_PULL_PREFIX`, `NAMESPACE`, `IMAGE_PULL_SCOPE`, `IMAGE_PULL_POLICY` | empty, `jumpserver`, `jumpserver`, `Always` | Image source and local naming |
+| `USE_XPACK` | `0` | Deploy enterprise components such as JDMC |
+| `KOKO_SSH_PORT`, `RAZOR_RDP_PORT`, `MAGNUS_PORT`, `NEC_VNC_PORT` | `2222`, `3389`, `5525`, `15900` | Component ports |
+| `ANSIBLE_EXECUTOR_*`, `CELERY_PRIVILEGED` | built-in defaults | Executor deployment and Celery isolation |
+| `*_ENABLED` | `1` | Disable an individual service with `0` |
+
+### Built-in database
+
+New installations use PostgreSQL 18.7. To use built-in MySQL 8.0, set `DB_ENGINE=mysql`, `DB_HOST=mysql`, and `DB_IMAGE=mysql:8.0`; the interactive installer also asks for the built-in database image. When `DB_IMAGE` is unset, new installations use MariaDB 10.6.
+
+An existing `VOLUME_DIR/mysql/data` or `VOLUME_DIR/mariadb/data` determines which database keeps being used. Changing `DB_IMAGE` does not migrate existing data. Offline installations must provide the selected database image.
+
+## Upgrade
+
+```bash
+sudo ./jmsctl.sh upgrade
+```
+
+Online upgrades pull the required images. Offline upgrades load them from the local image package. Before upgrading, back up the environment and keep `VOLUME_DIR`, `SECRET_KEY`, and `BOOTSTRAP_TOKEN`.
+
+### Database backup during upgrade
+
+When an external MySQL or PostgreSQL database is used without `HA_MODE=1`, a missing, unloadable, or unpullable backup client image only produces a warning, and the upgrade continues to the backup step. If no usable client image exists locally, the backup is skipped; if an image is available, the installer attempts the backup normally. Built-in databases and required application images must still be prepared successfully.
+
+If every database backup attempt fails, the installer prompts:
 
 ```text
 Failed to backup the database. Continue to upgrade? [Y/n] (Timeout: 30s, default: y):
 ```
 
-输入 `y`（不区分大小写）或直接回车继续，输入 `n` 中止；30 秒没有输入时提示超时并继续。
-其他输入或输入流关闭会中止升级。超时仅用于此备份失败确认，其他确认保持原有行为；
-`AUTO_INSTALL=1` 按既有自动安装规则直接采用默认值 `y`。
-继续升级表示接受本次没有成功的安装器数据库备份，请由 DBA 或云数据库保障可恢复的备份。
+Enter `y` (case-insensitive) or press Enter to continue, or `n` to abort. After 30 seconds without input, the prompt times out and continues. Any other input, or a closed input stream, aborts the upgrade. This timeout applies only to this backup-failure confirmation; other confirmations keep their existing behavior. `AUTO_INSTALL=1` takes the default `y` under the existing unattended rules.
 
-如果已自行完成备份，也可以显式跳过备份及备份客户端镜像准备：
+Continuing means accepting that this installer did not produce a successful database backup; make sure a DBA or cloud database provides a recoverable backup.
+
+To skip the backup and backup-client image preparation explicitly:
 
 ```bash
 SKIP_BACKUP_DB=1 ./jmsctl.sh upgrade
 ```
 
-表结构迁移仍由 Core 连接数据库执行。单独执行 `backup_db` 失败仍返回非零状态，
-不会触发升级确认。此流程不改变备份客户端版本，PostgreSQL 客户端与服务端版本不兼容时仍可能备份失败。
-`SKIP_BACKUP_DB` 通过命令环境传入，不是 `config.txt` 配置项。
+Schema migration is still performed by Core against the database. A standalone `backup_db` failure still returns a non-zero status and does not trigger the upgrade prompt. This flow does not change backup client versions, so a backup may still fail when the PostgreSQL client and server versions are incompatible. `SKIP_BACKUP_DB` is passed through the command environment, not set in `config.txt`.
 
-## JDMC（企业版）
+Built-in PostgreSQL versions 10 through 17 are migrated to PostgreSQL 18 during the same maintenance window. See [PostgreSQL 18 migration](docs/postgresql-18-upgrade.md) for the migration flow, disk requirements, custom configurations, and JDMC HA coordination.
 
-JDMC 是企业版组件，需要在 `/opt/jumpserver/config/config.txt` 中设置
-`USE_XPACK=1`。它作为宿主机 systemd 服务安装，不加入 Docker Compose。社区版不
-下载或安装 JDMC；企业版必须安装 JDMC，不再提供单独的启用或禁用开关。
+The installer no longer creates a symlink from `/opt/jumpserver/data` to the host data directory on install or upgrade; existing links, directories, and backups stay as they are. Other symlinks used by configuration files, historical data migration, and current installer paths are preserved.
 
-安装器默认根据 `IMAGE_PULL_PREFIX` 拉取 JDMC artifact 镜像（未配置时使用
-`jumpserver/jdmc:${VERSION}`），再按需标记为
-`${NAMESPACE:-jumpserver}/jdmc:${VERSION}`，从 `/dist` 提取并执行 JDMC 自带的
-`scripts/install.sh` 或 `scripts/upgrade.sh`。
-JDMC 与 Core 等自有组件使用相同的拉取和重标记规则，企业版离线包始终包含该镜像。
-安装或升级时会尝试安装 JDMC 的 HA 宿主机依赖；依赖安装失败或依赖脚本缺失时，
-仅输出警告，单机安装或升级继续。启用 HA 前必须补齐依赖；JDMC 的 HA
-`setup`、`prepare` 和 `install` 流程会再次检查并安装依赖，失败时中止 HA 部署。
-服务跟随 `jmsctl.sh start/stop/restart/status` 管理，日志可通过
-`./jmsctl.sh tail jdmc` 查看。安装器会为 Core 配置
-`JDMC_SOCK_PATH=/opt/jumpserver/data/unshare/jdmc.sock`；Core 根据企业版自动启用
-JDMC 集成。
+## Offline installation
 
-安装或升级 JDMC 时，安装器会将当前 `VOLUME_DIR` 传递给 JDMC artifact
-脚本。JDMC 据此配置宿主机上的 Core Unix Socket、日志和备份路径，因此可以
-继续使用已有的自定义持久化目录，不需要为了升级迁移到 `/data/jumpserver`。
-JDMC 启动时也会直接读取 `/opt/jumpserver/config/config.txt` 中的
-`VOLUME_DIR`；配置变化后可通过 `systemctl restart jdmc` 重新加载 JDMC 路径。
-但修改已安装环境的 `VOLUME_DIR` 不会自动搬迁原有 JDMC 数据，必须先停服务并
-显式迁移对应的同级 `jdmc` 目录。
-
-从旧 KOTL 升级时，安装器会识别 `/opt/kotl` 和 `kotl.service`，并调用新
-JDMC artifact 的升级脚本完成数据、配置和 systemd 服务迁移。安装或升级成功后会清理旧的
-`KOTL_ENABLED`、`JDMC_HOST_ENABLED` 和 `JDMC_ENABLED` 配置，历史禁用值不再生效。
-命令行使用 `jdmc` 作为 JDMC 服务目标。
-`--skip-jdmc` 仅供 JDMC 发起 JumpServer 重启时避免停止自身，不是组件开关。
-
-组件的目录、权限和密钥初始化统一由安装器负责：
+An offline installation loads images from `scripts/images/` instead of pulling them from a registry. The directory must contain each image as a `.zst` archive plus a `.sha256` file holding the expected image ID.
 
 ```bash
-./jmsctl.sh prepare chen video-worker
-./jmsctl.sh prepare --containers jms_chen jms_video-worker
+# Copy the packaged images into the installer directory, then:
+sudo ./jmsctl.sh install
+sudo ./jmsctl.sh load_image
 ```
 
-不指定服务时准备所有已启用服务。`--containers` 必须指定已停止的容器，按容器实际使用的
-镜像和运行用户准备，适用于 JDMC 主备及组件补丁后的启动。此命令不启动或重建业务容器，
-不改写配置或执行数据库操作。JDMC 在两端维护升级及拉起应用前调用它，继续负责主备启停。
+`install` and `upgrade` detect the image package automatically; `load_image` loads it explicitly. See [Offline installation](docs/offline-installation.md) for the file layout, image manifest, and registry-prefix settings.
 
-## 离线镜像清单
+## Enterprise edition (JDMC)
 
-`scripts/gists/image.sh` 是离线镜像选择和重标记规则的唯一来源。调用
-`get_offline_image_manifest` 会逐行输出以 Tab 分隔的源镜像和离线包目标镜像：
+JDMC is an enterprise-edition component enabled with `USE_XPACK=1`. It runs as a host systemd service and is not part of the Docker Compose stack. The community edition neither downloads nor installs JDMC; the enterprise edition always installs it.
 
-```text
-redis:8.10.3-trixie<TAB>redis:8.10.3-trixie
-registry.example.com/jumpserver/core:VERSION<TAB>jumpserver/core:VERSION
+See [Enterprise edition: JDMC](docs/jdmc.md) for image handling, HA host dependencies, data paths, migration from KOTL, service preparation, and the video worker.
+
+## SSH Ansible executor
+
+The installer deploys `jumpserver/ansible-executor` for CE and EE. Core and Celery reuse the `ANSIBLE_DOCKER_ENABLED` switch: enabled uses the persistent executor over SSH, disabled executes locally.
+
+The executor listens on 2222 inside a dedicated `executor` network, publishes no host port, and mounts neither Core data nor the Docker socket. Per-installation keys are generated on first start and kept across restarts and upgrades; back up `${CONFIG_DIR}/ansible-executor`.
+
+See [SSH Ansible executor](docs/ansible-executor.md) for networking, isolation, resource limits, external executors, and the `CELERY_PRIVILEGED` trade-off.
+
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `jmsctl.sh` | Command-line entry point |
+| `scripts/` | Numbered install, upgrade, backup, and uninstall steps plus shared helpers |
+| `scripts/gists/` | Image, service, database, and PostgreSQL migration helpers |
+| `compose/` | Per-service Docker Compose fragments |
+| `config-example.txt` | Annotated reference configuration |
+| `config_init/` | Initial configuration templates for MySQL, MariaDB, Redis, OpenBao, Loki, and the executor |
+| `locale/` | CLI translations for `en`, `zh_CN`, and `zh_Hant` |
+| `tests/` | Bash regression tests |
+| `docs/` | Topic guides in English, Simplified Chinese, and Traditional Chinese |
+| `.github/workflows/` | Quality checks, OSS mirror synchronization, and release drafting |
+
+## Development
+
+Run the shell syntax check and the regression suite before submitting changes:
+
+```bash
+find . -type f -name '*.sh' -print0 | while IFS= read -r -d '' file; do
+  bash -n "${file}"
+done
+
+bash tests/run.sh
 ```
 
-安装器的镜像拉取流程和外部 CI 打包流程都应消费该清单，不应分别维护 Redis、
-PostgreSQL、Ansible Executor、OpenBao 或 JDMC 的镜像列表。CI 可以通过
-`OFFLINE_IMAGE_SERVICES` 传入逗号或空格分隔的服务范围；未设置时，清单使用安装器
-当前配置所启用的服务。
+Maintainer notes for the Docker and Compose binary mirror are in [Docker and Compose mirror synchronization](docs/docker-mirror.md).
 
-`IMAGE_PULL_PREFIX` 只决定 JumpServer 自有镜像的拉取来源，`NAMESPACE` 只决定这些
-镜像拉取后的本地运行名称。Redis、数据库和 OpenBao 等基础镜像保留自己的 registry
-和 namespace，不使用 `NAMESPACE`；OpenBao 固定使用 `openbao/openbao:2.6.0`。
-`IMAGE_PULL_SCOPE` 默认为 `jumpserver`；设置为 `all` 时，基础镜像也从
-`IMAGE_PULL_PREFIX` 拉取，但拉取后仍恢复成各自的固定运行名称。
+## Community
 
-## SSH Ansible 执行器
+- Documentation: <https://www.jumpserver.com/docs>
+- Releases: <https://github.com/jumpserver/installer/releases>
+- Issues: <https://github.com/jumpserver/installer/issues>
+- Discord: <https://discord.gg/jumpserver>
 
-安装器部署 `jumpserver/ansible-executor:<版本或分支>`，标签取自 `VERSION` 并去掉末尾的
-`-ce` / `-ee`（例如 `v5.1.0-ce` → `v5.1.0`，`dev-ce` → `dev`）。Core/Celery 复用原
-`ANSIBLE_DOCKER_ENABLED` 开关：开启时通过 SSH 使用常驻执行器，关闭时本地执行。
-页面已保存的开关值继续生效，安装器不再强制指定执行后端；需配套支持该行为的 Core 版本（[Core 适配 PR](https://github.com/jumpserver/jumpserver/pull/17797)）。
-升级在线安装时重新拉取对应标签；离线包按镜像 ID 加载更新，运行时不访问镜像仓库。
-CE 和 EE 共用同一执行器标签，离线包包含执行器。`ansible-executor:latest` 保留给旧版，
-新安装器不会使用它。CI 从已验证的 digest 打包，发版只映射版本标签，不重新构建镜像。
-自定义 `OFFLINE_IMAGE_SERVICES` 时应包含 `ansible-executor`。
-执行器地址、端口和凭据路径统一使用 Core 默认值；自定义值写入安装器配置文件，
-由现有 `env_file` 传入 Core/Celery。Compose 仅分别指定两者的网域隧道地址。
+## License
 
-`./jmsctl.sh start` 使用执行器镜像中的 `ssh-keygen` 初始化每套安装独立的密钥，
-等待执行器健康后再启动 Core/Celery。重启、升级保留现有密钥；密钥损坏或只有公钥
-而缺少私钥时启动失败，不自动轮换身份。请备份 `${CONFIG_DIR}/ansible-executor`：
-
-- `client/`：服务私钥和固定服务器 host key 的 `known_hosts`，仅只读挂载给 Core/Celery。
-- `public/`：服务公钥，只读挂载给执行器。
-- `server/`：执行器 SSH host key，持久化并仅挂载给执行器。
-
-执行器只接独立的 `executor` bridge 网络，在内网监听 2222，不发布宿主机端口，
-也不挂载 Core 数据或 Docker socket。Core/Celery 同时接入业务网 `net` 和执行网
-`executor`，Redis、数据库和其他组件只接业务网。
-业务网保留原 `DOCKER_SUBNET` 配置，执行网使用 `DOCKER_EXECUTOR_SUBNET`，默认
-`192.168.252.0/24`，须避开业务、资产、VPN 和其他 Docker 网段。Docker 的 `bip`
-只配置默认网桥，不控制执行网。已有执行网修改子网后，需先停止并移除连接它的容器，
-删除旧执行网，再通过安装器重新启动；请先等待运行中的任务完成。
-`USE_IPV6=1` 时两个网络均启用 IPv6，执行网 IPv6 地址由 Docker 自动分配。
-Core/Celery 的默认出口由 Docker 自动选择，业务网和执行网均保留出站能力。
-自定义出口防火墙规则时，需允许实际使用的网络出站。
-Core/Celery 不挂载 Docker socket。Celery 恢复 `CELERY_PRIVILEGED` 配置，默认 `true`，
-以便关闭 Ansible Docker 隔离时，普通 Playbook 仍能在 Celery 内通过 `bwrap` 创建隔离命名空间。
-Core 和 SSH 执行器不启用 privileged。只使用 SSH 执行器的部署可设置
-`CELERY_PRIVILEGED=false`；修改后需要重建 Celery 容器，单纯重启进程不会改变容器权限。
-privileged 会扩大 Celery 容器的宿主机权限，`bwrap` 隔离不能消除这项部署风险。
-关闭 Ansible Docker 隔离不会停止常驻执行器，便于从页面重新开启；本地执行不享有
-执行器提供的任务 UID 和文件隔离。`ANSIBLE_EXECUTOR_ENABLED=0` 仅控制是否部署本地
-执行器容器，与功能开关独立。
-默认整体资源上限为 4 GiB 内存、2 CPU、1024 PID，可通过配置示例中的选项调整。
-任务目录使用 `exec,nosuid,nodev` tmpfs，以支持上传的 SSH 包装脚本。
-
-资产地址须可从执行器访问，`127.0.0.1` 表示执行器自身。执行网保留访问外部资产的
-出口，不设为 `internal` 网络。普通自动化由 Celery 执行，但资产页即时账号发现和
-风险检测由 Core 同步执行，因此两者都需要连接执行器。网域隧道必须返回创建它的
-容器：Celery 默认使用 `celery`，Core 默认使用 `core`。多节点部署分别配置
-`ANSIBLE_EXECUTOR_GATEWAY_HOST`（Celery）和 `ANSIBLE_EXECUTOR_CORE_GATEWAY_HOST`
-（Core），使执行器能访问实际执行节点及其动态隧道端口。
-使用外部执行器时设置 `ANSIBLE_EXECUTOR_ENABLED=0` 和实际
-HOST/PORT，并自行在 `client/` 提供私钥 `client` 及对应地址的可信 `known_hosts`。
-不得将服务私钥放入任务目录。任务仍通过不同 Linux UID 隔离，共享执行器内核和网络。
-分网阻止默认 bridge 之间直接互通，不能替代出口防火墙；宿主机发布的端口、外部服务、
-Core/Celery 在执行网上监听的服务仍可能可达，应保留认证并按部署环境限制访问。
-
-安装/升级不再创建 `/opt/jumpserver/data` 到宿主机数据目录的软链接；已有链接、
-目录和备份保持原状。配置文件、历史数据迁移及当前安装器路径使用的其他软链接保留。
-
-## 配置文件说明
-
-全新安装内置 MySQL 8.0 时，在 `config.txt` 中设置 `DB_ENGINE=mysql`、
-`DB_HOST=mysql` 和 `DB_IMAGE=mysql:8.0`；交互安装也会询问内置数据库镜像。
-不设置 `DB_IMAGE` 时，新安装沿用 MariaDB 10.6。已有的
-`VOLUME_DIR/mysql/data` 或 `VOLUME_DIR/mariadb/data` 决定继续使用原数据库，
-修改 `DB_IMAGE` 不会迁移已有数据。离线安装需自行提供所选数据库镜像。
-
-配置文件将会放在 /opt/jumpserver/config 中
-
-```
-[root@localhost config]# tree .
-.
-├── config.txt       # 主配置文件
-├── mysql
-│   └── my.cnf       # mysql 配置文件
-|── mariadb
-|   └── mariadb.cnf  # mariadb 配置文件
-├── nginx            # nginx 配置文件
-│   ├── cert
-│   │   ├── server.crt
-│   │   └── server.key
-│   ├── lb_http_server.conf
-│   └── lb_ssh_server.conf
-├── README.md
-└── redis
-    └── redis.conf  # redis 配置文件
-
-6 directories, 11 files
-```
-
-### config.txt 说明
-
-config.txt 文件是环境变量配置文件，会挂载到各个容器中，这样可以不必为 koko、core 单独设置配置文件。
-
-具体可以参考： [JumpServer 参数说明文档](https://docs.jumpserver.org/zh/master/admin-guide/env/)
-
-## 许可证
-
-本项目采用 GNU General Public License version 3（GPLv3），与 [JumpServer 主库](https://github.com/jumpserver/jumpserver)保持一致。完整许可条款见 [LICENSE](LICENSE)。
+This project is licensed under the GNU General Public License version 3 (GPLv3), matching [JumpServer](https://github.com/jumpserver/jumpserver). See [LICENSE](LICENSE) for the full terms.
