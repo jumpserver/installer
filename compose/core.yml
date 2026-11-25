@@ -1,6 +1,8 @@
 services:
   core:
-    image: ${NAMESPACE:-jumpserver}/core:${VERSION}
+    extends:
+      file: jdmc.yml
+      service: core${JDMC_COMPOSE_SUFFIX:-}
     container_name: jms_core
     hostname: jms_core
     ulimits:

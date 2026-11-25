@@ -1,5 +1,10 @@
+# Service fragments inherited by the application and database migration files.
 services:
-  celery:
+  core:
+    image: ${NAMESPACE:-jumpserver}/core:${VERSION}
+  web: {}
+
+  core-jdmc:
     image: ${JDMC_CORE_IMAGE:-${NAMESPACE:-jumpserver}/core:${VERSION}}
     environment:
       JDMC_HTTPS_URL: ${JDMC_HTTPS_URL:-https://jdmc.host.internal:${JDMC_CALLBACK_PORT:-9898}}
@@ -13,6 +18,23 @@ services:
       - type: bind
         source: ${JDMC_NODE_DIR:-/etc/jdmc/node}/identity/core
         target: /run/jdmc-core
+        read_only: true
+        bind:
+          create_host_path: false
+
+  web-jdmc:
+    ports:
+      - "127.0.0.1:${JDMC_API_PORT:-9897}:9897"
+    volumes:
+      - type: bind
+        source: ${JDMC_NODE_DIR:-/etc/jdmc/node}/identity/transport/web
+        target: /run/jdmc-api
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./jdmc-api.conf
+        target: /etc/nginx/conf.d/jdmc-api.conf
         read_only: true
         bind:
           create_host_path: false

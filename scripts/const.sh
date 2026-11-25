@@ -26,6 +26,12 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 # shellcheck source=../static.env
 . "${STATIC_ENV}"
 
+# Patch and recovery commands also source this file before replaying Compose.
+. "${SCRIPT_DIR}/gists/conf.sh"
+. "${SCRIPT_DIR}/gists/jdmc.sh"
+JDMC_COMPOSE_SUFFIX=$(jdmc_compose_suffix)
+export JDMC_COMPOSE_SUFFIX
+
 export OS=$(uname -s)
 export DOCKER_VERSION=29.7.2
 export DOCKER_COMPOSE_VERSION=v2.40.3

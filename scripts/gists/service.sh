@@ -253,29 +253,26 @@ function get_docker_compose_cmd_line() {
   http_port=$(get_config HTTP_PORT)
   cap_addon=$(get_config CAP_ADDON)
 
-  cmd="docker compose"
+  # Re-evaluate for upgrades that selected a different target after startup.
+  cmd="env JDMC_COMPOSE_SUFFIX=$(jdmc_compose_suffix)"
   # Older Web images select the JDMC proxy using USE_XPACK from Compose.
   if [[ "$(get_config_or_env USE_XPACK)" == 1 ]] && ! is_enterprise_edition; then
-    cmd="env USE_XPACK=0 ${cmd}"
+    cmd+=" USE_XPACK=0"
   fi
+  services=$(get_docker_compose_services "ignore_db")
+  if [[ " ${services} " == *" ansible-executor "* ]]; then
+    local executor_tag
+    executor_tag=$(get_ansible_executor_tag) || return 1
+    cmd+=" ANSIBLE_EXECUTOR_TAG=${executor_tag}"
+  fi
+  cmd+=" docker compose"
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
   else
     cmd+=" -f compose/network-v6.yml"
   fi
-  services=$(get_docker_compose_services "ignore_db")
-
-  for service in $services; do
-      if [[ "${service}" == "ansible-executor" ]]; then
-        local executor_tag
-        executor_tag=$(get_ansible_executor_tag) || return 1
-        cmd="env ANSIBLE_EXECUTOR_TAG=${executor_tag} ${cmd}"
-      fi
-      cmd+=" -f compose/${service}.yml"
-      case "${service}" in
-        core|celery|web)
-          if use_container_jdmc; then cmd+=" -f compose/${service}.jdmc.yml"; fi ;;
-      esac
+  for service in ${services}; do
+    cmd+=" -f compose/${service}.yml"
   done
 
   if [[ "${ignore_db}" != "ignore_db" ]]; then
@@ -285,12 +282,13 @@ function get_docker_compose_cmd_line() {
     fi
   fi
 
-  if [[ -n "${https_port}" && "${https_port}" != "0" ]]; then
-    cmd+=" -f compose/web.https.yml"
-  fi
-
-  if [[ -n "${http_port}" && "${http_port}" != "0" ]]; then
-    cmd+=" -f compose/web.http.yml"
+  if [[ " ${services} " == *" web "* ]]; then
+    if [[ -n "${https_port}" && "${https_port}" != "0" ]]; then
+      cmd+=" -f compose/web.https.yml"
+    fi
+    if [[ -n "${http_port}" && "${http_port}" != "0" ]]; then
+      cmd+=" -f compose/web.http.yml"
+    fi
   fi
 
   if [[ "${cap_addon}" == "1" ]]; then
@@ -514,9 +512,7 @@ function get_db_compose_cmd() {
 
 function get_db_migrate_compose_cmd() {
   cmd=$(get_db_compose_cmd "all") || return 1
-  cmd+=" -f compose/init-db.yml"
-  if use_container_jdmc; then cmd+=" -f compose/core.jdmc.yml"; fi
-  echo "$cmd"
+  echo "env JDMC_COMPOSE_SUFFIX=$(jdmc_compose_suffix) ${cmd} -f compose/init-db.yml"
 }
 
 function create_db_ops_env() {

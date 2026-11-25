@@ -24,6 +24,10 @@ function can_manage_existing_jdmc() {
   is_jdmc_enabled || [[ "${VERSION:-}" == *-ee && ! -f "${CONFIG_FILE}" ]]
 }
 
+function jdmc_compose_suffix() {
+  if use_container_jdmc; then printf '%s' '-jdmc'; fi
+}
+
 function should_include_jdmc_image() {
   is_jdmc_enabled
 }

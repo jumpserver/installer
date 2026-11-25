@@ -224,6 +224,7 @@ function jdmc_compose() (
   local node=$1 release=$2 local_core_url
   shift 2
   export JDMC_IMAGE JDMC_REGISTRATION_DIR="$node/identity/registration"
+  export JDMC_CORE_ENROLLMENT_SECRET_FILE=/run/jdmc/registration/enrollment-secret
   export JDMC_TLS_DIR="$node/identity/transport/callback"
   export JDMC_CORE_NODE_NAME JDMC_CORE_URL JDMC_CORE_CA_FILE JDMC_WEB_ADDR JDMC_HOST_BACKUP_DIR JUMPSERVER_VOLUME_DIR
   export JDMC_HOST_DISK_DEVICES JDMC_HOST_DISK_MOUNTPOINTS JDMC_HOST_DISK_SHARED_PARENT JDMC_HOST_LV_MINORS
@@ -269,7 +270,20 @@ function jdmc_compose() (
   JDMC_INSTALLER_SOURCE=$(cd -- "$installer" && pwd -P) || return 1
   export JDMC_NODE_DIR="$node" JDMC_STATE_DIR
   JDMC_STATE_DIR=$(get_current_jdmc_data_dir) || return 1
-  bash "$release/host-compose.sh" --project-name jdmc -f "$PROJECT_DIR/compose/jdmc.state.yml" "$@"
+  bash "$release/host-compose.sh" --project-name jdmc -f - "$@" <<'YAML'
+services:
+  jdmc:
+    environment:
+      # Keep the deployed edition when JDMC replays installer commands.
+      USE_XPACK: "1"
+    volumes:
+      - type: bind
+        source: ${JDMC_INSTALLER_SOURCE}
+        target: /opt/current/installer
+        read_only: true
+        bind:
+          create_host_path: false
+YAML
 )
 
 function container_jdmc_action() (
