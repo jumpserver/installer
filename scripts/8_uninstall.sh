@@ -108,13 +108,13 @@ function remove_compose() {
       rm -f /usr/local/libexec/docker/cli-plugins/docker-compose || return 1
     fi
   fi
-  if [ -f "$HOME/.docker/cli-plugins/docker-compose" ]; then
+  if [ -f "${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose" ]; then
     echo
     confirm="n"
     read_from_input confirm "$(gettext 'Do you need to clean up the Docker Compose binaries')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
-      echo -e "$(gettext 'Cleaning up') $HOME/.docker/cli-plugins/docker-compose"
-      rm -f "$HOME/.docker/cli-plugins/docker-compose" || return 1
+      echo -e "$(gettext 'Cleaning up') ${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose"
+      rm -f "${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose" || return 1
     fi
   fi
 }

@@ -4,7 +4,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/0_prepare.sh"
 
-DOCKER_CONFIG="/etc/docker/daemon.json"
+DOCKER_DAEMON_CONFIG="/etc/docker/daemon.json"
 
 cd "${BASE_DIR}" || exit 1
 
@@ -53,11 +53,11 @@ function check_compose_install() {
     if check_root; then
       plugin="/usr/local/libexec/docker/cli-plugins/docker-compose"
     else
-      plugin="$HOME/.docker/cli-plugins/docker-compose"
+      plugin="${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose"
     fi
-    if [[ -f "${plugin}" ]]; then
-      echo_done
-      return 0
+    if [[ -e "${plugin}" || -L "${plugin}" ]]; then
+      log_error "Docker Compose is unavailable with the existing plugin at ${plugin}"
+      return 1
     fi
   fi
 
@@ -78,7 +78,11 @@ function check_compose_install() {
     fi
   fi
   mv -f "${staged}" "${plugin}" || { rm -f "${staged}"; return 1; }
-  echo_done
+  if [[ -z "${1:-}" ]]; then
+    check_docker_compose
+  else
+    echo_done
+  fi
 }
 
 function set_docker_config() {
@@ -95,12 +99,12 @@ function set_docker_config() {
     return
   fi
 
-  if [[ ! -f "${DOCKER_CONFIG}" ]]; then
-    config_dir=$(dirname ${DOCKER_CONFIG})
+  if [[ ! -f "${DOCKER_DAEMON_CONFIG}" ]]; then
+    config_dir=$(dirname ${DOCKER_DAEMON_CONFIG})
     if [[ ! -d ${config_dir} ]]; then
       mkdir -p "${config_dir}"
     fi
-    echo -e "{\n}" >>${DOCKER_CONFIG}
+    echo -e "{\n}" >>${DOCKER_DAEMON_CONFIG}
   fi
 
 "${docker_command}" -c "import json
@@ -110,7 +114,7 @@ try:
     value = json.loads(value)
 except:
     pass
-filepath = \"${DOCKER_CONFIG}\"
+filepath = \"${DOCKER_DAEMON_CONFIG}\"
 f = open(filepath);
 config = json.load(f);
 config[key] = value
