@@ -150,11 +150,8 @@ function configure_container_jdmc() (
 
 function jdmc_extract_release() (
   set -eu
-  local image=$1 dir=$2 staging cid=''
-  if [[ -d "$dir" ]]; then
-    docker tag "$image" "jdmc-runtime:${dir##*/}"
-    return
-  fi
+  local image=$1 dir=$2 staging file cid=''
+  [[ ! -d "$dir" ]] || return 0
   staging=$(mktemp -d "${dir}.XXXXXX") || return 1
   trap 'if [[ -n "$cid" ]]; then docker rm "$cid" >/dev/null || :; fi; rm -rf -- "$staging"' EXIT
   cid=$(docker create --network none --entrypoint /bin/true "$image") || return 1
@@ -162,8 +159,6 @@ function jdmc_extract_release() (
   for file in host-compose.sh compose.yml compose.host-management.yml compose.halcli.yml compose.g2hproxy.yml; do
     [[ -f "$staging/$file" && ! -L "$staging/$file" ]] || { log_error "Missing JDMC deployment file: $file"; return 1; }
   done
-  docker tag "$image" "jdmc-runtime:${dir##*/}" || return 1
-  printf '%s\n' "jdmc-runtime:${dir##*/}" > "$staging/image"
   mv -T "$staging" "$dir"
 )
 
@@ -174,11 +169,11 @@ function jdmc_migrate_backup_mounts() (
   if [[ -e "$node/backup-mounts" && ( "$old" == "$state" || -n ${5:-} || -L "$node/release" || -d "$state/.jdmc-layout-transition" ) ]]; then
     return 0
   fi
+  stage=$(mktemp -d "$node/.backup-mounts.XXXXXX") || return 1
+  trap 'rm -rf -- "$stage"' EXIT
   if [[ -n ${5:-} ]]; then
     # Use the running deployment's approved mount list before considering
     # any of the native files left beside its volumes.
-    stage=$(mktemp -d "$node/.backup-mounts.XXXXXX") || return 1
-    trap 'rm -rf -- "$stage"' EXIT
     docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$5" |
       python3 -c 'import pathlib,sys
 values = dict(line.rstrip("\n").split("=",1) for line in sys.stdin if "=" in line)
@@ -197,8 +192,6 @@ for key, field in (("root","JDMC_HOST_BACKUP_DIR"),("logs","JDMC_HOST_BACKUP_LOG
       "$image" get backup-path /legacy.yaml) || return 1
     [[ -z "$legacy" ]] || candidate=$legacy
   fi
-  stage=$(mktemp -d "$node/.backup-mounts.XXXXXX") || return 1
-  trap 'rm -rf -- "$stage"' EXIT
   python3 "$PROJECT_DIR/scripts/gists/jdmc-backup.py" "$stage" "$state" "$node" \
     "$(get_config_or_env VOLUME_DIR /data/jumpserver)" "$candidate" "$default" "$config" "${6:-}" || return 1
   local root
@@ -222,14 +215,13 @@ for key, field in (("root","JDMC_HOST_BACKUP_DIR"),("logs","JDMC_HOST_BACKUP_LOG
 
 function jdmc_compose() (
   local node=$1 release=$2 local_core_url
-  shift 2
+  export JDMC_HOST_BACKUP_DIR="$3"
+  shift 3
   export JDMC_IMAGE JDMC_REGISTRATION_DIR="$node/identity/registration"
   export JDMC_CORE_ENROLLMENT_SECRET_FILE=/run/jdmc/registration/enrollment-secret
   export JDMC_TLS_DIR="$node/identity/transport/callback"
-  export JDMC_CORE_NODE_NAME JDMC_CORE_URL JDMC_CORE_CA_FILE JDMC_WEB_ADDR JDMC_HOST_BACKUP_DIR JUMPSERVER_VOLUME_DIR
-  export JDMC_HOST_DISK_DEVICES JDMC_HOST_DISK_MOUNTPOINTS JDMC_HOST_DISK_SHARED_PARENT JDMC_HOST_LV_MINORS
-  export JDMC_DOCKER_HOST JDMC_DOCKER_SOCK JDMC_HOST_BACKUP_LOG_DIRS JDMC_HOST_BACKUP_REPLAY_DIRS
-  JDMC_IMAGE=$(cat "$release/image") || return 1
+  export JDMC_CORE_NODE_NAME JDMC_CORE_URL JDMC_CORE_CA_FILE JDMC_WEB_ADDR JUMPSERVER_VOLUME_DIR
+  JDMC_IMAGE="sha256:${release##*/}"
   if [[ -n ${JDMC_OFFLINE_IDENTITY:-} ]]; then
     JDMC_REGISTRATION_DIR="$JDMC_OFFLINE_IDENTITY/registration"
     JDMC_TLS_DIR="$JDMC_OFFLINE_IDENTITY/tls"
@@ -248,31 +240,24 @@ function jdmc_compose() (
   JDMC_CALLBACK_BRIDGE_IP=$(get_config JDMC_CALLBACK_BRIDGE_IP)
   JUMPSERVER_VOLUME_DIR=$(get_config_or_env VOLUME_DIR /data/jumpserver)
   local name
-  for name in JDMC_HOST_DISK_DEVICES JDMC_HOST_DISK_MOUNTPOINTS JDMC_HOST_DISK_SHARED_PARENT JDMC_HOST_LV_MINORS JDMC_HOST_BACKUP_LOG_DIRS JDMC_HOST_BACKUP_REPLAY_DIRS JDMC_DOCKER_HOST JDMC_DOCKER_SOCK; do
-    printf -v "$name" '%s' "$(get_config_or_env "$name")"
+  for name in JDMC_HOST_DISK_DEVICES JDMC_HOST_DISK_MOUNTPOINTS JDMC_HOST_DISK_SHARED_PARENT JDMC_HOST_LV_MINORS JDMC_DOCKER_HOST JDMC_DOCKER_SOCK; do
+    export "$name=$(get_config_or_env "$name")"
   done
-  if [[ -f "$node/backup-mounts/root" ]]; then
-    JDMC_HOST_BACKUP_DIR=$(get_config_or_env JDMC_HOST_BACKUP_DIR "$(cat "$node/backup-mounts/root")")
-    JDMC_HOST_BACKUP_LOG_DIRS=$(get_config_or_env JDMC_HOST_BACKUP_LOG_DIRS "$(cat "$node/backup-mounts/logs")")
-    JDMC_HOST_BACKUP_REPLAY_DIRS=$(get_config_or_env JDMC_HOST_BACKUP_REPLAY_DIRS "$(cat "$node/backup-mounts/replays")")
-  else
-    JDMC_HOST_BACKUP_DIR=$(get_config_or_env JDMC_HOST_BACKUP_DIR "$(get_current_jdmc_data_dir)/backup")
-  fi
-  JDMC_HOST_BACKUP_DIR=${storage_backup:-$JDMC_HOST_BACKUP_DIR}
+  export JDMC_HOST_BACKUP_LOG_DIRS JDMC_HOST_BACKUP_REPLAY_DIRS
+  JDMC_HOST_BACKUP_LOG_DIRS=$(get_config_or_env JDMC_HOST_BACKUP_LOG_DIRS "$(cat "$node/backup-mounts/logs")")
+  JDMC_HOST_BACKUP_REPLAY_DIRS=$(get_config_or_env JDMC_HOST_BACKUP_REPLAY_DIRS "$(cat "$node/backup-mounts/replays")")
   if [[ ! -e "$JDMC_HOST_BACKUP_DIR" ]]; then
     install -d -m 0700 "$JDMC_HOST_BACKUP_DIR" || return 1
   fi
-  # A fresh node has no published installer symlink yet. Resolve the source
-  # before Compose so a later release switch also changes the bind identity.
-  local installer=/opt/current/installer
-  if [[ ! -e "$installer" && ! -L "$installer" ]]; then installer="$PROJECT_DIR"; fi
+  # Bind the release whose command is running, including during the first upgrade.
   export JDMC_INSTALLER_SOURCE
-  JDMC_INSTALLER_SOURCE=$(cd -- "$installer" && pwd -P) || return 1
+  JDMC_INSTALLER_SOURCE=$(cd -- "$PROJECT_DIR" && pwd -P) || return 1
   export JDMC_NODE_DIR="$node" JDMC_STATE_DIR
   JDMC_STATE_DIR=$(get_current_jdmc_data_dir) || return 1
   bash "$release/host-compose.sh" --project-name jdmc -f - "$@" <<'YAML'
 services:
   jdmc:
+    pull_policy: never
     environment:
       # Keep the deployed edition when JDMC replays installer commands.
       USE_XPACK: "1"
@@ -299,7 +284,19 @@ function container_jdmc_action() (
         ps) docker ps -a --filter label=com.docker.compose.project=jdmc --filter label=com.docker.compose.service=jdmc ;;
         logs) docker logs --tail 100 -f "${ids%%$'\n'*}" ;;
         stop) docker stop $ids ;;
-        down) docker stop $ids && docker rm $ids ;;
+        down)
+          state=$(get_current_jdmc_data_dir) || return 1
+          legacy_state=$(get_config_or_env JDMC_STATE_DIR "$state/container") || return 1
+          for id in $ids; do
+            dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$id") || return 1
+            [[ "${dir%/*}" != "$node/releases" ]] || continue
+            source=$(docker inspect --format '{{range .Mounts}}{{if or (eq .Destination "/data/jdmc/management") (eq .Destination "/var/lib/jdmc-host-state")}}{{.Source}}{{end}}{{end}}' "$id") || return 1
+            if [[ -z "$source" || ( ! "$source" -ef "$state/management" && ! "$source" -ef "$legacy_state/management" ) ]]; then
+              log_error "Cannot confirm the JDMC container belongs to this installation: $id"
+              return 1
+            fi
+          done
+          docker stop $ids && docker rm $ids ;;
       esac
       return
       ;;
@@ -337,11 +334,11 @@ function container_jdmc_action() (
   jdmc_migrate_backup_mounts "$node" "$state" "$old" "$id" "$live" "$backup_override" || return 1
   local layout="$PROJECT_DIR/scripts/gists/jdmc-layout.py"
   python3 "$layout" plan "$state" "$work" "$legacy_state" "$old" \
-    "$(cat "$node/backup-mounts/root")" "$backup_override" "$live" "$id" || return 1
+    "$(cat "$node/backup-mounts/root")" "$backup_override" "$live" "$id" "$node/release" || return 1
   storage_backup=$(cat "$work/new-backup") || return 1
   mode=$(cat "$work/mode") || return 1
   # Validate the target on this host while the native service can still serve.
-  jdmc_compose "$node" "$dir" config --quiet || return 1
+  jdmc_compose "$node" "$dir" "$storage_backup" config --quiet || return 1
   docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
     --entrypoint /opt/jdmc/jdmc "$id" -v >/dev/null || return 1
 
@@ -361,7 +358,7 @@ function container_jdmc_action() (
     python3 "$layout" apply "$state" "$work" "$id" || return 1
   fi
   [[ "$operation" != restart ]] || flags+=(--force-recreate)
-  if ! jdmc_compose "$node" "$dir" up -d --wait "${flags[@]}"; then
+  if ! jdmc_compose "$node" "$dir" "$storage_backup" up -d --wait "${flags[@]}"; then
     log_error "JDMC container did not become ready. Correct the startup error and retry the same installer operation."
     return 1
   fi
@@ -381,7 +378,7 @@ function container_jdmc_action() (
 
 function install_jdmc_boot_unit() {
   local unit_dir=${JDMC_UNIT_DIR:-/etc/systemd/system} name=jumpserver-jdmc-container.service
-  local src="$PROJECT_DIR/config_init/jdmc/jumpserver-jdmc-container.service"
+  local src="$PROJECT_DIR/scripts/gists/jumpserver-jdmc-container.service"
   [[ -d /run/systemd/system ]] || { log_warn "systemd is unavailable; run jmsctl start jdmc after boot to refresh host mounts"; return 0; }
   if [[ -e "$unit_dir/$name" || -L "$unit_dir/$name" ]]; then
     [[ ! -L "$unit_dir/$name" ]] && grep -Fxq '# Managed by the JumpServer installer' "$unit_dir/$name" || return 1

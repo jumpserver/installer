@@ -245,8 +245,6 @@ function prepare_config() {
 
   # shellcheck disable=SC2045
   for d in $(ls "${PROJECT_DIR}/config_init"); do
-    # The JDMC systemd template is installed directly from the release.
-    [[ "${d}" != jdmc ]] || continue
     if [[ -d "${PROJECT_DIR}/config_init/${d}" ]]; then
       for f in $(ls "${PROJECT_DIR}/config_init/${d}"); do
         if [[ -f "${PROJECT_DIR}/config_init/${d}/${f}" ]]; then

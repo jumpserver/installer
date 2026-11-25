@@ -23,17 +23,10 @@ function should_skip_external_db_image() {
 }
 
 function report_image_failure() {
-  local image=$1 message=$2 continuation
+  local image=$1 message=$2
 
-  # Installation has no backup step. Upgrades defer an unavailable client to
-  # the backup prompt. Required images remain fatal in both cases.
-  case "${ALLOW_MISSING_DB_IMAGE:-0}" in
-    install) continuation='continuing installation' ;;
-    1) continuation='continuing to the backup step' ;;
-    *) continuation='' ;;
-  esac
-  if [[ -n "${continuation}" ]] && is_external_db_image "${image}"; then
-    log_warn "${message}. External database backup image ${image} could not be prepared; ${continuation}."
+  if [[ "${ALLOW_MISSING_DB_IMAGE:-0}" == 1 ]] && is_external_db_image "${image}"; then
+    log_warn "${message}. External database backup image ${image} is unavailable; continuing without the backup client."
     return 0
   fi
   echo_red "${message}"

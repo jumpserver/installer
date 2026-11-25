@@ -11,6 +11,12 @@ from pathlib import Path
 
 OLD = {"config": "/var/lib/jdmc-config", "state": "/data/jdmc", "management": "/var/lib/jdmc-host-state"}
 NEW = {name: "/data/jdmc/" + name for name in OLD}
+NATIVE_FILES = (
+    ("auth", "state/auth"), ("acheck", "state/acheck"),
+    ("tls", "state/tls"), ("data/metrics", "management/data/metrics"),
+    ("port_policies.json", "management/port_policies.json"), ("network", "management/network"),
+    ("settings-history", "management/settings-history"), ("pending-audit", "management/pending-audit"),
+)
 
 
 def check(condition, message):
@@ -63,17 +69,23 @@ def load_container(cid):
     return layout, sources, backup
 
 
-def plan(target, legacy, native, backup, explicit_backup, cid):
+def plan(target, legacy, native, backup, explicit_backup, cid, published=False):
     info = load_container(cid)
     layout, sources, old_backup = NEW, {}, backup
     check(clean_path(legacy) and clean_path(native), "Invalid old JDMC directory")
     if info:
         layout, sources, old_backup = info
-    elif native == target and (target / "state").is_dir():
+    elif native == target and published and (target / "state").is_dir():
         sources = {n: str(target / n) for n in NEW}
     elif legacy.exists():
         layout = OLD
         sources = {n: str(legacy / ("data" if n == "state" else n)) for n in OLD}
+    elif native == target and all((target / n).is_dir() for n in NEW):
+        # Empty target directories can be pre-created before the native cutover.
+        # Unpublished native data must still pass the destination conflict checks.
+        native_paths = ["jdmc.yaml", "kotl.yaml", "data/media/license", *(src for src, _ in NATIVE_FILES)]
+        if not any(os.path.lexists(native / src) for src in native_paths):
+            sources = {n: str(target / n) for n in NEW}
     for src in sources.values():
         path = Path(src)
         check(clean_path(path) and path.is_dir(), f"Invalid persistent mount {src}")
@@ -147,12 +159,7 @@ def stage_native(stage, old, image, *, include_license):
         (stage / name).mkdir(mode=0o700)
     if include_license and os.path.lexists(old / "data/media/license"):
         copy(old / "data/media/license", stage / "state/license")
-    for path, dest in (
-        ("auth", "state/auth"), ("acheck", "state/acheck"),
-        ("tls", "state/tls"), ("data/metrics", "management/data/metrics"),
-        ("port_policies.json", "management/port_policies.json"), ("network", "management/network"),
-        ("settings-history", "management/settings-history"), ("pending-audit", "management/pending-audit"),
-    ):
+    for path, dest in NATIVE_FILES:
         if os.path.lexists(old / path):
             copy(old / path, stage / dest)
     migrate_native_config(stage, old, image)
@@ -271,14 +278,15 @@ def main():
         mode = pending.stat()
         check(mode.st_uid == 0 and stat.S_IMODE(mode.st_mode) == 0o700, "Untrusted JDMC layout journal")
     if action == "plan":
-        legacy, native, backup, explicit, cid, image = args
+        legacy, native, backup, explicit, cid, image, *published = args
         target.mkdir(mode=0o700, parents=True, exist_ok=True)
         root = target.stat()
         check(root.st_uid == 0 and not root.st_mode & 0o022, f"Untrusted JDMC root {target}")
         if pending.exists():
             p = json.loads((pending / "plan.json").read_text())
         else:
-            p = plan(target, Path(legacy), Path(native), backup, explicit, cid)
+            p = plan(target, Path(legacy), Path(native), backup, explicit, cid,
+                     published=bool(published and Path(published[0]).is_symlink()))
             if p["kind"] in ("native", "kotl"):
                 # Validate conversion before retiring the native writer. Apply reads
                 # the source again after shutdown so the latest settings are kept.

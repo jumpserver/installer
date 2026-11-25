@@ -8,6 +8,7 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
+Environment=USE_XPACK=1
 ExecStart=/bin/bash /opt/current/installer/jmsctl.sh start jdmc
 Restart=on-failure
 RestartSec=15s

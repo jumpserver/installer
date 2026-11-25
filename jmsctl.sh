@@ -97,10 +97,6 @@ function should_manage_jdmc() {
   [[ "${skip_jdmc}" != "true" ]] && is_jdmc_enabled
 }
 
-function is_jdmc_target() {
-  [[ "${target}" == "jdmc" ]]
-}
-
 # Apply the application's lifecycle without controlling the independent JDMC
 # project. These entry points are also called by the container's manager.
 function start_applications() {
@@ -138,10 +134,6 @@ function start_applications() {
 }
 
 function start() {
-  if is_jdmc_target; then
-    start_jdmc
-    return
-  fi
   local jdmc_started=false
   # Start JDMC before Core on a fresh or already-published standalone node.
   # During a release switch, keep the working installer until Compose succeeds.
@@ -161,9 +153,7 @@ function start() {
 }
 
 function stop() {
-  if is_jdmc_target; then
-    stop_jdmc
-  elif [[ "${target}" == "ignore_db" ]]; then
+  if [[ "${target}" == "ignore_db" ]]; then
     if should_manage_jdmc && ! use_container_jdmc; then
       stop_jdmc || return 1
     fi
@@ -181,10 +171,6 @@ function stop() {
 
 function close() {
   if [[ -n "${target}" ]]; then
-    if is_jdmc_target; then
-      stop_jdmc
-      return
-    fi
     ${EXE} stop "${target}"
     return
   fi
@@ -206,10 +192,6 @@ function pull() {
 }
 
 function restart() {
-  if is_jdmc_target; then
-    restart_jdmc
-    return
-  fi
   stop || return 1
   echo -e "\n"
 
@@ -298,7 +280,7 @@ function main() {
   check_os || return 3
 
   # Standalone management must work before any Core/DB compose can render.
-  if is_jdmc_target; then
+  if [[ "${target}" == jdmc ]]; then
     local jdmc_action=''
     case "${action}" in
       start|restart|status|tail) jdmc_action="${action}_jdmc" ;;
@@ -342,21 +324,18 @@ function main() {
     return $?
   fi
 
-  if [[ "${action}" == "help" || "${action}" == "h" || "${action}" == "-h" || "${action}" == "--help" ]]; then
-    echo ""
-  elif [[ "${action}" == "install" || "${action}" == "config" || "${action}" == "reconfig" || "${action}" == "uninstall" ]]; then
-    echo ""
-  else
-    pre_check || return 3
-    case "${action}" in
-      start|application-start|application-restart|stop|restart|close|status|down|pull|cmd|tail|raw)
-        EXE=$(get_docker_compose_cmd_line) || return 1
-        ;;
-      backup_db|backup_no_audit|backup_audit|restore_db)
-        postgresql_upgrade_start_guard || return 1
-        ;;
-    esac
-  fi
+  case "${action}" in
+    help|h|-h|--help|install|config|uninstall) ;;
+    *) pre_check || return 3 ;;
+  esac
+  case "${action}" in
+    start|application-start|application-restart|stop|restart|close|status|down|pull|cmd|tail|raw|reconfig)
+      EXE=$(get_docker_compose_cmd_line) || return 1
+      ;;
+    backup_db|backup_no_audit|backup_audit|restore_db)
+      postgresql_upgrade_start_guard || return 1
+      ;;
+  esac
   case "${action}" in
   install)
     bash "${SCRIPT_DIR}/4_install_jumpserver.sh"
@@ -371,7 +350,7 @@ function main() {
     bash "${SCRIPT_DIR}/config.sh" "$target"
     ;;
   reconfig)
-    ${EXE} down -v
+    ${EXE} down -v || return 1
     bash "${SCRIPT_DIR}/1_config_jumpserver.sh"
     ;;
   application-start|application-restart)
@@ -393,7 +372,6 @@ function main() {
     close
     ;;
   status)
-    if is_jdmc_target; then status_jdmc; return; fi
     ${EXE} ps
     if should_manage_jdmc; then
       status_jdmc
@@ -405,8 +383,6 @@ function main() {
         stop_jdmc || exit 1
       fi
       ${EXE} down -v
-    elif is_jdmc_target; then
-      stop_jdmc
     else
       ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
     fi
@@ -446,9 +422,7 @@ function main() {
     echo "${EXE}"
     ;;
   tail)
-    if is_jdmc_target; then
-      tail_jdmc
-    elif [[ -z "${target}" ]]; then
+    if [[ -z "${target}" ]]; then
       ${EXE} logs --tail 100 -f
     else
       docker_name=$(service_to_docker_name "${target}")
@@ -482,13 +456,7 @@ function main() {
   version)
     get_current_version
     ;;
-  help)
-    usage
-    ;;
-  --help)
-    usage
-    ;;
-  -h)
+  help|h|-h|--help)
     usage
     ;;
   *)

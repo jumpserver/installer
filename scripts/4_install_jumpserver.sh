@@ -86,7 +86,7 @@ function post_install() {
 function main() {
   echo_logo
   pre_install
-  prepare_config
+  prepare_config || exit 1
 
   echo_green "\n>>> $(gettext 'Install and Configure Docker')"
   if ! bash "${BASE_DIR}/2_install_docker.sh"; then
@@ -105,14 +105,14 @@ function main() {
   fi
 
   echo_green "\n>>> $(gettext 'Loading Docker Image')"
-  if ! ALLOW_MISSING_DB_IMAGE=install bash "${BASE_DIR}/3_load_images.sh"; then
+  if ! ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh"; then
     exit 1
   fi
 
   # The EE migration command boots Django and reads JDMC's license before
   # it can touch the business database.
   if use_container_jdmc; then
-    ensure_current_installer_link && install_jdmc || exit 1
+    install_jdmc && ensure_current_installer_link || exit 1
   fi
 
   echo_green "\n>>> $(gettext 'Initialize Database')"

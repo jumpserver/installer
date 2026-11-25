@@ -225,7 +225,7 @@ bash "${installer_dir}/jmsctl.sh" install >"${case_dir}/output.log" 2>&1 || {
   cat "${case_dir}/output.log"
   fail 'a missing backup image must not prevent installation with an external MySQL database'
 }
-assert_contains "$(cat "${case_dir}/output.log")" 'External database backup image mariadb:10.6 could not be prepared; continuing installation.'
+assert_contains "$(cat "${case_dir}/output.log")" 'External database backup image mariadb:10.6 is unavailable; continuing without the backup client.'
 assert_eq $'prepare:\ndocker-prepare:\nmigrations:\nsuccess-install:v5.1.0-ce' \
   "$(cat "${INSTALL_FLOW_EVENTS}")" 'external MySQL initialization must complete without JDMC'
 printf 'PASS: new installation continues when the external MySQL backup image is unavailable\n'

@@ -171,7 +171,8 @@ function retire_jdmc_ha_lifecycle() {
 
 function prepare_jdmc_uninstall() {
   remove_jdmc_boot_unit || return 1
-  if [[ -e "$(jdmc_node_dir)/release" ]]; then
+  # The releases directory also exists when the first Compose health check failed.
+  if [[ -d "$(jdmc_node_dir)/releases" ]]; then
     container_jdmc_action down || return 1
   fi
   retire_jdmc_ha_lifecycle "$(get_current_jdmc_data_dir)" "${JDMC_HA_CLI}"

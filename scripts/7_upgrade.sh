@@ -386,7 +386,7 @@ function migrate_data_folder() {
 function migrate_config() {
   local component
 
-  prepare_jmsctl
+  prepare_jmsctl || exit 1
   migrate_compat_config "KOKO_SSH_PORT" "SSH_PORT" "2222"
   migrate_compat_config "RAZOR_RDP_PORT" "RDP_PORT" "3389"
   migrate_compat_config "VIDEO_WORKER_ENABLED" "VIDEO_ENABLED" ""
@@ -509,7 +509,7 @@ function backup_db() {
     # Avoid an implicit docker run pull when the offline client is unavailable.
     log_warn "External database backup image ${db_image} is unavailable."
     backup_failed=1
-  elif ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
+  elif ! bash "${SCRIPT_DIR}/5_db_backup.sh" full "${VERSION}"; then
     backup_failed=1
   fi
 
@@ -684,7 +684,7 @@ function main() {
   UPGRADE_CONFIG_CHANGED=1
   migrate_internal_mysql_root_password || exit 1
   if use_container_jdmc; then
-    ensure_current_installer_link && upgrade_jdmc || exit 1
+    upgrade_jdmc && ensure_current_installer_link || exit 1
   fi
   backup_db
 

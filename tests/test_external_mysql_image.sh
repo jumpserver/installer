@@ -115,7 +115,7 @@ for selected_db_image in mariadb:10.6 mysql:8.0; do
   unset SKIP_BACKUP_DB
   main >"${test_dir}/load.log"
   assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Docker image not found'
-  assert_contains "$(cat "${test_dir}/load.log")" 'continuing to the backup step'
+  assert_contains "$(cat "${test_dir}/load.log")" 'continuing without the backup client'
 
   export SKIP_BACKUP_DB=0
   main >"${test_dir}/load.log"
@@ -196,7 +196,7 @@ assert_no_db_image_operations
 unset SKIP_BACKUP_DB
 main >"${test_dir}/load.log"
 assert_contains "$(cat "${test_dir}/load.log")" 'WARNING: Docker image not found'
-assert_contains "$(cat "${test_dir}/load.log")" 'continuing to the backup step'
+assert_contains "$(cat "${test_dir}/load.log")" 'continuing without the backup client'
 installed_db_image=postgres:18.7-trixie
 main >"${test_dir}/load.log"
 if [[ "$(cat "${test_dir}/load.log")" == *WARNING* ]]; then
