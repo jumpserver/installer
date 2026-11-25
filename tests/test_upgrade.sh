@@ -37,6 +37,43 @@ cp "${TEST_ROOT}/config-example.txt" "${test_dir}/config.txt"
   assert_eq 'copied' "$(cat "${test_dir}/copies")" 'confirmed upgrade must replace existing Docker binaries once'
 )
 
+(
+  BASE_DIR="${test_dir}/compose"
+  system_dir="${BASE_DIR}/system"
+  user_dir="${BASE_DIR}/user"
+  mkdir -p "${system_dir}" "${user_dir}" "${BASE_DIR}/docker"
+  eval "$(declare -f upgrade_compose | sed -e "s|/usr/local/libexec/docker/cli-plugins|${system_dir}|g" -e "s|[$]HOME/.docker/cli-plugins|${user_dir}|g")"
+  check_root() { return 0; }
+  read_from_input() { confirm="${answer}"; }
+  docker() {
+    local plugin="${user_dir}/docker-compose"
+    [[ -f "${plugin}" ]] || plugin="${system_dir}/docker-compose"
+    "${plugin}" "${@:2}"
+  }
+  write_plugin() {
+    printf '#!/bin/sh\necho "%s"\n' "$2" >"$1"
+    chmod +x "$1"
+  }
+  DOCKER_COMPOSE_VERSION=v2.40.3
+  write_plugin "${system_dir}/docker-compose" 2.40.30
+  write_plugin "${BASE_DIR}/docker/docker-compose" 2.40.3
+  answer=n
+  upgrade_compose
+  assert_eq 2.40.30 "$(docker compose version --short)" 'declining must preserve Compose'
+  answer=y
+  upgrade_compose
+  assert_eq 2.40.3 "$(docker compose version --short)" 'system Compose must be replaced'
+  write_plugin "${user_dir}/docker-compose" 2.39.0
+  write_plugin "${BASE_DIR}/docker/docker-compose" 2.38.0
+  if upgrade_compose; then exit 1; fi
+  assert_eq 2.39.0 "$(docker compose version --short)" 'invalid package must preserve active plugin'
+  write_plugin "${BASE_DIR}/docker/docker-compose" v2.40.3
+  upgrade_compose
+  assert_eq v2.40.3 "$(docker compose version --short)" 'user plugin takes precedence over system plugin'
+  read_from_input() { exit 1; }
+  upgrade_compose
+)
+
 check_root() { return 1; }
 docker() {
   [[ "${1:-}" == "ps" ]]

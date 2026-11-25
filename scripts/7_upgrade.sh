@@ -607,19 +607,38 @@ function upgrade_docker() {
 }
 
 function upgrade_compose() {
-  if check_root && [[ -f "/usr/local/libexec/docker/cli-plugins/docker-compose" || -f "$HOME/.docker/cli-plugins/docker-compose" ]]; then
-    if ! docker compose version | grep ${DOCKER_COMPOSE_VERSION} &>/dev/null; then
-      echo
-      echo -e "$(docker compose version) \033[33m-->\033[0m Docker Compose version \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
-      confirm="n"
-      read_from_input confirm "$(gettext 'Do you need upgrade Docker Compose')?" "y/n" "${confirm}"
-      if [[ "${confirm}" == "y" ]]; then
-        echo
-        cd "${BASE_DIR}" || exit 1
-        check_compose_install
-        check_docker_compose
-      fi
-    fi
+  local plugin current_version package staged
+  check_root || return 0
+  plugin="$HOME/.docker/cli-plugins/docker-compose"
+  if [[ ! -f "${plugin}" ]]; then
+    plugin="/usr/local/libexec/docker/cli-plugins/docker-compose"
+  fi
+  [[ -f "${plugin}" ]] || return 0
+
+  current_version=$(docker compose version --short) || current_version=""
+  [[ "${current_version#v}" != "${DOCKER_COMPOSE_VERSION#v}" ]] || return 0
+  echo -e "Docker Compose ${current_version} \033[33m-->\033[0m \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
+  local confirm=n
+  read_from_input confirm "$(gettext 'Do you need upgrade Docker Compose')?" "y/n" "${confirm}"
+  [[ "${confirm}" == "y" ]] || return 0
+
+  package="${BASE_DIR}/docker/docker-compose"
+  if [[ ! -f "${package}" ]]; then
+    prepare_compose_bin || return 1
+  fi
+  staged=$(mktemp "${plugin}.XXXXXX") || return 1
+  if ! install -m 0755 "${package}" "${staged}" ||
+     ! current_version=$("${staged}" version --short) ||
+     [[ "${current_version#v}" != "${DOCKER_COMPOSE_VERSION#v}" ]]; then
+    rm -f "${staged}"
+    log_error "Invalid Docker Compose package: expected ${DOCKER_COMPOSE_VERSION}"
+    return 1
+  fi
+  mv -f "${staged}" "${plugin}" || return 1
+  current_version=$(docker compose version --short) || return 1
+  if [[ "${current_version#v}" != "${DOCKER_COMPOSE_VERSION#v}" ]]; then
+    log_error "Active Docker Compose version is ${current_version}, expected ${DOCKER_COMPOSE_VERSION}"
+    return 1
   fi
 }
 
