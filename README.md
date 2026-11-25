@@ -281,7 +281,7 @@ Maintainer notes for the Docker and Compose binary mirror are in [Docker and Com
 
 - Documentation: <https://www.jumpserver.com/docs>
 - Releases: <https://github.com/jumpserver/installer/releases>
-- Issues: <https://github.com/jumpserver/installer/issues>
+- Issues: <https://github.com/jumpserver/jumpserver/issues>
 - Discord: <https://discord.gg/jumpserver>
 
 ## License
