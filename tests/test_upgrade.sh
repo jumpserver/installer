@@ -11,6 +11,32 @@ cp "${TEST_ROOT}/config-example.txt" "${test_dir}/config.txt"
 
 . "${TEST_ROOT}/scripts/7_upgrade.sh" ''
 
+(
+  # Redirect the installer's absolute Docker paths into the fixture.
+  bin_dir="${test_dir}/bin"
+  BASE_DIR="${test_dir}"
+  PROJECT_DIR="${test_dir}"
+  mkdir -p "${bin_dir}" "${BASE_DIR}/docker"
+  touch "${BASE_DIR}/docker/docker.tar.gz" "${bin_dir}/dockerd"
+  printf '#!/bin/sh\necho "Docker version 1.0.0, build old"\n' >"${bin_dir}/docker"
+  chmod +x "${bin_dir}/docker"
+  eval "$(declare -f upgrade_docker install_docker check_docker_install | sed "s|/usr/local/bin/|${bin_dir}/|g")"
+  export PATH="${bin_dir}:${PATH}"
+  printf 'exit 0\n' >"${PROJECT_DIR}/jmsctl.sh"
+  check_root() { return 0; }
+  read_from_input() { confirm="${answer}"; }
+  sleep() { :; }
+  systemctl() { :; }
+  check_docker_start() { :; }
+  copy_docker() { echo copied >>"${test_dir}/copies"; }
+  answer=n
+  upgrade_docker
+  [[ ! -e "${test_dir}/copies" ]]
+  answer=y
+  upgrade_docker
+  assert_eq 'copied' "$(cat "${test_dir}/copies")" 'confirmed upgrade must replace existing Docker binaries once'
+)
+
 check_root() { return 1; }
 docker() {
   [[ "${1:-}" == "ps" ]]

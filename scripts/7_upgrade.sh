@@ -598,7 +598,7 @@ function upgrade_docker() {
         echo
         systemctl stop docker
         cd "${BASE_DIR}" || exit 1
-        install_docker
+        install_docker || exit 1
         check_docker_install
         check_docker_start
       fi

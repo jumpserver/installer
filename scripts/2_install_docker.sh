@@ -27,9 +27,7 @@ function install_docker() {
     echo_red "Error: $(gettext 'Docker program does not exist')"
     exit 1
   fi
-  if [[ ! -f "/usr/local/bin/dockerd" ]]; then
-    copy_docker
-  fi
+  copy_docker
 }
 
 function install_compose() {
@@ -59,7 +57,9 @@ function install_compose_home() {
 function check_docker_install() {
   docker version &>/dev/null || {
     if check_root; then
-      install_docker
+      if [[ ! -f "/usr/local/bin/dockerd" ]]; then
+        install_docker
+      fi
     else
       log_warn "$(gettext 'Permission denied. pass...')"
     fi
