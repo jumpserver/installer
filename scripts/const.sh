@@ -27,7 +27,7 @@ STATIC_ENV=${PROJECT_DIR}/static.env
 . "${STATIC_ENV}"
 
 export OS=$(uname -s)
-export DOCKER_VERSION=29.7.2
+export DOCKER_VERSION=29.10.1
 export DOCKER_COMPOSE_VERSION=v2.40.3
 
 ARCH=$(uname -m)
@@ -41,8 +41,8 @@ DOCKER_BIN_URL="https://download.docker.com/linux/static/stable/${ARCH}/docker-$
 COMPOSE_BIN_URL="https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${ARCH}"
 
 case "${DOCKER_VERSION}:${ARCH}" in
-  29.7.2:x86_64) DOCKER_BIN_SHA256=803d433f226db4776e1768fd319fc6c6e4935a456acf84fcc0080818b854bc8f ;;
-  29.7.2:aarch64) DOCKER_BIN_SHA256=43d143448adf2c2787704e7d7704fd6d62d367a54c5edaef0a3f75509cb0938d ;;
+  29.10.1:x86_64) DOCKER_BIN_SHA256=061642059fa7f2ed9b2f04a327a951cff4249585cf04b2661c2a6539197c9962 ;;
+  29.10.1:aarch64) DOCKER_BIN_SHA256=a38c8a9ef6d17bce07499bfd3a3688542274769dc3b4f75c06ea2705fe65053e ;;
   *) DOCKER_BIN_SHA256=${DOCKER_BIN_SHA256:-} ;;
 esac
 case "${DOCKER_COMPOSE_VERSION}:${ARCH}" in
