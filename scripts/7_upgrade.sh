@@ -592,13 +592,19 @@ function upgrade_docker() {
       read_from_input confirm "$(gettext 'Do you need upgrade Docker binaries')?" "y/n" "${confirm}"
       if [[ "${confirm}" == "y" ]]; then
         echo
+        local archive="${BASE_DIR}/docker/docker.tar.gz"
+        if [[ -f "${archive}" ]]; then
+          verify_sha256 "${archive}" "${DOCKER_BIN_SHA256}" || return 1
+        else
+          prepare_docker_bin || return 1
+        fi
         cd "${PROJECT_DIR}" || exit 1
-        bash ./jmsctl.sh down
+        bash ./jmsctl.sh down || return 1
         sleep 2s
         echo
-        systemctl stop docker
+        systemctl stop docker || return 1
         cd "${BASE_DIR}" || exit 1
-        install_docker
+        copy_docker || return 1
         check_docker_install
         check_docker_start
       fi
@@ -607,20 +613,29 @@ function upgrade_docker() {
 }
 
 function upgrade_compose() {
-  if check_root && [[ -f "/usr/local/libexec/docker/cli-plugins/docker-compose" || -f "$HOME/.docker/cli-plugins/docker-compose" ]]; then
-    if ! docker compose version | grep ${DOCKER_COMPOSE_VERSION} &>/dev/null; then
-      echo
-      echo -e "$(docker compose version) \033[33m-->\033[0m Docker Compose version \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
-      confirm="n"
-      read_from_input confirm "$(gettext 'Do you need upgrade Docker Compose')?" "y/n" "${confirm}"
-      if [[ "${confirm}" == "y" ]]; then
-        echo
-        cd "${BASE_DIR}" || exit 1
-        check_compose_install
-        check_docker_compose
-      fi
-    fi
-  fi
+  local plugin current_version
+  check_root || return 0
+  plugin=$(docker info --format '{{range .ClientInfo.Plugins}}{{if eq .Name "compose"}}{{.Path}}{{end}}{{end}}') || plugin=""
+  case "${plugin}" in
+    "/usr/local/libexec/docker/cli-plugins/docker-compose"|"${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose")
+      if [[ -L "${plugin}" ]]; then
+        log_warn "Skipping Docker Compose upgrade: managed externally via symlink ${plugin}"
+        return 0
+      fi ;;
+    *)
+      log_warn "Skipping Docker Compose upgrade: unmanaged or unknown plugin path (${plugin:-unknown})"
+      return 0 ;;
+  esac
+
+  current_version=$(docker compose version --short) || return 1
+  [[ "${current_version#v}" != "${DOCKER_COMPOSE_VERSION#v}" ]] || return 0
+  echo -e "Docker Compose ${current_version} \033[33m-->\033[0m \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
+  local confirm=n
+  read_from_input confirm "$(gettext 'Do you need upgrade Docker Compose')?" "y/n" "${confirm}"
+  [[ "${confirm}" == "y" ]] || return 0
+
+  check_compose_install "${plugin}" || return 1
+  check_docker_compose "${DOCKER_COMPOSE_VERSION}"
 }
 
 function main() {
@@ -665,7 +680,7 @@ function main() {
   echo
   verify_upgrade_version || exit 1
   echo
-  check_compose_install
+  check_compose_install || exit 1
 
   echo_yellow "\n2. $(gettext 'Backup Configuration File')"
   if ! backup_config; then

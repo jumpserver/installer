@@ -4,7 +4,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 . "${BASE_DIR}/0_prepare.sh"
 
-DOCKER_CONFIG="/etc/docker/daemon.json"
+DOCKER_DAEMON_CONFIG="/etc/docker/daemon.json"
 
 cd "${BASE_DIR}" || exit 1
 
@@ -27,39 +27,15 @@ function install_docker() {
     echo_red "Error: $(gettext 'Docker program does not exist')"
     exit 1
   fi
-  if [[ ! -f "/usr/local/bin/dockerd" ]]; then
-    copy_docker
-  fi
-}
-
-function install_compose() {
-  if [[ ! -f ${BASE_DIR}/docker/docker-compose ]]; then
-    prepare_compose_bin
-  fi
-  if [[ ! -f "/usr/local/libexec/docker/cli-plugins/docker-compose" ]]; then
-    if [[ ! -d "/usr/local/libexec/docker/cli-plugins" ]]; then
-      mkdir -p /usr/local/libexec/docker/cli-plugins
-    fi
-    \cp -f ${BASE_DIR}/docker/docker-compose /usr/local/libexec/docker/cli-plugins/
-  fi
-}
-
-function install_compose_home() {
-  if [[ ! -f ${BASE_DIR}/docker/docker-compose ]]; then
-    prepare_compose_bin
-  fi
-  if [[ ! -f "$HOME/.docker/cli-plugins/docker-compose" ]]; then
-    if [[ ! -d "$HOME/.docker/cli-plugins" ]]; then
-      mkdir -p $HOME/.docker/cli-plugins
-    fi
-    \cp -f ${BASE_DIR}/docker/docker-compose $HOME/.docker/cli-plugins/
-  fi
+  copy_docker
 }
 
 function check_docker_install() {
   docker version &>/dev/null || {
     if check_root; then
-      install_docker
+      if [[ ! -f "/usr/local/bin/dockerd" ]]; then
+        install_docker
+      fi
     else
       log_warn "$(gettext 'Permission denied. pass...')"
     fi
@@ -67,14 +43,46 @@ function check_docker_install() {
 }
 
 function check_compose_install() {
-  docker compose version &>/dev/null || {
-    if check_root; then
-      install_compose
-    else
-      install_compose_home
+  # An explicit plugin path is supplied only after an upgrade is confirmed.
+  local plugin=${1:-} package="${BASE_DIR}/docker/docker-compose" staged version
+  if [[ -z "${plugin}" ]]; then
+    if docker compose version &>/dev/null; then
+      echo_done
+      return 0
     fi
-  }
-  echo_done
+    if check_root; then
+      plugin="/usr/local/libexec/docker/cli-plugins/docker-compose"
+    else
+      plugin="${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose"
+    fi
+    if [[ -e "${plugin}" || -L "${plugin}" ]]; then
+      log_error "Docker Compose is unavailable with the existing plugin at ${plugin}"
+      return 1
+    fi
+  fi
+
+  if [[ ! -f "${package}" ]]; then
+    prepare_compose_bin || return 1
+  fi
+  mkdir -p "${plugin%/*}" || return 1
+  staged=$(mktemp "${plugin}.XXXXXX") || return 1
+  if ! install -m 0755 "${package}" "${staged}"; then
+    rm -f "${staged}"
+    return 1
+  fi
+  if [[ -n "${1:-}" ]]; then
+    if ! version=$("${staged}" version --short) || [[ "${version#v}" != "${DOCKER_COMPOSE_VERSION#v}" ]]; then
+      rm -f "${staged}"
+      log_error "Invalid Docker Compose package: expected ${DOCKER_COMPOSE_VERSION}"
+      return 1
+    fi
+  fi
+  mv -f "${staged}" "${plugin}" || { rm -f "${staged}"; return 1; }
+  if [[ -z "${1:-}" ]]; then
+    check_docker_compose
+  else
+    echo_done
+  fi
 }
 
 function set_docker_config() {
@@ -91,12 +99,12 @@ function set_docker_config() {
     return
   fi
 
-  if [[ ! -f "${DOCKER_CONFIG}" ]]; then
-    config_dir=$(dirname ${DOCKER_CONFIG})
+  if [[ ! -f "${DOCKER_DAEMON_CONFIG}" ]]; then
+    config_dir=$(dirname ${DOCKER_DAEMON_CONFIG})
     if [[ ! -d ${config_dir} ]]; then
       mkdir -p "${config_dir}"
     fi
-    echo -e "{\n}" >>${DOCKER_CONFIG}
+    echo -e "{\n}" >>${DOCKER_DAEMON_CONFIG}
   fi
 
 "${docker_command}" -c "import json
@@ -106,7 +114,7 @@ try:
     value = json.loads(value)
 except:
     pass
-filepath = \"${DOCKER_CONFIG}\"
+filepath = \"${DOCKER_DAEMON_CONFIG}\"
 f = open(filepath);
 config = json.load(f);
 config[key] = value
@@ -178,7 +186,14 @@ function check_docker_start() {
 }
 
 function check_docker_compose() {
-  if ! docker compose version &>/dev/null; then
+  local expected=${1:-} version
+  if [[ -n "${expected}" ]]; then
+    version=$(docker compose version --short) || return 1
+    if [[ "${version#v}" != "${expected#v}" ]]; then
+      log_error "Active Docker Compose version is ${version}, expected ${expected}"
+      return 1
+    fi
+  elif ! docker compose version &>/dev/null; then
     echo_failed "$(gettext 'Docker compose is not installed')"
     exit 1
   fi
@@ -188,7 +203,7 @@ function check_docker_compose() {
 function main() {
   echo_yellow "1. $(gettext 'Install Docker')"
   check_docker_install
-  check_compose_install
+  check_compose_install || exit 1
   echo_yellow "\n2. $(gettext 'Configure Docker')"
   check_docker_config
   echo_yellow "\n3. $(gettext 'Start Docker')"

@@ -11,6 +11,99 @@ cp "${TEST_ROOT}/config-example.txt" "${test_dir}/config.txt"
 
 . "${TEST_ROOT}/scripts/7_upgrade.sh" ''
 
+(
+  # Redirect the installer's absolute Docker paths into the fixture.
+  bin_dir="${test_dir}/bin"
+  BASE_DIR="${test_dir}"
+  PROJECT_DIR="${test_dir}"
+  mkdir -p "${bin_dir}" "${BASE_DIR}/docker"
+  touch "${BASE_DIR}/docker/docker.tar.gz" "${bin_dir}/dockerd"
+  printf '#!/bin/sh\necho "Docker version 1.0.0, build old"\n' >"${bin_dir}/docker"
+  chmod +x "${bin_dir}/docker"
+  eval "$(declare -f upgrade_docker install_docker check_docker_install | sed "s|/usr/local/bin/|${bin_dir}/|g")"
+  export PATH="${bin_dir}:${PATH}"
+  printf 'echo down >>down-events\nexit "${down_status:-0}"\n' >"${PROJECT_DIR}/jmsctl.sh"
+  check_root() { return 0; }
+  read_from_input() { confirm="${answer}"; }
+  sleep() { :; }
+  systemctl() { echo "$*" >>"${test_dir}/stop-events"; return "${stop_status:-0}"; }
+  check_docker_start() { :; }
+  copy_docker() { echo copied >>"${test_dir}/copies"; }
+  answer=n
+  upgrade_docker
+  [[ ! -e "${test_dir}/copies" ]]
+  answer=y
+  DOCKER_BIN_SHA256=wrong
+  if (upgrade_docker); then fail 'bad Docker package must abort upgrade'; fi
+  [[ ! -e "${PROJECT_DIR}/down-events" && ! -e "${test_dir}/stop-events" ]]
+  DOCKER_BIN_SHA256=$(file_sha256 "${BASE_DIR}/docker/docker.tar.gz")
+  export down_status=1
+  if (upgrade_docker); then fail 'failed project shutdown must abort upgrade'; fi
+  [[ ! -e "${test_dir}/stop-events" && ! -e "${test_dir}/copies" ]]
+  down_status=0
+  stop_status=1
+  if (upgrade_docker); then fail 'failed Docker shutdown must abort upgrade'; fi
+  [[ ! -e "${test_dir}/copies" ]]
+  stop_status=0
+  upgrade_docker
+  assert_eq 'copied' "$(cat "${test_dir}/copies")" 'confirmed upgrade must replace existing Docker binaries once'
+)
+
+(
+  BASE_DIR="${test_dir}/compose"
+  system_dir="${BASE_DIR}/system"
+  export DOCKER_CONFIG="${BASE_DIR}/user"
+  user_dir="${DOCKER_CONFIG}/cli-plugins"
+  mkdir -p "${system_dir}" "${user_dir}" "${BASE_DIR}/docker"
+  eval "$(declare -f upgrade_compose check_compose_install | sed -e "s|/usr/local/libexec/docker/cli-plugins|${system_dir}|g")"
+  check_root() { return 0; }
+  read_from_input() { confirm="${answer}"; }
+  docker() {
+    local plugin="${user_dir}/docker-compose"
+    [[ -f "${plugin}" ]] || plugin="${system_dir}/docker-compose"
+    plugin=${extra_plugin:-${plugin}}
+    if [[ "$1" == info ]]; then printf '%s\n' "${plugin}"; return; fi
+    "${plugin}" "${@:2}"
+  }
+  write_plugin() {
+    printf '#!/bin/sh\necho "%s"\n' "$2" >"$1"
+    chmod +x "$1"
+  }
+  DOCKER_COMPOSE_VERSION=v2.40.3
+  write_plugin "${BASE_DIR}/docker/docker-compose" 2.40.3
+  check_compose_install
+  assert_eq 2.40.3 "$(docker compose version --short)" 'fresh install must install the system plugin'
+  write_plugin "${system_dir}/docker-compose" 2.40.30
+  check_compose_install
+  check_docker_compose
+  assert_eq 2.40.30 "$(docker compose version --short)" 'normal install must preserve working Compose'
+  chmod -x "${system_dir}/docker-compose"
+  if check_compose_install; then fail 'preflight must reject a broken existing plugin'; fi
+  chmod +x "${system_dir}/docker-compose"
+  extra_plugin="${BASE_DIR}/external-compose"
+  write_plugin "${extra_plugin}" 2.39.0
+  answer=y
+  upgrade_compose
+  assert_eq 2.40.30 "$("${system_dir}/docker-compose")" 'external Compose must not trigger a system plugin replacement'
+  assert_eq 2.39.0 "$(docker compose version --short)" 'external plugin must remain untouched'
+  unset extra_plugin
+  answer=n
+  upgrade_compose
+  assert_eq 2.40.30 "$(docker compose version --short)" 'declining must preserve Compose'
+  answer=y
+  upgrade_compose
+  assert_eq 2.40.3 "$(docker compose version --short)" 'system Compose must be replaced'
+  write_plugin "${user_dir}/docker-compose" 2.39.0
+  write_plugin "${BASE_DIR}/docker/docker-compose" 2.38.0
+  if upgrade_compose; then exit 1; fi
+  assert_eq 2.39.0 "$(docker compose version --short)" 'invalid package must preserve active plugin'
+  write_plugin "${BASE_DIR}/docker/docker-compose" v2.40.3
+  upgrade_compose
+  assert_eq v2.40.3 "$(docker compose version --short)" 'user plugin takes precedence over system plugin'
+  read_from_input() { exit 1; }
+  upgrade_compose
+)
+
 check_root() { return 1; }
 docker() {
   [[ "${1:-}" == "ps" ]]
