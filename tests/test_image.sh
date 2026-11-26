@@ -16,6 +16,16 @@ for legacy_services in 'chen,kael' 'lion' 'koko chen kael lion'; do
   [[ "${mappings}" != *'/chen:'* && "${mappings}" != *'/kael:'* && "${mappings}" != *'/lion:'* ]] || fail 'the manifest still requests standalone images'
 done
 
+for legacy_services in magnus nec 'razor,nec,magnus,razor'; do
+  manifest=$(USE_XPACK=1 VERSION=dev-ee NAMESPACE=offline/jms IMAGE_PULL_PREFIX=registry.local/jms \
+    OFFLINE_IMAGE_SERVICES="${legacy_services}" get_offline_image_manifest)
+  razor_images=$(awk '$2 ~ /\/(magnus|nec|razor):/ {print}' <<<"${manifest}")
+  assert_eq $'registry.local/jms/razor:dev-ee\toffline/jms/razor:dev-ee' "${razor_images}" \
+    "EE services ${legacy_services} must package the Razor image once"
+done
+ce_images=$(USE_XPACK=0 OFFLINE_IMAGE_SERVICES='core,razor,magnus,nec' get_images)
+[[ "${ce_images}" != *'/razor:'* && "${ce_images}" != *'/magnus:'* && "${ce_images}" != *'/nec:'* ]] || fail 'CE must exclude the Razor bundle'
+
 IMAGE_DIR="${test_dir}/images"
 mkdir -p "${IMAGE_DIR}"
 set_config VOLUME_DIR "${test_dir}/volume"

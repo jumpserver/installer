@@ -212,7 +212,7 @@ assert_contains "$(cat "${test_dir}/backup.log")" 'default: y): y'
   . "${TEST_ROOT}/scripts/gists/jdmc.sh"
   export USE_XPACK=1 AUTO_INSTALL=1
   listed_image='jumpserver/chen:v3.10.21'
-  retire_services_merged_into_koko() { printf '%s\n' "$1" >>"${BACKUP_EVENTS}"; }
+  retire_merged_services() { printf '%s\n' "$1" >>"${BACKUP_EVENTS}"; }
   jdmc_action_result=0
   check_jdmc_runtime() { :; }
   check_jdmc_installed() { return 0; }

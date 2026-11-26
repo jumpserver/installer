@@ -13,6 +13,7 @@ function stop_services() {
       return 1
     fi
     cd "${PROJECT_DIR?}" || return 1
+    retire_merged_services stop || return 1
     bash ./jmsctl.sh down || return 1
     sleep 2s
     echo
@@ -135,6 +136,9 @@ function remove_jumpserver() {
   confirm="n"
   read_from_input confirm "$(gettext 'Are you clean up JumpServer files')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
+    if [[ -f "${CONFIG_FILE}" ]]; then
+      retire_merged_services remove || return 1
+    fi
     remove_managed_dir "${volume_dir}" || return 1
     remove_managed_dir "${jdmc_data_dir}" || return 1
     remove_managed_dir "${kotl_data_dir}" || return 1

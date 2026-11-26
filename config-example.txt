@@ -225,8 +225,11 @@ WEB_PROXY_ALLOWED_HOSTS=localhost,127.0.0.1
 # XPack package, invalid setting in open source version
 #
 KOKO_SSH_PORT=2222
+# Razor hosts the RDP, Magnus database proxy, and NEC VNC services in one EE container.
+# RAZOR_ENABLED=0
 RAZOR_RDP_PORT=3389
 MAGNUS_PORT=5525
+NEC_VNC_PORT=15900
 
 # XRDP is optional and disabled by default. Set it to 1 only when needed.
 XRDP_ENABLED=0

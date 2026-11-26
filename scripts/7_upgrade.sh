@@ -719,8 +719,8 @@ function main() {
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
   write_upgrade_recovery_state recovery_required || exit 1
   UPGRADE_DATABASE_MIGRATION_STARTED=1
-  retire_services_merged_into_koko stop || {
-    log_error "Failed to stop standalone Chen, Kael or Lion; retry the upgrade"
+  retire_merged_services stop || {
+    log_error "Failed to stop services merged into KoKo or Razor; retry the upgrade"
     exit 1
   }
   upgrade_internal_postgresql || {
@@ -766,7 +766,7 @@ function main() {
   }
   UPGRADE_COMMITTED=1
   trap - EXIT
-  retire_services_merged_into_koko remove || {
+  retire_merged_services remove || {
     log_error "Upgrade applied, but standalone container cleanup failed; retry the upgrade"
     exit 1
   }

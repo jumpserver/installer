@@ -93,7 +93,7 @@ function emit_image_mapping() {
 
 function get_image_mappings() {
   local use_xpack enabled_services service image db_image namespace executor_tag
-  local koko_included=0
+  local koko_included=0 razor_included=0
 
   use_xpack=$(get_config_or_env USE_XPACK)
   namespace=$(get_image_namespace)
@@ -117,6 +117,11 @@ function get_image_mappings() {
         [[ "${koko_included}" == 0 ]] || continue
         service=koko
         koko_included=1
+        ;;
+      magnus|nec|razor)
+        [[ "${use_xpack}" == "1" && "${razor_included}" == 0 ]] || continue
+        service=razor
+        razor_included=1
         ;;
     esac
     case "${service}" in

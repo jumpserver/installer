@@ -168,12 +168,12 @@ printf 'PASS: upgrade cleans obsolete containers and preserves enabled XRDP\n'
 
 (
   calls="${test_dir}/bundled-container-calls"
-  declare -A legacy_ids=([chen]=old-chen [kael]=old-kael [lion]=old-lion)
+  declare -A legacy_ids=([chen]=old-chen [kael]=old-kael [lion]=old-lion [magnus]=old-magnus [nec]=old-nec)
   fail_action=''
   docker() {
     case "$1" in
       ps)
-        for service in chen kael lion; do
+        for service in chen kael lion magnus nec; do
           if [[ "$*" == "ps -aq --filter name=^/jms_${service}$ --filter label=com.docker.compose.project=jms --filter label=com.docker.compose.service=${service}" ]]; then
             echo "${legacy_ids[${service}]:-}"
             return 0
@@ -191,32 +191,37 @@ printf 'PASS: upgrade cleans obsolete containers and preserves enabled XRDP\n'
       *) fail "unexpected container operation: $*" ;;
     esac
   }
-  expected=$'update --restart=no old-chen\nstop old-chen\nupdate --restart=no old-kael\nstop old-kael\nupdate --restart=no old-lion\nstop old-lion'
+  koko_stop=$'update --restart=no old-chen\nstop old-chen\nupdate --restart=no old-kael\nstop old-kael\nupdate --restart=no old-lion\nstop old-lion'
+  razor_stop=$'update --restart=no old-magnus\nstop old-magnus\nupdate --restart=no old-nec\nstop old-nec'
+  expected="${koko_stop}"$'\n'"${razor_stop}"
   : >"${calls}"
-  retire_services_merged_into_koko stop kael
+  retire_merged_services stop razor
+  assert_eq "${razor_stop}" "$(cat "${calls}")" 'a Razor cutover must stop only old Magnus and NEC containers'
+  : >"${calls}"
+  retire_merged_services stop kael
   assert_eq $'update --restart=no old-kael\nstop old-kael' "$(cat "${calls}")" 'a named stop must affect only that legacy container'
   for attempt in 1 2; do
     : >"${calls}"
-    retire_services_merged_into_koko stop
+    retire_merged_services stop
     assert_eq "${expected}" "$(cat "${calls}")" 'legacy containers must stay stopped across upgrades and daemon restarts'
   done
-  for fail_action in 'update --restart=no old-lion' 'stop old-lion'; do
-    if retire_services_merged_into_koko stop; then fail "upgrade ignored failure: ${fail_action}"; fi
+  for fail_action in 'update --restart=no old-lion' 'stop old-lion' 'stop old-nec'; do
+    if retire_merged_services stop; then fail "upgrade ignored failure: ${fail_action}"; fi
   done
   fail_action='rm old-kael'
   : >"${calls}"
-  if retire_services_merged_into_koko remove; then fail 'upgrade ignored a container removal failure'; fi
+  if retire_merged_services remove; then fail 'upgrade ignored a container removal failure'; fi
   assert_eq $'rm old-chen\nrm old-kael' "$(cat "${calls}")"
   fail_action=''
   : >"${calls}"
-  retire_services_merged_into_koko remove
-  assert_eq $'rm old-kael\nrm old-lion' "$(cat "${calls}")" 'retry must remove only the remaining containers without removing volumes'
+  retire_merged_services remove
+  assert_eq $'rm old-kael\nrm old-lion\nrm old-magnus\nrm old-nec' "$(cat "${calls}")" 'retry must remove only the remaining containers without removing volumes'
   : >"${calls}"
-  retire_services_merged_into_koko stop
-  retire_services_merged_into_koko remove
+  retire_merged_services stop
+  retire_merged_services remove
   [[ ! -s "${calls}" ]] || fail 'missing legacy containers must be skipped'
 )
-printf 'PASS: upgrade stops and removes standalone Chen, Kael and Lion and preserves their volumes\n'
+printf 'PASS: upgrade stops and removes the old KoKo and Razor component containers and preserves their volumes\n'
 
 (
   export NAMESPACE=registry.example:5000/team/jumpserver/

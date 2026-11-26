@@ -51,11 +51,9 @@ function set_ntp() {
 function set_port() {
     use_xpack=$(get_config_or_env USE_XPACK)
     koko_enabled=$(get_config_or_env KOKO_ENABLED)
-    magnus_enabled=$(get_config_or_env MAGNUS_ENABLED)
     xrdp_enabled=$(get_config_or_env XRDP_ENABLED)
     razor_enabled=$(get_config_or_env RAZOR_ENABLED)
     web_enabled=$(get_config_or_env WEB_ENABLED)
-    nec_enabled=$(get_config_or_env NEC_ENABLED)
 
     if [[ "${web_enabled}" != "0" ]]; then
         http_port=$(get_config HTTP_PORT)
@@ -79,24 +77,20 @@ function set_port() {
             read_from_input ssh_port "$(gettext 'Please enter SSH PORT')" "" "${ssh_port}"
             set_config KOKO_SSH_PORT "${ssh_port}"
         fi
-        if [[ "${magnus_enabled}" != "0" ]]; then
-            magnus_port=$(get_config MAGNUS_PORT)
-            read_from_input magnus_port "$(gettext 'Please enter MAGNUS PORT')" "" "${magnus_port}"
-            set_config MAGNUS_PORT "${magnus_port}"
-        fi
         if [[ "${xrdp_enabled}" == "1" ]]; then
             xrdp_port=$(get_config XRDP_PORT "3390")
             read_from_input xrdp_port "$(gettext 'Please enter XRDP PORT')" "" "${xrdp_port}"
             set_config XRDP_PORT "${xrdp_port}"
         fi
         if [[ "${razor_enabled}" != "0" ]]; then
-            rdp_port=$(get_config RAZOR_RDP_PORT)
+            rdp_port=$(get_config RAZOR_RDP_PORT 3389)
             read_from_input rdp_port "$(gettext 'Please enter RAZOR PORT')" "" "${rdp_port}"
             set_config RAZOR_RDP_PORT "${rdp_port}"
-        fi
-        if [[ "${nec_enabled}" != "0" ]]; then
-            nec_vnc_port=$(get_config NEC_VNC_PORT)
-            read_from_input nec_port "$(gettext 'Please enter NEC VNC PORT')" "" "${nec_vnc_port}"
+            magnus_port=$(get_config MAGNUS_PORT 5525)
+            read_from_input magnus_port "$(gettext 'Please enter MAGNUS PORT')" "" "${magnus_port}"
+            set_config MAGNUS_PORT "${magnus_port}"
+            nec_vnc_port=$(get_config NEC_VNC_PORT 15900)
+            read_from_input nec_vnc_port "$(gettext 'Please enter NEC VNC PORT')" "" "${nec_vnc_port}"
             set_config NEC_VNC_PORT "${nec_vnc_port}"
         fi
     fi

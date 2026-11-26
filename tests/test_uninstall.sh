@@ -35,6 +35,42 @@ assert_contains "${systemctl_calls[*]}" 'daemon-reload' \
   'JDMC main service removal must reload systemd'
 printf 'PASS: JDMC main service integration is removed\n'
 
+(
+  PROJECT_DIR="${test_dir}/installer"
+  mkdir -p "${PROJECT_DIR}"
+  export uninstall_events="${test_dir}/events"
+  printf 'echo down >>"$uninstall_events"\n' >"${PROJECT_DIR}/jmsctl.sh"
+  docker() { [[ "$*" == 'compose version' ]]; }
+  sleep() { :; }
+  retire_merged_services() {
+    echo "$1" >>"${uninstall_events}"
+    [[ "$1" != "${fail_action}" ]]
+  }
+  get_images() { :; }
+  read_from_input() { confirm="${file_answer}"; file_answer=n; }
+  remove_managed_dir() { echo files >>"${uninstall_events}"; }
+
+  fail_action=stop
+  if stop_services; then fail 'uninstall must propagate a legacy container stop failure'; fi
+  assert_eq 'stop' "$(cat "${uninstall_events}")"
+  fail_action=''
+  : >"${uninstall_events}"
+  stop_services
+  file_answer=n
+  remove_jumpserver
+  assert_eq $'stop\ndown' "$(cat "${uninstall_events}")" 'declining cleanup must retain the stopped containers and files'
+  file_answer=y
+  fail_action=remove
+  if remove_jumpserver; then fail 'failed container removal must block file deletion'; fi
+  assert_eq $'stop\ndown\nremove' "$(cat "${uninstall_events}")"
+  file_answer=y
+  fail_action=''
+  : >"${uninstall_events}"
+  remove_jumpserver
+  assert_eq $'remove\nfiles' "$(head -n 2 "${uninstall_events}")"
+)
+printf 'PASS: uninstall retires merged services before deleting their bind-mounted data\n'
+
 calls=()
 echo_yellow() { :; }
 prepare_jdmc_uninstall() { calls+=(retire); }

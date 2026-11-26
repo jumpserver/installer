@@ -43,6 +43,8 @@ cat >"${PG18_WORK}/writers" <<'WRITERS'
 /jms_chen true always 0 chen
 /jms_kael false always 0 kael
 /jms_lion true always 0 lion
+/jms_magnus true always 0 magnus
+/jms_nec false always 0 nec
 WRITERS
 : >"${calls}"
 complete_internal_postgresql_upgrade
@@ -50,7 +52,9 @@ calls_text=$(cat "${calls}")
 assert_contains "${calls_text}" $'db up -d\nwait jms_postgresql\nwait jms_redis\nprepare ' 'datastores must be restored and healthy before applications start'
 assert_contains "${calls_text}" 'prepare core web koko ansible-executor future-service' 'recovery must prepare enabled new services'
 assert_contains "${calls_text}" 'compose up -d --no-deps --force-recreate koko ansible-executor future-service' 'new services must start from Compose with their restart policies'
-[[ "${calls_text}" != *chen* && "${calls_text}" != *kael* && "${calls_text}" != *lion* ]] || fail 'recovery must skip retired services and their restart policies'
+for service in chen kael lion magnus nec; do
+  [[ "${calls_text}" != *"${service}"* ]] || fail "recovery must skip retired ${service} and its restart policy"
+done
 assert_contains "${calls_text}" 'compose up -d core web' 'previously running services must be restored'
 assert_contains "${calls_text}" 'docker update --restart=on-failure:3 /jms_celery' 'stopped service restart policy must be preserved'
 assert_contains "${calls_text}" 'jms_ansible_executor' 'executor container name must be mapped correctly'

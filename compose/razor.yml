@@ -10,9 +10,15 @@ services:
       - ${CONFIG_SAFE_FILE}
     ports:
       - ${RAZOR_RDP_PORT:-3389}:3389
+      - ${MAGNUS_PORT:-5525}:5525
+      - ${NEC_VNC_PORT:-15900}:15900
     volumes:
       - ${VOLUME_DIR}/razor/data:/opt/razor/data
       - ${CONFIG_DIR}/nginx/cert:/opt/razor/cert
+      - ${VOLUME_DIR}/magnus/data:/opt/magnus/data
+      - ${CONFIG_DIR}/certs:/opt/magnus/data/certs
+      - ${VOLUME_DIR}/nec/data:/opt/nec/data
+      - ${CONFIG_DIR}/certs:/opt/nec/data/certs
     healthcheck:
       test: "check http://localhost:8084/razor/health/"
       interval: 10s
