@@ -111,7 +111,7 @@ run_jmsctl() {
 }
 startup_events() {
   run_jmsctl "$@" || return 1
-  rg '^(legacy |compose up )' "${test_dir}/events"
+  grep -E '^(legacy |compose up )' "${test_dir}/events"
 }
 assert_eq $'legacy stop\ncompose up -d' "$(startup_events start)"
 assert_eq $'legacy stop\ncompose up -d' "$(startup_events restart)"
