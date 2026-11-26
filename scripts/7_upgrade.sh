@@ -13,8 +13,7 @@ UPGRADE_DATABASE_MIGRATION_STARTED=0
 UPGRADE_COMMITTED=0
 
 function verify_upgrade_version() {
-  required_version="v3.10.11"
-  current_version=$(get_config CURRENT_VERSION)
+  local current_version=$1 required_version="v3.10.11"
 
   if [[ -z "${current_version}" ]]; then
     log_error "$(gettext 'The current version is not detected, please check')"
@@ -558,28 +557,38 @@ function db_migrations() {
 }
 
 function clean_images() {
-  current_version=$(get_config CURRENT_VERSION)
+  local previous_version=$1 to_version=$2 namespace images image old_tag new_tag confirm=y
+  local -a old_images=()
 
-  if [[ -z "${to_version}" || -z "${current_version}" ]];then
+  if [[ -z "${to_version}" || -z "${previous_version}" ]]; then
     echo "to_version or current_version is empty, skip clean images"
-    return
+    return 0
   fi
 
-  if [[ "${current_version}" == "${to_version}" ]]; then
+  if [[ "${previous_version}" == "${to_version}" ]]; then
     echo "current_version is equal to to_version, skip clean images"
-    return
+    return 0
   fi
 
-  namespace=$(get_config_or_env NAMESPACE jumpserver)
-  namespace=${namespace%/}
-  old_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${namespace}/" | grep "${current_version}" || true)
-  if [[ -n "${old_images}" ]]; then
-    confirm="y"
-    read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
-    if [[ "${confirm}" == "y" ]]; then
-      echo "${old_images}" | xargs docker rmi -f || true
+  namespace=$(get_image_namespace)
+  images=$(docker images --format '{{.Repository}}:{{.Tag}}') || return 1
+  while IFS= read -r image; do
+    [[ "${image%/*}" == "${namespace}" ]] || continue
+    if [[ "${image%:*}" == "${namespace}/ansible-executor" ]]; then
+      # CE and EE can share an executor tag across an edition change.
+      old_tag=$(VERSION="${previous_version}" get_ansible_executor_tag 2>/dev/null) || continue
+      new_tag=$(VERSION="${to_version}" get_ansible_executor_tag 2>/dev/null) || continue
+      [[ "${old_tag}" != "${new_tag}" && "${image##*:}" == "${old_tag}" ]] || continue
+    elif [[ "${image##*:}" != "${previous_version}" ]]; then
+      continue
     fi
-  fi
+    old_images+=("${image}")
+  done <<<"${images}"
+
+  (( ${#old_images[@]} > 0 )) || return 0
+  read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
+  [[ "${confirm}" == "y" ]] || return 0
+  docker rmi -f "${old_images[@]}"
 }
 
 function upgrade_docker() {
@@ -637,7 +646,7 @@ function upgrade_compose() {
 }
 
 function main() {
-  local installer_version_before_upgrade target_version
+  local installer_version_before_upgrade previous_version target_version
   trap cleanup_failed_upgrade EXIT
   write_upgrade_recovery_state running || exit 1
   cd "${PROJECT_DIR}" || exit 1
@@ -676,7 +685,8 @@ function main() {
 
   export VERSION="${to_version}"
   echo
-  verify_upgrade_version || exit 1
+  previous_version=$(get_config CURRENT_VERSION)
+  verify_upgrade_version "${previous_version}" || exit 1
   echo
   check_compose_install || exit 1
 
@@ -763,7 +773,7 @@ function main() {
   installation_log "upgrade"
 
   echo_yellow "\n8. $(gettext 'Cleanup Image')"
-  clean_images
+  clean_images "${previous_version}" "${to_version}" || log_warn "Upgrade applied, but cleanup of images for ${previous_version} failed"
 
   echo_yellow "\n9. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "cd ${PROJECT_DIR}"
