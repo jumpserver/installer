@@ -218,24 +218,55 @@ printf 'PASS: upgrade cleans obsolete containers and preserves enabled XRDP\n'
 )
 printf 'PASS: upgrade stops and removes standalone Chen, Kael and Lion and preserves their volumes\n'
 
-current_version_under_test=v3.10.11
-get_config() {
-  if [[ "$1" == "CURRENT_VERSION" ]]; then
-    printf '%s\n' "${current_version_under_test}"
-  else
-    printf '%s\n' "${2:-}"
-  fi
-}
+(
+  export NAMESPACE=registry.example:5000/team/jumpserver/
+  ns=${NAMESPACE%/}
+  calls="${test_dir}/image-cleanup-calls"
+  docker() {
+    printf '%s\n' "$*" >>"${calls}"
+    case "$1" in
+      images) printf '%s\n' "${images_on_host[@]}" ;;
+      rmi) : ;;
+      *) fail "unexpected Docker command: $*" ;;
+    esac
+    [[ "$1" != "${fail_action:-}" ]]
+  }
+  images_on_host=(
+    "${ns}/core:v5.1.1" "${ns}/core:v5.1.10" "${ns}/core:v5.1.1-ee"
+    "${ns}/ansible-executor:v5.1.1" "${ns}/ansible-executor:v5.1.10"
+    "${ns}/nested/core:v5.1.1" "other${ns}/core:v5.1.1" "postgres:16"
+  )
+  list_call='images --format {{.Repository}}:{{.Tag}}'
+  clean_images v5.1.1 v5.1.10 <<<y
+  assert_eq "${list_call}"$'\n'"rmi -f ${ns}/core:v5.1.1 ${ns}/ansible-executor:v5.1.1" "$(cat "${calls}")"
+
+  : >"${calls}"
+  clean_images v5.1.1 v5.1.10 <<<n
+  assert_eq "${list_call}" "$(cat "${calls}")" 'declining cleanup must preserve all tags'
+  : >"${calls}"
+  clean_images v5.1.1 v5.1.1 </dev/null
+  [[ ! -s "${calls}" ]] || fail 'same-version upgrades must skip cleanup'
+
+  images_on_host=("${ns}/core:v5.1.1-ce" "${ns}/ansible-executor:v5.1.1" "${ns}/ansible-executor:v5.1.10")
+  clean_images v5.1.1-ce v5.1.1-ee <<<y
+  assert_eq "${list_call}"$'\n'"rmi -f ${ns}/core:v5.1.1-ce" "$(cat "${calls}")" 'edition changes must preserve the shared executor tag'
+  : >"${calls}"
+  clean_images v5.1.1-ce v5.1.10-ce <<<y
+  assert_eq "${list_call}"$'\n'"rmi -f ${ns}/core:v5.1.1-ce ${ns}/ansible-executor:v5.1.1" "$(cat "${calls}")"
+  for fail_action in images rmi; do
+    if clean_images v5.1.1-ce v5.1.10-ce <<<y; then fail "ignored docker ${fail_action} failure"; fi
+  done
+)
+printf 'PASS: old image cleanup respects exact tags, namespaces and confirmation\n'
+
 log_error() { :; }
 gettext() { printf '%s\n' "$1"; }
 
-verify_upgrade_version
-current_version_under_test=v3.10.10
-if verify_upgrade_version; then
+verify_upgrade_version v3.10.11
+if verify_upgrade_version v3.10.10; then
   fail 'versions below the minimum upgrade version must be rejected'
 fi
-current_version_under_test=''
-if verify_upgrade_version; then
+if verify_upgrade_version ''; then
   fail 'an empty current version must be rejected'
 fi
 printf 'PASS: upgrade version preflight handles boundary values\n'

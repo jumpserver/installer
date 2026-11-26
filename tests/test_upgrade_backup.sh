@@ -30,6 +30,8 @@ installed_db_image=''
 docker() {
   case "$1 ${2:-}" in
     'ps -aq') return 0 ;;
+    'images --format') printf '%s\n' "${listed_image:-}" ;;
+    'rmi -f') printf '%s\n' "$*" >>"${BACKUP_EVENTS}" ;;
     'image inspect')
       case "${*: -1}" in
         redis:8.10.3-trixie|"jumpserver/core:${VERSION}"|"jumpserver/jdmc:${VERSION}") printf 'sha256:installed\n' ;;
@@ -156,7 +158,6 @@ ensure_current_installer_link() { :; }
 upgrade_jdmc() { :; }
 persist_installer_version() { :; }
 installation_log() { printf 'success\n' >>"${BACKUP_EVENTS}"; }
-clean_images() { :; }
 
 for selected_db_image in mariadb:10.6 postgres:18.7-trixie; do
   select_database "${selected_db_image}"
@@ -210,6 +211,7 @@ assert_contains "$(cat "${test_dir}/backup.log")" 'default: y): y'
 (
   . "${TEST_ROOT}/scripts/gists/jdmc.sh"
   export USE_XPACK=1 AUTO_INSTALL=1
+  listed_image='jumpserver/chen:v3.10.21'
   retire_services_merged_into_koko() { printf '%s\n' "$1" >>"${BACKUP_EVENTS}"; }
   jdmc_action_result=0
   check_jdmc_runtime() { :; }
@@ -233,6 +235,7 @@ assert_contains "$(cat "${test_dir}/backup.log")" 'default: y): y'
       expected_events=''
       [[ -z "${installed_db_image}" ]] || expected_events=$'backup\n'
       expected_events+=$'stop\nmigrations\njdmc-upgrade\nremove\nsuccess'
+      expected_events+=$'\n'"rmi -f ${listed_image}"
       assert_eq "${expected_events}" "$(cat "${BACKUP_EVENTS}")"
       assert_eq "${VERSION}" "$(get_config CURRENT_VERSION)"
       assert_contains "$(cat "${test_dir}/jdmc-upgrade.log")" 'default: y): y'
