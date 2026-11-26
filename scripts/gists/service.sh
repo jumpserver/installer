@@ -313,6 +313,30 @@ function video_worker_can_start() {
      "$(get_config_or_env VIDEO_WORKER_ENABLED)" != "0" ]]
 }
 
+function retire_services_merged_into_koko() {
+  local action=$1 target_service=${2:-} service container_id
+  for service in chen kael lion; do
+    [[ -z "${target_service}" || "${target_service}" == "${service}" ]] || continue
+    container_id=$(docker ps -aq --filter "name=^/jms_${service}$" \
+      --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-jms}" \
+      --filter "label=com.docker.compose.service=${service}") || return 1
+    [[ -n "${container_id}" ]] || continue
+    case "${action}" in
+      stop)
+        # Keep the old services stopped across daemon restarts.
+        docker update --restart=no "${container_id}" >/dev/null || return 1
+        docker stop "${container_id}" >/dev/null || return 1
+        echo_check "Stopped standalone jms_${service}"
+        ;;
+      remove)
+        docker rm "${container_id}" >/dev/null || return 1
+        echo_check "Removed standalone jms_${service} and retained its volumes"
+        ;;
+      *) return 1 ;;
+    esac
+  done
+}
+
 function stop_disabled_video_worker() {
   local container_id
   video_worker_can_start && return 0

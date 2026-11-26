@@ -183,25 +183,40 @@ printf 'PASS: upgrade cleans obsolete containers and preserves enabled XRDP\n'
       update|stop)
         echo "$*" >>"${calls}"
         [[ "$*" != "${fail_action}" ]] ;;
+      rm)
+        echo "$*" >>"${calls}"
+        [[ $# == 2 && "$*" != "${fail_action}" ]] || return 1
+        local removed_service=${2#old-}
+        unset 'legacy_ids[$removed_service]' ;;
       *) fail "unexpected container operation: $*" ;;
     esac
   }
   expected=$'update --restart=no old-chen\nstop old-chen\nupdate --restart=no old-kael\nstop old-kael\nupdate --restart=no old-lion\nstop old-lion'
+  : >"${calls}"
+  retire_services_merged_into_koko stop kael
+  assert_eq $'update --restart=no old-kael\nstop old-kael' "$(cat "${calls}")" 'a named stop must affect only that legacy container'
   for attempt in 1 2; do
     : >"${calls}"
-    stop_services_merged_into_koko
+    retire_services_merged_into_koko stop
     assert_eq "${expected}" "$(cat "${calls}")" 'legacy containers must stay stopped across upgrades and daemon restarts'
   done
-  legacy_ids=()
-  : >"${calls}"
-  stop_services_merged_into_koko
-  [[ ! -s "${calls}" ]] || fail 'missing legacy containers must be skipped'
-  legacy_ids=([lion]=old-lion)
   for fail_action in 'update --restart=no old-lion' 'stop old-lion'; do
-    if stop_services_merged_into_koko; then fail "upgrade ignored failure: ${fail_action}"; fi
+    if retire_services_merged_into_koko stop; then fail "upgrade ignored failure: ${fail_action}"; fi
   done
+  fail_action='rm old-kael'
+  : >"${calls}"
+  if retire_services_merged_into_koko remove; then fail 'upgrade ignored a container removal failure'; fi
+  assert_eq $'rm old-chen\nrm old-kael' "$(cat "${calls}")"
+  fail_action=''
+  : >"${calls}"
+  retire_services_merged_into_koko remove
+  assert_eq $'rm old-kael\nrm old-lion' "$(cat "${calls}")" 'retry must remove only the remaining containers without removing volumes'
+  : >"${calls}"
+  retire_services_merged_into_koko stop
+  retire_services_merged_into_koko remove
+  [[ ! -s "${calls}" ]] || fail 'missing legacy containers must be skipped'
 )
-printf 'PASS: upgrade stops standalone Chen, Kael and Lion without removing containers or volumes\n'
+printf 'PASS: upgrade stops and removes standalone Chen, Kael and Lion and preserves their volumes\n'
 
 current_version_under_test=v3.10.11
 get_config() {

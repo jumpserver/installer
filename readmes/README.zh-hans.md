@@ -196,7 +196,7 @@ sudo ./jmsctl.sh upgrade
 
 在线升级会拉取所需镜像，离线升级会从本地镜像包加载。升级前请备份环境，并保留 `VOLUME_DIR`、`SECRET_KEY` 和 `BOOTSTRAP_TOKEN`。
 
-从 v5.3.0 起，KoKo 统一提供 Chen、Kael 和 Lion 的功能。升级前请结束进行中的 Chen 会话，等旧服务上传完待传的审计和录像。升级会停止现有的 Chen、Kael 和 Lion 独立容器，并关闭它们的自动重启。KoKo 直接复用 `${VOLUME_DIR}/kael/data`，默认将新的 Chen 状态写入 `${VOLUME_DIR}/koko/data/chen`。旧 Chen 数据目录会保留。原先单独部署 Chen、Kael 或 Lion 的节点，如需在本机继续提供这些功能，请启用 KoKo。新版工作台随 `KOKO_ENABLED` 启停，旧配置 `CHEN_ENABLED=0` 只适用于独立服务。
+从 v5.3.0 起，KoKo 统一提供 Chen、Kael 和 Lion 的功能。升级前请结束进行中的 Chen 会话，等旧服务上传完待传的审计和录像。通过 jmsctl 启动或重启 KoKo 时，会先停止旧的独立容器并关闭它们的自动重启。执行 `jmsctl stop` 或 `jmsctl stop koko` 时，会在读取 Compose 配置前直接通过 Docker 停用这些旧容器。即使 Compose 不可用，也可以按名称单独停用，例如 `jmsctl stop chen`。执行升级时，这一步会在数据库迁移前完成。升级成功后会删除这些容器，保留挂载的数据。KoKo 直接复用 `${VOLUME_DIR}/kael/data`，默认将新的 Chen 状态写入 `${VOLUME_DIR}/koko/data/chen`。旧 Chen 数据目录会保留。原先单独部署 Chen、Kael 或 Lion 的节点，如需在本机继续提供这些功能，请启用 KoKo。新版工作台随 `KOKO_ENABLED` 启停，旧配置 `CHEN_ENABLED=0` 只适用于独立服务。
 
 ### 升级时的数据库备份
 

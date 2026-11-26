@@ -237,20 +237,6 @@ function migrate_internal_mysql_business_account() {
   echo_check "Migrated built-in MySQL from the root login to a dedicated JumpServer account"
 }
 
-function stop_services_merged_into_koko() {
-  local service container_id
-  for service in chen kael lion; do
-    container_id=$(docker ps -aq --filter "name=^/jms_${service}$" \
-      --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" \
-      --filter "label=com.docker.compose.service=${service}") || return 1
-    [[ -n "${container_id}" ]] || continue
-    # The old services use restart=always. Honor the container's stop timeout.
-    docker update --restart=no "${container_id}" >/dev/null || return 1
-    docker stop "${container_id}" >/dev/null || return 1
-    echo_check "Stopped standalone jms_${service} and retained its data"
-  done
-}
-
 function remove_obsolete_containers() {
   local container existing_containers
   local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_video" "jms_facelive" "jms_panda")
@@ -723,7 +709,7 @@ function main() {
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
   write_upgrade_recovery_state recovery_required || exit 1
   UPGRADE_DATABASE_MIGRATION_STARTED=1
-  stop_services_merged_into_koko || {
+  retire_services_merged_into_koko stop || {
     log_error "Failed to stop standalone Chen, Kael or Lion; retry the upgrade"
     exit 1
   }
@@ -770,6 +756,10 @@ function main() {
   }
   UPGRADE_COMMITTED=1
   trap - EXIT
+  retire_services_merged_into_koko remove || {
+    log_error "Upgrade applied, but standalone container cleanup failed; retry the upgrade"
+    exit 1
+  }
   installation_log "upgrade"
 
   echo_yellow "\n8. $(gettext 'Cleanup Image')"
