@@ -38,7 +38,7 @@ get_config_or_env() { printf '%s\n' "${!1:-1}"; }
 set_openbao() { :; }
 configure_jdmc() { :; }
 stop_disabled_video_worker() { :; }
-retire_services_merged_into_koko() {
+retire_merged_services() {
   printf 'legacy %s\n' "$*" >>"${COMPOSE_FAILURE_ROOT}/events"
   return "${LEGACY_STOP_STATUS:-0}"
 }
@@ -113,23 +113,31 @@ startup_events() {
   run_jmsctl "$@" || return 1
   grep -E '^(legacy |compose up )' "${test_dir}/events"
 }
-assert_eq $'legacy stop\ncompose up -d' "$(startup_events start)"
-assert_eq $'legacy stop\ncompose up -d' "$(startup_events restart)"
-assert_eq $'legacy stop\ncompose up -d koko' "$(startup_events restart koko)"
+assert_eq $'legacy stop koko\nlegacy stop razor\ncompose up -d' "$(startup_events start)"
+assert_eq $'legacy stop koko\nlegacy stop razor\ncompose up -d' "$(startup_events restart)"
+assert_eq $'legacy stop koko\ncompose up -d koko' "$(startup_events restart koko)"
+assert_eq $'legacy stop razor\ncompose up -d razor' "$(startup_events restart razor)"
 assert_eq 'compose up -d web' "$(startup_events restart web)"
-assert_eq 'compose up -d' "$(KOKO_ENABLED=0 startup_events start)"
+assert_eq $'legacy stop razor\ncompose up -d' "$(KOKO_ENABLED=0 startup_events start)"
+assert_eq $'legacy stop koko\ncompose up -d' "$(RAZOR_ENABLED=0 startup_events start)"
+assert_eq $'legacy stop koko\ncompose up -d' "$(USE_XPACK=0 startup_events start)"
 if LEGACY_STOP_STATUS=1 startup_events start; then
   fail 'KoKo must not start when a legacy container failed to stop'
 fi
-assert_eq 'legacy stop' "$(cat "${test_dir}/events")"
-printf 'PASS: startup stops legacy services before KoKo and propagates stop failures\n'
+assert_eq 'legacy stop koko' "$(cat "${test_dir}/events")"
+if LEGACY_STOP_STATUS=1 startup_events restart razor; then
+  fail 'Razor must not start when a legacy container failed to stop'
+fi
+printf 'PASS: startup stops legacy services before KoKo and Razor and propagates stop failures\n'
 
 for target in '' ignore_db --skip-jdmc; do
   KOKO_ENABLED=0 run_jmsctl stop "${target}"
   assert_eq $'legacy stop\ncompose down -v' "$(cat "${test_dir}/events")"
 done
 run_jmsctl stop koko
-assert_eq $'legacy stop\ncompose stop koko\ncompose rm -f koko' "$(cat "${test_dir}/events")"
+assert_eq $'legacy stop koko\ncompose stop koko\ncompose rm -f koko' "$(cat "${test_dir}/events")"
+run_jmsctl stop razor
+assert_eq $'legacy stop razor\ncompose stop razor\ncompose rm -f razor' "$(cat "${test_dir}/events")"
 run_jmsctl stop web
 assert_eq $'compose stop web\ncompose rm -f web' "$(cat "${test_dir}/events")"
 run_jmsctl stop jdmc
@@ -145,7 +153,7 @@ COMPOSE_COMMAND_STATUS=127 run_jmsctl stop || status=$?
 assert_eq 127 "${status}" 'a missing Compose command must still be reported for the rest of the stack'
 assert_eq $'legacy stop\ncompose down -v' "$(cat "${test_dir}/events")"
 rm "${test_dir}/config.txt"
-for target in chen kael lion; do
+for target in chen kael lion magnus nec; do
   run_jmsctl stop "${target}"
   assert_eq "legacy stop ${target}" "$(cat "${test_dir}/events")"
 done

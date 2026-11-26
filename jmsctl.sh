@@ -102,7 +102,10 @@ function is_jdmc_target() {
 
 function start_compose_services() {
   if [[ ( $# == 0 || "${1:-}" == koko ) && "$(get_config_or_env KOKO_ENABLED)" != "0" ]]; then
-    retire_services_merged_into_koko stop || return 1
+    retire_merged_services stop koko || return 1
+  fi
+  if [[ ( $# == 0 || "${1:-}" == razor ) && "$(get_config_or_env USE_XPACK)" == "1" && "$(get_config_or_env RAZOR_ENABLED)" != "0" ]]; then
+    retire_merged_services stop razor || return 1
   fi
   ${EXE} up -d "$@"
 }
@@ -264,11 +267,12 @@ function main() {
   # Retired services can still be running after their Compose files are gone.
   if [[ "${action}" == stop ]]; then
     case "${target}" in
-      chen|kael|lion)
-        retire_services_merged_into_koko stop "${target}"
+      chen|kael|lion|magnus|nec)
+        retire_merged_services stop "${target}"
         return
         ;;
-      ''|ignore_db|koko) retire_services_merged_into_koko stop || return 1 ;;
+      koko|razor) retire_merged_services stop "${target}" || return 1 ;;
+      ''|ignore_db) retire_merged_services stop || return 1 ;;
     esac
   fi
 

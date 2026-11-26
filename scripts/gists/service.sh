@@ -1,7 +1,7 @@
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/postgresql-upgrade-standalone.sh"
 
 common_services=(core celery ansible-executor koko web)
-xpack_services=(magnus razor xrdp video-worker nec)
+xpack_services=(razor xrdp video-worker)
 
 
 function get_enabled_services() {
@@ -313,10 +313,17 @@ function video_worker_can_start() {
      "$(get_config_or_env VIDEO_WORKER_ENABLED)" != "0" ]]
 }
 
-function retire_services_merged_into_koko() {
-  local action=$1 target_service=${2:-} service container_id
-  for service in chen kael lion; do
-    [[ -z "${target_service}" || "${target_service}" == "${service}" ]] || continue
+function retire_merged_services() {
+  local action=$1 target=${2:-} service container_id
+  local -a services
+  case "${target}" in
+    koko) services=(chen kael lion) ;;
+    razor) services=(magnus nec) ;;
+    '') services=(chen kael lion magnus nec) ;;
+    chen|kael|lion|magnus|nec) services=("${target}") ;;
+    *) return 1 ;;
+  esac
+  for service in "${services[@]}"; do
     container_id=$(docker ps -aq --filter "name=^/jms_${service}$" \
       --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-jms}" \
       --filter "label=com.docker.compose.service=${service}") || return 1

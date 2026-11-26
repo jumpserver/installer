@@ -79,10 +79,7 @@ scrape_configs:
         refresh_interval: 5s
         filters:
           - name: name
-            values: [jms_web, jms_core, jms_koko,
-                     jms_magnus, jms_xrdp, jms_razor,
-                     jms_nec,
-                     ]
+            values: [jms_web, jms_core, jms_koko, jms_xrdp, jms_razor]
     relabel_configs:
       - source_labels: ["__meta_docker_container_name"]
         regex: "/(.*)"

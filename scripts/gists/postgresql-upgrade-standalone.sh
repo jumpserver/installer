@@ -64,7 +64,7 @@ upgrade_internal_postgresql() {
   while read -r container running policy retries service; do
     [[ "${container}" == /jms_* && "${service}" =~ ^[A-Za-z0-9_.-]+$ ]] || return 1
     # Upgrade already stopped these by Compose project and service label.
-    case "${service}" in chen|kael|lion) continue ;; esac
+    case "${service}" in chen|kael|lion|magnus|nec) continue ;; esac
     if docker inspect "${container}" >/dev/null 2>&1; then
       docker update --restart=no "${container}" >/dev/null && docker stop "${container}" >/dev/null || return 1
       [[ "$(docker inspect -f '{{.State.Running}}' "${container}")" == false ]] || return 1
@@ -104,7 +104,7 @@ complete_internal_postgresql_upgrade() {
   # Called only after application schema and JDMC upgrades have succeeded.
   while read -r container running policy retries service; do
     # A snapshot from an earlier installer can include the retired containers.
-    case "${service}" in chen|kael|lion) continue ;; esac
+    case "${service}" in chen|kael|lion|magnus|nec) continue ;; esac
     recorded_services+=("${service}")
     [[ "${running}" == true ]] || continue
     services+=("${service}")
@@ -142,7 +142,7 @@ complete_internal_postgresql_upgrade() {
   [[ "${timeout}" =~ ^[0-9]+$ ]] || timeout=300
   deadline=$((SECONDS + timeout))
   while read -r container running policy retries service; do
-    case "${service}" in chen|kael|lion) continue ;; esac
+    case "${service}" in chen|kael|lion|magnus|nec) continue ;; esac
     if [[ "${running}" == true ]]; then
       pg18_wait_recovered_container "${container}" || return 1
     fi

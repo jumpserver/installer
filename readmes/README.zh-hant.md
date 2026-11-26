@@ -198,6 +198,8 @@ sudo ./jmsctl.sh upgrade
 
 自 v5.3.0 起，KoKo 統一提供 Chen、Kael 和 Lion 的功能。升級前請結束進行中的 Chen 工作階段，等舊服務上傳完待傳的稽核紀錄與錄影。透過 jmsctl 啟動或重新啟動 KoKo 時，會先停止舊的獨立容器並關閉其自動重啟。執行 `jmsctl stop` 或 `jmsctl stop koko` 時，會在讀取 Compose 設定前直接透過 Docker 停用這些舊容器。即使 Compose 無法使用，也可以按名稱個別停用，例如 `jmsctl stop chen`。執行升級時，這一步會在資料庫遷移前完成。升級成功後會刪除這些容器，保留掛載的資料。KoKo 直接沿用 `${VOLUME_DIR}/kael/data`，預設將新的 Chen 狀態寫入 `${VOLUME_DIR}/koko/data/chen`。舊 Chen 資料目錄會保留。原先獨立部署 Chen、Kael 或 Lion 的節點，如需在本機繼續提供這些功能，請啟用 KoKo。新版工作台隨 `KOKO_ENABLED` 啟停，舊設定 `CHEN_ENABLED=0` 只適用於獨立服務。
 
+企業版的 Razor 映像檔同時提供 RDP、Magnus 資料庫代理和 NEC VNC 服務。先前僅部署 Magnus 或 NEC 的節點需要啟用 Razor。`RAZOR_ENABLED` 統一控制容器及三個監聽連接埠。升級沿用原有連接埠、資料目錄及憑證，並清理舊的獨立容器。
+
 ### 升級時的資料庫備份
 
 使用外置 MySQL 或 PostgreSQL 且未啟用 `HA_MODE=1` 時，備份客戶端鏡像缺少、載入或拉取失敗只會輸出警告，升級會繼續到備份步驟。本機沒有可用的客戶端鏡像時跳過備份；鏡像可用時正常嘗試備份。內建資料庫和應用程式必需鏡像仍必須準備成功。
