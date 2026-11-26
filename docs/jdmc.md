@@ -31,8 +31,8 @@ The command-line service target is `jdmc`. `--skip-jdmc` exists only so a JDMC-i
 Directories, permissions, and key initialization for all components are owned by the installer:
 
 ```bash
-./jmsctl.sh prepare chen video-worker
-./jmsctl.sh prepare --containers jms_chen jms_video-worker
+./jmsctl.sh prepare ansible-executor video-worker
+./jmsctl.sh prepare --containers jms_ansible_executor jms_video-worker
 ```
 
 Without a service list, all enabled services are prepared. `--containers` requires stopped containers and prepares them using the images and runtime users actually used by those containers; it suits JDMC primary/standby nodes and post-patch component starts. The command does not start or recreate business containers, rewrite configuration, or touch the database. JDMC calls it on both nodes before maintenance upgrades and before bringing the application back, and remains responsible for primary/standby start and stop.

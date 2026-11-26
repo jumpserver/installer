@@ -196,6 +196,8 @@ sudo ./jmsctl.sh upgrade
 
 在线升级会拉取所需镜像，离线升级会从本地镜像包加载。升级前请备份环境，并保留 `VOLUME_DIR`、`SECRET_KEY` 和 `BOOTSTRAP_TOKEN`。
 
+从 v5.3.0 起，KoKo 统一提供 Chen、Kael 和 Lion 的功能。升级前请结束进行中的 Chen 会话，等旧服务上传完待传的审计和录像。升级会停止现有的 Chen、Kael 和 Lion 独立容器，并关闭它们的自动重启。KoKo 直接复用 `${VOLUME_DIR}/kael/data`，默认将新的 Chen 状态写入 `${VOLUME_DIR}/koko/data/chen`。旧 Chen 数据目录会保留。原先单独部署 Chen、Kael 或 Lion 的节点，如需在本机继续提供这些功能，请启用 KoKo。新版工作台随 `KOKO_ENABLED` 启停，旧配置 `CHEN_ENABLED=0` 只适用于独立服务。
+
 ### 升级时的数据库备份
 
 使用外置 MySQL 或 PostgreSQL 且未启用 `HA_MODE=1` 时，备份客户端镜像缺失、加载或拉取失败只会输出警告，升级会继续到备份步骤。本地没有可用的客户端镜像时跳过备份；镜像可用时正常尝试备份。内置数据库和应用必需镜像仍必须准备成功。

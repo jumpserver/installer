@@ -8,7 +8,7 @@ mkdir -p "${PG18_WORK}"
 PG18_UPGRADE_ACTIVE=1
 PG18_IMAGE=postgres:test
 calls="${PG18_WORK}/calls"
-enabled='core web celery kael ansible-executor future-service'
+enabled='core web celery koko ansible-executor future-service'
 failed_container=''
 dependency_failure=''
 test_redis_host=redis
@@ -40,13 +40,17 @@ cat >"${PG18_WORK}/writers" <<'WRITERS'
 /jms_core true always 0 core
 /jms_web true unless-stopped 0 web
 /jms_celery false on-failure 3 celery
+/jms_chen true always 0 chen
+/jms_kael false always 0 kael
+/jms_lion true always 0 lion
 WRITERS
 : >"${calls}"
 complete_internal_postgresql_upgrade
 calls_text=$(cat "${calls}")
 assert_contains "${calls_text}" $'db up -d\nwait jms_postgresql\nwait jms_redis\nprepare ' 'datastores must be restored and healthy before applications start'
-assert_contains "${calls_text}" 'prepare core web kael ansible-executor future-service' 'recovery must prepare enabled new services'
-assert_contains "${calls_text}" 'compose up -d --no-deps --force-recreate kael ansible-executor future-service' 'new services must start from Compose with their restart policies'
+assert_contains "${calls_text}" 'prepare core web koko ansible-executor future-service' 'recovery must prepare enabled new services'
+assert_contains "${calls_text}" 'compose up -d --no-deps --force-recreate koko ansible-executor future-service' 'new services must start from Compose with their restart policies'
+[[ "${calls_text}" != *chen* && "${calls_text}" != *kael* && "${calls_text}" != *lion* ]] || fail 'recovery must skip retired services and their restart policies'
 assert_contains "${calls_text}" 'compose up -d core web' 'previously running services must be restored'
 assert_contains "${calls_text}" 'docker update --restart=on-failure:3 /jms_celery' 'stopped service restart policy must be preserved'
 assert_contains "${calls_text}" 'jms_ansible_executor' 'executor container name must be mapped correctly'
@@ -70,14 +74,14 @@ assert_contains "$(cat "${calls}")" $'db up -d\nwait jms_postgresql\nprepare ' '
 test_redis_host=redis
 printf 'PASS: datastore failures block applications and recovery can retry with external Redis\n'
 
-# Retry after an interrupted attempt: recreate new containers, including kael,
+# Retry after an interrupted attempt: recreate new containers, including koko,
 # and do not mark migration complete if a newly introduced service is unhealthy.
 printf 'switched\n' >"${PG18_WORK}/phase"
-failed_container=jms_kael
+failed_container=jms_koko
 : >"${calls}"
 if complete_internal_postgresql_upgrade; then fail 'failed new service must prevent completion'; fi
 assert_eq switched "$(cat "${PG18_WORK}/phase")" 'unhealthy new service must leave migration pending'
-assert_contains "$(cat "${calls}")" 'compose up -d --no-deps --force-recreate kael' 'retry must recreate newly introduced services'
+assert_contains "$(cat "${calls}")" 'compose up -d --no-deps --force-recreate koko' 'retry must recreate newly introduced services'
 printf 'PASS: failure in a new service keeps recovery pending\n'
 
 # With no previously running services, upgrade must not start an idle deployment.
@@ -97,14 +101,14 @@ complete_internal_postgresql_upgrade
 [[ "$(cat "${calls}")" != *'--force-recreate'* ]] || fail 'no new services should require recreation'
 printf 'PASS: recovery handles a release without new services\n'
 
-# An explicitly stopped kael in the saved snapshot must not be treated as new.
+# An explicitly stopped koko in the saved snapshot must not be treated as new.
 cat >"${PG18_WORK}/writers" <<'WRITERS'
 /jms_core true always 0 core
-/jms_kael false always 0 kael
+/jms_koko false always 0 koko
 WRITERS
-enabled='core kael'
+enabled='core koko'
 : >"${calls}"
 complete_internal_postgresql_upgrade
 calls_text=$(cat "${calls}")
-[[ "${calls_text}" != *'--force-recreate'* && "${calls_text}" != *'compose up -d core kael'* ]] || fail 'recorded stopped kael must remain stopped'
-printf 'PASS: a recorded stopped kael remains stopped\n'
+[[ "${calls_text}" != *'--force-recreate'* && "${calls_text}" != *'compose up -d core koko'* ]] || fail 'recorded stopped koko must remain stopped'
+printf 'PASS: a recorded stopped koko remains stopped\n'

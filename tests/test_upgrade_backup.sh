@@ -29,6 +29,7 @@ EOF
 installed_db_image=''
 docker() {
   case "$1 ${2:-}" in
+    'ps -aq') return 0 ;;
     'image inspect')
       case "${*: -1}" in
         redis:8.10.3-trixie|"jumpserver/core:${VERSION}"|"jumpserver/jdmc:${VERSION}") printf 'sha256:installed\n' ;;

@@ -28,15 +28,6 @@ scrape_configs:
           job_name: koko
           __path__: /data/jumpserver/koko/data/logs/*.log
 
-  - job_name: chen
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          component: chen
-          job_name: chen
-          __path__: /data/jumpserver/chen/data/logs/*.log
-
   - job_name: web
     static_configs:
       - targets:
@@ -89,7 +80,7 @@ scrape_configs:
         filters:
           - name: name
             values: [jms_web, jms_core, jms_koko,
-                     jms_chen, jms_magnus, jms_xrdp, jms_razor,
+                     jms_magnus, jms_xrdp, jms_razor,
                      jms_nec,
                      ]
     relabel_configs:

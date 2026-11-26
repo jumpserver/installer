@@ -1,6 +1,6 @@
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/postgresql-upgrade-standalone.sh"
 
-common_services=(core kael celery ansible-executor koko chen web)
+common_services=(core celery ansible-executor koko web)
 xpack_services=(magnus razor xrdp video-worker nec)
 
 
@@ -357,7 +357,12 @@ function prepare_services_for_start() {
       }
     fi
     case "${service#jms_}" in
-      chen) prepare_chen_volume "${image}" "${owner}" || return 1 ;;
+      chen)
+        # JDMC can still prepare an installed container during an HA upgrade.
+        if [[ "${from_containers}" == 1 ]]; then
+          prepare_chen_volume "${image}" "${owner}" || return 1
+        fi
+        ;;
       video-worker) prepare_video_worker_volume "${image}" "${owner}" || return 1 ;;
       ansible-executor|ansible_executor) prepare_ansible_executor "${image}" || return 1 ;;
     esac
@@ -367,7 +372,7 @@ function prepare_services_for_start() {
 function prepare_chen_volume() {
   [[ "$(get_config_or_env CHEN_ENABLED)" != "0" ]] || return 0
   local image owner data_dir folder
-  image=${1:-"$(get_image_namespace)/chen:${VERSION}"}
+  image=$1
   owner=${2:-}
   if [[ -z "${owner}" ]]; then
     owner=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
