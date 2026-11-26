@@ -148,7 +148,7 @@ Core、Celery 和临时迁移容器通过 `jdmc.host.internal` 和 JDMC 的 HTTP
 
 原服务是 v4 KOTL 时，安装器保留业务配置和备份数据。默认的 `kotl/backup` 整目录迁到 `jdmc/backup`，旧的独立备份盘继续挂载使用。SFTP 目标、加密登录凭据、备份计划、历史记录、增量进度和本地归档随备份目录保留。V4 的许可证留在旧目录，V5 使用对应的授权。旧 KOTL 没有保存远端 SFTP 主机指纹时，请在「数据备份」的 SFTP 主机设置中核对并保存服务器的 SHA256 指纹，随后该目标才能传输。
 
-`./jmsctl.sh stop` 或 `down` 停止应用后仍可用宿主 root 登录 JDMC。单独操作管理容器可使用 `./jmsctl.sh start jdmc`、`stop jdmc`、`restart jdmc`、`status jdmc` 或 `tail jdmc`。JDMC 页面里的应用启停共享安装器的 `application-start`、`application-restart` 入口。
+`./jmsctl.sh stop` 或 `down` 停止应用后仍可用宿主 root 登录 JDMC。单独操作管理容器可使用 `./jmsctl.sh start jdmc`、`stop jdmc`、`restart jdmc`、`status jdmc` 或 `tail jdmc`。JDMC 页面和命令行共用 `start`、`restart`。例如 `jmsctl start core` 启动 Core，`jmsctl restart core` 重建 Core。整套应用重启时，页面执行 `jmsctl restart --skip-jdmc`，通过 Compose 重建业务容器，期间 JDMC 保持在线。
 
 JDMC 的宿主管理进程通过只读宿主根目录挂载访问宿主机的 `/var/run/docker.sock`。自定义路径使用 `JDMC_DOCKER_SOCK`。开机时，宿主机现有的 `systemd-tmpfiles` 按 `/etc/tmpfiles.d/zz-jumpserver-jdmc.conf` 准备需要挂入容器的 `/run` 文件和目录，Docker 按 `unless-stopped` 策略恢复之前运行的 JDMC 容器。更改宿主资源后，运行 `jmsctl start jdmc` 重新探测挂载。
 

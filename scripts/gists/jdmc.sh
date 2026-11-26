@@ -14,13 +14,18 @@ function is_jdmc_enabled() {
   is_enterprise_edition
 }
 
+function warn_jdmc_unavailable() {
+  local message="$1. Continuing with JumpServer."
+  log_warn "$message"
+  if [[ -n ${JDMC_UPGRADE_LOG_DIR:-} ]]; then
+    printf '%s\n' "$message" >> "$JDMC_UPGRADE_LOG_DIR/jdmc-upgrade-warning" ||
+      log_warn "Could not save the JDMC warning to the upgrade directory."
+  fi
+}
+
 function can_manage_existing_jdmc() {
   # A lost config.txt must not bypass HA protection or strand an EE uninstall.
   is_jdmc_enabled || [[ "${VERSION:-}" == *-ee && ! -f "${CONFIG_FILE}" ]]
-}
-
-function should_include_jdmc_image() {
-  is_jdmc_enabled
 }
 
 function get_container_jdmc_image_override() {
@@ -32,16 +37,9 @@ function get_container_jdmc_image_override() {
 }
 
 function get_jdmc_image() {
-  local namespace image
+  local image
   image=$(get_container_jdmc_image_override JDMC_IMAGE)
-  if [[ -n "$image" ]]; then
-    printf '%s\n' "$image"
-    return
-  fi
-
-  namespace=$(get_config_or_env NAMESPACE jumpserver)
-  namespace=${namespace%/}
-  echo "${namespace:-jumpserver}/jdmc:${VERSION}"
+  printf '%s\n' "${image:-$(get_image_namespace)/jdmc:${VERSION}}"
 }
 
 function cleanup_jdmc_legacy_switches() {
@@ -107,35 +105,24 @@ function jdmc_managed_host_file() {
 function jdmc_uninstall_ready() {
   local active
   if [[ -d /etc/docker/.jdmc-undo.pending || -d /etc/docker/.jdmc-undo.claimed ]]; then
-    log_error "Finish the pending Docker network rollback in JDMC before uninstalling"
+    log_error "A previous JDMC release left a Docker recovery record in /etc/docker. Check the configuration and finish recovery on the host before uninstalling."
     return 1
   fi
   if [[ -d /run/systemd/system ]]; then
     active=$(systemctl list-units --plain --no-legend --state=active,activating,reloading,deactivating \
-             'jumpserver-jdmc-maintenance@*.service') || return 1
+             'jumpserver-jdmc-maintenance[-@]*.service') || return 1
     [[ -z "$active" ]] || { log_error "A JDMC package maintenance task is running"; return 1; }
   fi
 }
 
 function remove_container_jdmc_integration() {
-  local dir=/etc/systemd/system file timer profile=/etc/apparmor.d/jumpserver-jdmc
-  local rule=/etc/tmpfiles.d/zz-jumpserver-jdmc.conf
-  # The last container request could have armed a rollback while shutting down.
+  local unit=/etc/systemd/system/jumpserver-jdmc-maintenance@.service
+  local profile=/etc/apparmor.d/jumpserver-jdmc rule=/etc/tmpfiles.d/zz-jumpserver-jdmc.conf
   jdmc_uninstall_ready || return 1
-  for file in "$dir"/jumpserver-jdmc-docker-*.timer "$dir"/jumpserver-jdmc-docker-*.service \
-              "$dir/jumpserver-jdmc-maintenance@.service"; do
-    jdmc_managed_host_file "$file" || continue
-    if [[ "$file" == *.timer ]]; then
-      timer=${file##*/}
-      if [[ -d /run/systemd/system ]]; then
-        systemctl disable --now "$timer" || return 1
-      else
-        systemctl --root=/ disable "$timer" || return 1
-      fi
-    fi
-    rm -- "$file" || return 1
-  done
-  if [[ -d /run/systemd/system ]]; then systemctl daemon-reload || return 1; fi
+  if jdmc_managed_host_file "$unit"; then
+    rm -- "$unit" || return 1
+    if [[ -d /run/systemd/system ]]; then systemctl daemon-reload || return 1; fi
+  fi
   if jdmc_managed_host_file "$profile"; then
     local profiles=/sys/kernel/security/apparmor/profiles
     if [[ -r /sys/module/apparmor/parameters/enabled && $(< /sys/module/apparmor/parameters/enabled) == Y ]]; then

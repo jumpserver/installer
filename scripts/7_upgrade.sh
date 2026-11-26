@@ -624,7 +624,7 @@ function upgrade_compose() {
 }
 
 function main() {
-  local installer_version_before_upgrade target_version
+  local installer_version_before_upgrade target_version jdmc_warning=
   check_jdmc_deployment "${target:-}" || exit 1
   trap cleanup_failed_upgrade EXIT
   write_upgrade_recovery_state running || exit 1
@@ -676,7 +676,7 @@ function main() {
   # Database backup starts a Core container using the target version.
   # Load the offline images before that container is created.
   echo_yellow "\n3. $(gettext 'Loading Docker Image')"
-  if ! POSTGRESQL_MAJOR_UPGRADE=1 ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh" "${to_version}"; then
+  if ! POSTGRESQL_MAJOR_UPGRADE=1 ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh" "${to_version}" business; then
     log_error "$(gettext 'Failed to load Docker images')"
     exit 1
   fi
@@ -684,7 +684,12 @@ function main() {
   echo_yellow "\n4. $(gettext 'Backup database')"
   UPGRADE_CONFIG_CHANGED=1
   if is_jdmc_enabled; then
-    container_jdmc_action deploy || exit 1
+    if ! bash "${BASE_DIR}/3_load_images.sh" "${to_version}" jdmc; then
+      jdmc_warning="JDMC image unavailable. Load the target JDMC image before retrying ./jmsctl.sh start jdmc"
+    elif ! container_jdmc_action deploy; then
+      jdmc_warning="JDMC deployment failed. Inspect the error and retry ./jmsctl.sh start jdmc"
+    fi
+    if [[ -n "$jdmc_warning" ]]; then warn_jdmc_unavailable "$jdmc_warning"; fi
   fi
   migrate_internal_mysql_root_password || exit 1
   backup_db
@@ -692,8 +697,9 @@ function main() {
   echo_yellow "\n5. $(gettext 'Update Configuration File')"
   update_config_if_need
   if is_jdmc_enabled && ! configure_container_jdmc; then
-    log_error "Failed to configure JDMC"
-    exit 1
+    export JDMC_CALLBACK_UNAVAILABLE=1
+    jdmc_warning="JDMC callback setup failed. After repair, run ./jmsctl.sh start jdmc, ./jmsctl.sh start core and ./jmsctl.sh start celery from this installer"
+    warn_jdmc_unavailable "$jdmc_warning"
   fi
 
   echo_yellow "\n6. $(gettext 'Apply database changes')"
@@ -745,7 +751,12 @@ function main() {
 
   echo_yellow "\n9. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "cd ${PROJECT_DIR}"
-  echo "./jmsctl.sh start"
+  if [[ -n "$jdmc_warning" ]]; then
+    log_warn "$jdmc_warning"
+    echo "./jmsctl.sh start --skip-jdmc"
+  else
+    echo "./jmsctl.sh start"
+  fi
   echo -e "\n"
 }
 

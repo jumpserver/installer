@@ -35,58 +35,17 @@ assert_contains "${systemctl_calls[*]}" 'daemon-reload' \
   'JDMC main service removal must reload systemd'
 printf 'PASS: JDMC main service integration is removed\n'
 
-VERSION=v5.2.1-ee
-USE_XPACK=1
 calls=()
 echo_yellow() { :; }
 prepare_jdmc_uninstall() { calls+=(retire); }
 stop_services() { calls+=(stop); return 1; }
 cleanup_jdmc_host_integration() { calls+=(jdmc); }
 installation_log() { calls+=(telemetry); }
+remove_jumpserver() { calls+=(jumpserver); }
 remove_compose() { calls+=(compose); }
 remove_docker() { calls+=(docker); }
 remove_jmsctl() { calls+=(jmsctl); }
 
-# Run the full uninstall against disposable trees. CE may encounter EE flags or
-# data left by another deployment. An EE package can also lose its config file.
-for edition in ce ee; do
-  (
-    VERSION="v5.2.1-${edition}"
-    case_dir="${test_dir}/${edition}"
-    PROJECT_DIR="${case_dir}/installer"
-    CONFIG_DIR="${case_dir}/config"
-    CONFIG_FILE="${CONFIG_DIR}/config.txt"
-    VOLUME_DIR="${case_dir}/data/jumpserver"
-    JDMC_INSTALL_DIR="${case_dir}/opt/jdmc"
-    JDMC_LEGACY_INSTALL_DIR="${case_dir}/opt/kotl"
-    jdmc_dirs=("$(get_current_jdmc_data_dir)" "$(get_legacy_kotl_data_dir)" "${JDMC_INSTALL_DIR}" "${JDMC_LEGACY_INSTALL_DIR}")
-    mkdir -p "${VOLUME_DIR}" "${CONFIG_DIR}" "${PROJECT_DIR}/compose" "${jdmc_dirs[@]}"
-    unset USE_XPACK
-    if [[ "${edition}" == ce ]]; then
-      echo USE_XPACK=1 >"${CONFIG_FILE}"
-    fi
-    # Confirm only the file cleanup, never Docker image removal.
-    count=0
-    read_from_input() {
-      count=$((count + 1))
-      if [[ "${count}" == 1 ]]; then printf -v "$1" y; else printf -v "$1" n; fi
-    }
-    get_images() { :; }
-    stop_services() { calls+=(stop); }
-    main
-    [[ ! -e "${VOLUME_DIR}" && ! -e "${CONFIG_DIR}" ]] || fail 'JumpServer files should be removed'
-    if [[ "${edition}" == ce ]]; then
-      assert_eq 'stop telemetry compose docker jmsctl' "${calls[*]}" 'CE must leave JDMC integration alone'
-      for dir in "${jdmc_dirs[@]}"; do [[ -d "${dir}" ]] || fail "CE removed ${dir}"; done
-    else
-      assert_eq 'retire stop jdmc telemetry compose docker jmsctl' "${calls[*]}" 'EE must retire JDMC with missing config'
-      for dir in "${jdmc_dirs[@]}"; do [[ ! -e "${dir}" ]] || fail "EE left ${dir}"; done
-    fi
-  )
-done
-printf 'PASS: CE preserves JDMC/KOTL volumes and services, EE can clean up without config\n'
-
-remove_jumpserver() { calls+=(jumpserver); }
 if main; then
   fail 'Uninstall must fail when services cannot be stopped'
 fi

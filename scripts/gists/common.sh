@@ -4,6 +4,17 @@ function check_root() {
 }
 
 
+function get_python() {
+  local cmd
+  for cmd in python python2 python3; do
+    if command -v "$cmd" >/dev/null && "$cmd" -c 'import sys; sys.exit(sys.version_info < (2, 7))' 2>/dev/null; then
+      command -v "$cmd"
+      return 0
+    fi
+  done
+  return 1
+}
+
 function random_str() {
   len=$1
   if [[ -z ${len} ]]; then

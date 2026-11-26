@@ -103,10 +103,14 @@ function emit_app_image_mapping() {
 }
 
 function get_image_mappings() {
-  local use_xpack enabled_services service image db_image namespace executor_tag
+  local use_xpack enabled_services service image db_image namespace executor_tag core_image_added=false
 
   use_xpack=$(get_config_or_env USE_XPACK)
   namespace=$(get_image_namespace)
+  if [[ ${image_scope:-all} == jdmc ]]; then
+    emit_app_image_mapping jdmc "$namespace"
+    return
+  fi
   emit_image_mapping "redis:8.10.3-trixie" "redis:8.10.3-trixie"
   db_image=$(get_db_images)
   if [[ -n "${db_image}" ]] && ! should_skip_external_db_image "${db_image}"; then
@@ -122,7 +126,12 @@ function get_image_mappings() {
 
   for service in ${enabled_services}; do
     case "${service}" in
-      "" | celery | jdmc | panda)
+      "" | jdmc | panda)
+        ;;
+      core|celery)
+        [[ "$core_image_added" == false ]] || continue
+        emit_app_image_mapping core "$namespace"
+        core_image_added=true
         ;;
       ansible-executor)
         executor_tag=$(get_ansible_executor_tag) || return 1
@@ -146,7 +155,7 @@ function get_image_mappings() {
     image=$(get_openbao_image)
     emit_image_mapping "${image}" "${image}"
   fi
-  if should_include_jdmc_image; then
+  if [[ ${image_scope:-all} != business ]] && is_jdmc_enabled; then
     emit_app_image_mapping jdmc "$namespace"
   fi
 }

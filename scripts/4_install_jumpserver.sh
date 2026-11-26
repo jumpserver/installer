@@ -25,15 +25,7 @@ function pre_install() {
     exit 1
   fi
 
-  found=0
-  for cmd in python python2 python3; do
-    if command -v "$cmd" &>/dev/null; then
-      found=1
-    break
-  fi
-  done
-  
-  if [ $found -eq 0 ]; then
+  if ! get_python >/dev/null; then
     log_error "$(gettext 'command not found, Please install it first') python"
     exit 1
   fi

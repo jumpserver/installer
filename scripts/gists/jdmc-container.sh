@@ -209,7 +209,7 @@ function jdmc_extract_release() (
     cid=$(docker create --network none --entrypoint /bin/true "$image") || return 1
     docker cp "$cid:/opt/jdmc/deploy/docker/." "$source/" || return 1
   fi
-  for file in host-compose.sh jdmc-layout.py compose.yml compose.host-management.yml compose.halcli.yml compose.g2hproxy.yml; do
+  for file in host-compose.sh compose.yml; do
     [[ -f "$source/$file" && -s "$source/$file" && ! -L "$source/$file" ]] || {
       log_error "Missing or invalid JDMC deployment file $file in release $image"
       return 1
@@ -290,15 +290,21 @@ function jdmc_current_backup() {
   printf '%s\n' "$backup"
 }
 
+function jdmc_layout() {
+  local python
+  python=$(get_python) || { log_error "JDMC needs Python 2.7 or Python 3"; return 1; }
+  "$python" "$SCRIPT_DIR/gists/jdmc-layout.py" "$@"
+}
+
 function jdmc_migrate_and_start() (
   local node=$1 dir=$2 state=$3 live=$4 backup_override=$5
   shift 5
-  local id="sha256:${dir##*/}" layout="$dir/jdmc-layout.py"
+  local id="sha256:${dir##*/}"
   local work storage_backup unit
   grep -Fq '/data/jdmc/state' "$dir/compose.yml" || { log_error "The selected JDMC image does not declare the required /data/jdmc/state volume"; return 1; }
   work=$(mktemp -d "$node/.layout-run.XXXXXX") || return 1
   trap 'rm -rf -- "$work"' EXIT
-  storage_backup=$(python3 "$layout" plan "$state" "$work" "$node" \
+  storage_backup=$(jdmc_layout plan "$state" "$work" "$node" \
     "$(get_config_or_env VOLUME_DIR /data/jumpserver)" "$backup_override" "$live" "$id") || return 1
   # Validate the target on this host while the native service can still serve.
   jdmc_compose "$node" "$dir" "$storage_backup" config --quiet || return 1
@@ -315,7 +321,7 @@ function jdmc_migrate_and_start() (
     if systemctl is-enabled --quiet "$unit"; then systemctl disable "$unit" || return 1; fi
     systemctl stop "$unit" || return 1
   done
-  python3 "$layout" apply "$state" "$work" "$id" "$live" || return 1
+  jdmc_layout apply "$state" "$work" "$id" "$live" || return 1
   jdmc_compose "$node" "$dir" "$storage_backup" "$@" || return 1
   local unshare socket
   unshare="$(get_config_or_env VOLUME_DIR /data/jumpserver)/core/data/unshare"
@@ -325,7 +331,7 @@ function jdmc_migrate_and_start() (
   remove_config JDMC_SOCK_PATH || return 1
   cleanup_jdmc_legacy_switches || return 1
   ln -sfnT "$dir" "$node/.next-release" && mv -fT "$node/.next-release" "$node/release" || return 1
-  python3 "$layout" commit "$state" "$work" "$node"
+  jdmc_layout commit "$state" "$work" "$node"
 )
 
 function container_jdmc_action() (
