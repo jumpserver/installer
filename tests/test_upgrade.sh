@@ -135,7 +135,7 @@ printf 'PASS: upgrade adds and preserves Koko Web Proxy configuration\n'
   }
   export USE_XPACK=1 XRDP_ENABLED=0
   remove_obsolete_containers
-  expected_calls=$'ps -a --format {{.Names}}\nstop jms_lion\nrm jms_lion\nstop jms_facelive\nrm jms_facelive\nstop jms_panda\nrm jms_panda\nstop jms_xrdp\nrm jms_xrdp'
+  expected_calls=$'ps -a --format {{.Names}}\nstop jms_facelive\nrm jms_facelive\nstop jms_panda\nrm jms_panda\nstop jms_xrdp\nrm jms_xrdp'
   assert_eq "${expected_calls}" "$(cat "${docker_calls}")" 'cleanup must remove only exact obsolete container names'
 
   mock_container_names=jms_xrdp
@@ -153,8 +153,8 @@ printf 'PASS: upgrade adds and preserves Koko Web Proxy configuration\n'
   remove_obsolete_containers
   assert_eq 'ps -a --format {{.Names}}' "$(cat "${docker_calls}")" 'cleanup must succeed when obsolete containers are already absent'
 
-  mock_container_names=jms_lion
-  for fail_action in 'stop jms_lion' 'rm jms_lion'; do
+  mock_container_names=jms_facelive
+  for fail_action in 'stop jms_facelive' 'rm jms_facelive'; do
     if remove_obsolete_containers; then
       fail "cleanup must propagate failure: ${fail_action}"
     fi
@@ -165,6 +165,58 @@ printf 'PASS: upgrade adds and preserves Koko Web Proxy configuration\n'
   fi
 )
 printf 'PASS: upgrade cleans obsolete containers and preserves enabled XRDP\n'
+
+(
+  calls="${test_dir}/bundled-container-calls"
+  declare -A legacy_ids=([chen]=old-chen [kael]=old-kael [lion]=old-lion)
+  fail_action=''
+  docker() {
+    case "$1" in
+      ps)
+        for service in chen kael lion; do
+          if [[ "$*" == "ps -aq --filter name=^/jms_${service}$ --filter label=com.docker.compose.project=jms --filter label=com.docker.compose.service=${service}" ]]; then
+            echo "${legacy_ids[${service}]:-}"
+            return 0
+          fi
+        done
+        fail "unexpected container selection: $*" ;;
+      update|stop)
+        echo "$*" >>"${calls}"
+        [[ "$*" != "${fail_action}" ]] ;;
+      rm)
+        echo "$*" >>"${calls}"
+        [[ $# == 2 && "$*" != "${fail_action}" ]] || return 1
+        local removed_service=${2#old-}
+        unset 'legacy_ids[$removed_service]' ;;
+      *) fail "unexpected container operation: $*" ;;
+    esac
+  }
+  expected=$'update --restart=no old-chen\nstop old-chen\nupdate --restart=no old-kael\nstop old-kael\nupdate --restart=no old-lion\nstop old-lion'
+  : >"${calls}"
+  retire_services_merged_into_koko stop kael
+  assert_eq $'update --restart=no old-kael\nstop old-kael' "$(cat "${calls}")" 'a named stop must affect only that legacy container'
+  for attempt in 1 2; do
+    : >"${calls}"
+    retire_services_merged_into_koko stop
+    assert_eq "${expected}" "$(cat "${calls}")" 'legacy containers must stay stopped across upgrades and daemon restarts'
+  done
+  for fail_action in 'update --restart=no old-lion' 'stop old-lion'; do
+    if retire_services_merged_into_koko stop; then fail "upgrade ignored failure: ${fail_action}"; fi
+  done
+  fail_action='rm old-kael'
+  : >"${calls}"
+  if retire_services_merged_into_koko remove; then fail 'upgrade ignored a container removal failure'; fi
+  assert_eq $'rm old-chen\nrm old-kael' "$(cat "${calls}")"
+  fail_action=''
+  : >"${calls}"
+  retire_services_merged_into_koko remove
+  assert_eq $'rm old-kael\nrm old-lion' "$(cat "${calls}")" 'retry must remove only the remaining containers without removing volumes'
+  : >"${calls}"
+  retire_services_merged_into_koko stop
+  retire_services_merged_into_koko remove
+  [[ ! -s "${calls}" ]] || fail 'missing legacy containers must be skipped'
+)
+printf 'PASS: upgrade stops and removes standalone Chen, Kael and Lion and preserves their volumes\n'
 
 current_version_under_test=v3.10.11
 get_config() {

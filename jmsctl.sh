@@ -100,6 +100,13 @@ function is_jdmc_target() {
   [[ "${target}" == "jdmc" ]]
 }
 
+function start_compose_services() {
+  if [[ ( $# == 0 || "${1:-}" == koko ) && "$(get_config_or_env KOKO_ENABLED)" != "0" ]]; then
+    retire_services_merged_into_koko stop || return 1
+  fi
+  ${EXE} up -d "$@"
+}
+
 function start() {
   set_openbao || return 1
   configure_jdmc || return 1
@@ -110,7 +117,7 @@ function start() {
   if [[ "$(get_config_or_env ANSIBLE_EXECUTOR_ENABLED)" != "0" ]]; then
     ${EXE} up -d --wait --wait-timeout 60 ansible-executor || return 1
   fi
-  ${EXE} up -d || return 1
+  start_compose_services || return 1
   remove_stopped_openbao_init_container
 
   ensure_current_installer_link || return 1
@@ -120,21 +127,22 @@ function start() {
 }
 
 function stop() {
+  local cmd="${EXE}" service="${target}"
   if is_jdmc_target; then
     stop_jdmc
-  elif [[ "${target}" == "ignore_db" ]]; then
-    if should_manage_jdmc; then
-      stop_jdmc || return 1
-    fi
+    return
+  fi
+  if [[ "${target}" == "ignore_db" ]]; then
     cmd=$(get_docker_compose_cmd_line "ignore_db") || return 1
+    service=""
+  fi
+  if [[ -z "${service}" ]] && should_manage_jdmc; then
+    stop_jdmc || return 1
+  fi
+  if [[ -z "${service}" ]]; then
     ${cmd} down -v
-  elif [[ -n "${target}" ]]; then
-    ${EXE} stop "${target}" && ${EXE} rm -f "${target}"
   else
-    if should_manage_jdmc; then
-      stop_jdmc || return 1
-    fi
-    ${EXE} down -v
+    ${cmd} stop "${service}" && ${cmd} rm -f "${service}"
   fi
 }
 
@@ -174,7 +182,7 @@ function restart() {
 
   if [[ -n "${target}" && "${target}" != "ignore_db" ]]; then
     prepare_services_for_start "${target}" || return 1
-    ${EXE} up -d "${target}" || return 1
+    start_compose_services "${target}" || return 1
     remove_stopped_openbao_init_container
     return
   fi
@@ -252,6 +260,17 @@ function check_os() {
 
 function main() {
   check_os || return 3
+
+  # Retired services can still be running after their Compose files are gone.
+  if [[ "${action}" == stop ]]; then
+    case "${target}" in
+      chen|kael|lion)
+        retire_services_merged_into_koko stop "${target}"
+        return
+        ;;
+      ''|ignore_db|koko) retire_services_merged_into_koko stop || return 1 ;;
+    esac
+  fi
 
   # Preparation also runs on an HA standby. Do not render Compose, rewrite
   # configuration, or enter any service/database lifecycle action here.

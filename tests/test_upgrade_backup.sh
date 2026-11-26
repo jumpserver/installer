@@ -29,6 +29,7 @@ EOF
 installed_db_image=''
 docker() {
   case "$1 ${2:-}" in
+    'ps -aq') return 0 ;;
     'image inspect')
       case "${*: -1}" in
         redis:8.10.3-trixie|"jumpserver/core:${VERSION}"|"jumpserver/jdmc:${VERSION}") printf 'sha256:installed\n' ;;
@@ -209,6 +210,7 @@ assert_contains "$(cat "${test_dir}/backup.log")" 'default: y): y'
 (
   . "${TEST_ROOT}/scripts/gists/jdmc.sh"
   export USE_XPACK=1 AUTO_INSTALL=1
+  retire_services_merged_into_koko() { printf '%s\n' "$1" >>"${BACKUP_EVENTS}"; }
   jdmc_action_result=0
   check_jdmc_runtime() { :; }
   check_jdmc_installed() { return 0; }
@@ -230,7 +232,7 @@ assert_contains "$(cat "${test_dir}/backup.log")" 'default: y): y'
       (( SECONDS - auto_started < 30 )) || fail 'JDMC unattended upgrades must not wait for backup confirmation'
       expected_events=''
       [[ -z "${installed_db_image}" ]] || expected_events=$'backup\n'
-      expected_events+=$'migrations\njdmc-upgrade\nsuccess'
+      expected_events+=$'stop\nmigrations\njdmc-upgrade\nremove\nsuccess'
       assert_eq "${expected_events}" "$(cat "${BACKUP_EVENTS}")"
       assert_eq "${VERSION}" "$(get_config CURRENT_VERSION)"
       assert_contains "$(cat "${test_dir}/jdmc-upgrade.log")" 'default: y): y'
@@ -243,7 +245,7 @@ assert_contains "$(cat "${test_dir}/backup.log")" 'default: y): y'
   if (main) </dev/null >"${test_dir}/jdmc-upgrade.log" 2>&1; then
     fail 'JDMC package upgrade failure must remain fatal after accepting backup failure'
   fi
-  assert_eq $'backup\nmigrations\njdmc-upgrade' "$(cat "${BACKUP_EVENTS}")"
+  assert_eq $'backup\nstop\nmigrations\njdmc-upgrade' "$(cat "${BACKUP_EVENTS}")"
   assert_eq v3.10.21 "$(get_config CURRENT_VERSION)"
   assert_contains "$(cat "${test_dir}/jdmc-upgrade.log")" 'Failed to upgrade JDMC'
 

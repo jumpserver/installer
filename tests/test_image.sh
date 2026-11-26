@@ -10,6 +10,12 @@ export JS_CONFIG_DIR="${test_dir}"
 cp "${TEST_ROOT}/config-example.txt" "${test_dir}/config.txt"
 . "${TEST_ROOT}/scripts/3_load_images.sh"
 
+for legacy_services in 'chen,kael' 'lion' 'koko chen kael lion'; do
+  mappings=$(OFFLINE_IMAGE_SERVICES="${legacy_services}" get_image_mappings)
+  assert_eq 1 "$(awk '$1 ~ /\/koko:/ {n++} END {print n+0}' <<<"${mappings}")" 'a legacy offline list must package KoKo once'
+  [[ "${mappings}" != *'/chen:'* && "${mappings}" != *'/kael:'* && "${mappings}" != *'/lion:'* ]] || fail 'the manifest still requests standalone images'
+done
+
 IMAGE_DIR="${test_dir}/images"
 mkdir -p "${IMAGE_DIR}"
 set_config VOLUME_DIR "${test_dir}/volume"

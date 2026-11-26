@@ -31,8 +31,8 @@ JDMC 启动时也会直接读取 `/opt/jumpserver/config/config.txt` 中的 `VOL
 组件的目录、权限和密钥初始化统一由安装器负责：
 
 ```bash
-./jmsctl.sh prepare chen video-worker
-./jmsctl.sh prepare --containers jms_chen jms_video-worker
+./jmsctl.sh prepare ansible-executor video-worker
+./jmsctl.sh prepare --containers jms_ansible_executor jms_video-worker
 ```
 
 不指定服务时准备所有已启用服务。`--containers` 必须指定已停止的容器，按容器实际使用的镜像和运行用户准备，适用于 JDMC 主备及组件补丁后的启动。此命令不启动或重建业务容器，不改写配置或执行数据库操作。JDMC 在两端维护升级及拉起应用前调用它，继续负责主备启停。

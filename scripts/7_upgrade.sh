@@ -239,9 +239,7 @@ function migrate_internal_mysql_business_account() {
 
 function remove_obsolete_containers() {
   local container existing_containers
-  # Kael and Magnus are current services. Keep their containers until the normal
-  # stop/recreate flow so PostgreSQL migration can record their restart intent.
-  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_video" "jms_lion" "jms_facelive" "jms_panda")
+  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_video" "jms_facelive" "jms_panda")
 
   # XRDP is still supported when explicitly enabled in the enterprise edition.
   if [[ "$(get_config_or_env USE_XPACK)" != "1" || "$(get_config_or_env XRDP_ENABLED)" != "1" ]]; then
@@ -391,7 +389,7 @@ function migrate_config() {
   migrate_compat_config "RAZOR_RDP_PORT" "RDP_PORT" "3389"
   migrate_compat_config "VIDEO_WORKER_ENABLED" "VIDEO_ENABLED" ""
   migrate_compat_config "VIDEO_WORKER_ENABLED" "VIDEO_ENABLE" ""
-  for component in CORE AI CELERY KOKO CHEN WEB MAGNUS RAZOR XRDP NEC; do
+  for component in CORE AI CELERY KOKO WEB MAGNUS RAZOR XRDP NEC; do
     migrate_compat_config "${component}_ENABLED" "${component}_ENABLE" ""
   done
 }
@@ -711,6 +709,10 @@ function main() {
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
   write_upgrade_recovery_state recovery_required || exit 1
   UPGRADE_DATABASE_MIGRATION_STARTED=1
+  retire_services_merged_into_koko stop || {
+    log_error "Failed to stop standalone Chen, Kael or Lion; retry the upgrade"
+    exit 1
+  }
   upgrade_internal_postgresql || {
     log_error "PostgreSQL migration did not complete; business remains stopped. Retry the same upgrade."
     exit 1
@@ -754,6 +756,10 @@ function main() {
   }
   UPGRADE_COMMITTED=1
   trap - EXIT
+  retire_services_merged_into_koko remove || {
+    log_error "Upgrade applied, but standalone container cleanup failed; retry the upgrade"
+    exit 1
+  }
   installation_log "upgrade"
 
   echo_yellow "\n8. $(gettext 'Cleanup Image')"

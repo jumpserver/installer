@@ -93,6 +93,7 @@ function emit_image_mapping() {
 
 function get_image_mappings() {
   local use_xpack enabled_services service image db_image namespace executor_tag
+  local koko_included=0
 
   use_xpack=$(get_config_or_env USE_XPACK)
   namespace=$(get_image_namespace)
@@ -110,6 +111,14 @@ function get_image_mappings() {
   enabled_services=${enabled_services//,/ }
 
   for service in ${enabled_services}; do
+    # Older offline build lists may request a bundled component by name.
+    case "${service}" in
+      chen|kael|lion|koko)
+        [[ "${koko_included}" == 0 ]] || continue
+        service=koko
+        koko_included=1
+        ;;
+    esac
     case "${service}" in
       "" | celery | jdmc | panda)
         ;;
