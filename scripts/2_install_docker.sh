@@ -89,15 +89,8 @@ function set_docker_config() {
   key=$1
   value=$2
 
-  if command -v python&>/dev/null; then
-    docker_command=python
-  elif command -v python2&>/dev/null; then
-    docker_command=python2
-  elif command -v python3&>/dev/null; then
-    docker_command=python3
-  else
-    return
-  fi
+  local docker_command
+  docker_command=$(get_python) || return 0
 
   if [[ ! -f "${DOCKER_DAEMON_CONFIG}" ]]; then
     config_dir=$(dirname ${DOCKER_DAEMON_CONFIG})

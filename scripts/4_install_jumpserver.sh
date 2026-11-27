@@ -25,15 +25,7 @@ function pre_install() {
     exit 1
   fi
 
-  found=0
-  for cmd in python python2 python3; do
-    if command -v "$cmd" &>/dev/null; then
-      found=1
-    break
-  fi
-  done
-  
-  if [ $found -eq 0 ]; then
+  if ! get_python >/dev/null; then
     log_error "$(gettext 'command not found, Please install it first') python"
     exit 1
   fi
@@ -84,9 +76,10 @@ function post_install() {
 }
 
 function main() {
+  check_jdmc_deployment || exit 1
   echo_logo
   pre_install
-  prepare_config
+  prepare_config || exit 1
 
   echo_green "\n>>> $(gettext 'Install and Configure Docker')"
   if ! bash "${BASE_DIR}/2_install_docker.sh"; then
@@ -97,14 +90,16 @@ function main() {
   if ! bash "${BASE_DIR}/1_config_jumpserver.sh"; then
     exit 1
   fi
-  if ! configure_jdmc; then
-    log_error "Failed to configure JDMC"
+
+  echo_green "\n>>> $(gettext 'Loading Docker Image')"
+  if ! ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh"; then
     exit 1
   fi
 
-  echo_green "\n>>> $(gettext 'Loading Docker Image')"
-  if ! bash "${BASE_DIR}/3_load_images.sh"; then
-    exit 1
+  # The EE migration command boots Django and reads JDMC's license before
+  # it can touch the business database.
+  if is_jdmc_enabled; then
+    container_jdmc_action deploy || exit 1
   fi
 
   echo_green "\n>>> $(gettext 'Initialize Database')"
@@ -113,21 +108,15 @@ function main() {
     exit 1
   fi
 
-  ensure_current_installer_link || {
-    log_error "Failed to update /opt/current/installer"
-    exit 1
-  }
-  install_jdmc || {
-    jdmc_status=$?
-    log_error "Failed to install JDMC"
-    exit "${jdmc_status}"
-  }
-
   if ! set_current_version; then
     log_error "Failed to update CURRENT_VERSION"
     exit 1
   fi
 
+  ensure_current_installer_link || {
+    log_error "Failed to update /opt/current/installer"
+    exit 1
+  }
   installation_log "install"
   post_install
 }

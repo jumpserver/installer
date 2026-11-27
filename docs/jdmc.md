@@ -2,29 +2,23 @@
 
 [English](jdmc.md) · [简体中文](zh-hans/jdmc.md) · [繁體中文](zh-hant/jdmc.md)
 
-JDMC is an enterprise-edition component. Enable it in `/opt/jumpserver/config/config.txt` with `USE_XPACK=1`. It is installed as a host systemd service and is not part of the Docker Compose stack. The community edition neither downloads nor installs JDMC; the enterprise edition always installs it, with no separate enable or disable switch.
+On enterprise nodes with `USE_XPACK=1`, the installer extracts the Compose files from the matching JDMC runtime image and starts a separate `jdmc` project. The enterprise offline bundle includes the image. Community packages skip JDMC and preserve existing JDMC and KOTL data on uninstall.
 
-## Image and installation
+## Startup and Core connectivity
 
-The installer pulls the JDMC artifact image according to `IMAGE_PULL_PREFIX` (`jumpserver/jdmc:${VERSION}` when unset), tags it as `${NAMESPACE:-jumpserver}/jdmc:${VERSION}` when needed, extracts `/dist`, and runs the bundled `scripts/install.sh` or `scripts/upgrade.sh`.
+The installer starts JDMC before the Core database migration. The host root account can sign in through PAM while Core is offline or its callback certificate is unavailable. Core calls JDMC over HTTPS on the management port (default `9898`), verifying the certificate and authenticating with a Bearer token. In the other direction, JDMC signs requests with the local node key and connects to `http://core.host.internal:8080`. The installer publishes Core at `127.0.0.1:8080`.
 
-JDMC follows the same pull and retag rules as Core and other first-party components. Enterprise offline packages always include this image.
+The node name, secret and callback configuration are mounted read-only into JDMC and the Core processes. To rotate the key, keep `node-name` and atomically replace `config/core/enrollment-secret` with a root-owned file of mode `0400`. After changing `JDMC_WEB_ADDR`, run `./jmsctl.sh start jdmc` to publish the callback port. Each HA node uses its own identity and local Core.
 
-Installation and upgrades try to install JDMC's HA host dependencies. If dependency installation fails or the dependency script is missing, the installer only emits a warning and single-node installation or upgrade continues. Dependencies must be satisfied before enabling HA; JDMC's HA `setup`, `prepare`, and `install` flows check and install dependencies again and abort HA deployment on failure.
+Use `./jmsctl.sh status jdmc` or `./jmsctl.sh tail jdmc` to inspect JDMC. Stopping the application stack with `./jmsctl.sh stop` leaves JDMC available. Use `./jmsctl.sh stop jdmc` to stop it explicitly. Docker restores previously running containers at boot with `unless-stopped`. JDMC uses the host Docker socket, configurable with `JDMC_DOCKER_SOCK`.
 
-The service follows `jmsctl.sh start/stop/restart/status`. View its logs with `./jmsctl.sh tail jdmc`. The installer configures `JDMC_SOCK_PATH=/opt/jumpserver/data/unshare/jdmc.sock` for Core, and Core enables JDMC integration automatically on the enterprise edition.
+## Data and upgrades
 
-## Data paths
+The host stores JDMC data in a `jdmc` directory alongside `VOLUME_DIR`. The `config`, `state`, `management`, and `backup` directories are mounted under `/data/jdmc` in the container. Include `config/core/` and `.installer/` when backing up node identity and TLS material. Existing dedicated backup disks remain mounted in place.
 
-During installation or upgrade, the installer passes the current `VOLUME_DIR` to the JDMC artifact scripts. JDMC uses it to configure the host-side Core Unix socket, logs, and backup paths, so an existing custom persistence directory can be reused without migrating to `/data/jumpserver` for the upgrade.
+For a single-node host JDMC or v4 KOTL installation, the installer checks the image and Compose configuration, stops and disables the old service, then migrates the data. If the container fails to start after cutover, fix the reported problem and retry from the same target installer. For a legacy host HA cluster, back up and retire both nodes with the original version before installing container HA.
 
-JDMC also reads `VOLUME_DIR` from `/opt/jumpserver/config/config.txt` at startup. After changing it, run `systemctl restart jdmc` to reload JDMC paths. Changing `VOLUME_DIR` on an installed environment does not move existing JDMC data: stop the service and explicitly migrate the sibling `jdmc` directory first.
-
-## Migration from KOTL
-
-When upgrading from KOTL, the installer detects `/opt/kotl` and `kotl.service` and invokes the new JDMC artifact upgrade script to migrate data, configuration, and the systemd service. After a successful install or upgrade, the legacy `KOTL_ENABLED`, `JDMC_HOST_ENABLED`, and `JDMC_ENABLED` settings are removed; historical disabled values no longer take effect.
-
-The command-line service target is `jdmc`. `--skip-jdmc` exists only so a JDMC-initiated JumpServer restart does not stop JDMC itself; it is not a component switch.
+KOTL backup migration preserves SFTP targets and encrypted credentials, schedules, history, incremental progress, and archives. Import a V5 license after upgrading from V4. For an old SFTP target with no recorded host key, verify and save the server's SHA256 fingerprint in Data Backup before the next transfer. Custom log or replay directories can be specified with `JDMC_HOST_BACKUP_LOG_DIRS` and `JDMC_HOST_BACKUP_REPLAY_DIRS`, as comma-separated absolute paths.
 
 ## Service preparation
 

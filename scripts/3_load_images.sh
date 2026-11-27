@@ -49,6 +49,8 @@ function load_image_files() {
         report_image_failure "${image}" "$(gettext 'Error loading image'): ${filename}" || load_failed=1
       elif ! docker image inspect "${image}" &>/dev/null; then
         report_image_failure "${image}" "$(gettext 'Docker image not found after loading'): ${image}" || load_failed=1
+      elif [[ ${image_scope:-all} == jdmc && "$(docker image inspect -f '{{.ID}}' "${image}" 2>/dev/null)" != "${saved_id}" ]]; then
+        report_image_failure "${image}" "Loaded image ID does not match the package: ${image}" || load_failed=1
       fi
     else
       echo "$(gettext 'Docker image loaded, skipping')"
@@ -58,28 +60,27 @@ function load_image_files() {
 }
 
 function main() {
+  # An upgrade can target a different tag from the one in static.env.
+  local -x VERSION=${1:-${VERSION}}
   # Panda belongs to remote publishers, even if packaging flags are inherited.
-  local INCLUDE_PANDA_IMAGE=0
-  if [[ "$(get_config HA_MODE)" == 1 && -n "${JDMC_HA_MAINTENANCE_ID:-}" &&
-    "${JDMC_HA_PG18_COORDINATED:-0}" != 1 && "${POSTGRESQL_MAJOR_UPGRADE:-0}" != 1 && "$(get_config DB_ENGINE)" == postgresql ]]; then
-    local pg_major
-    pg_major=$(get_internal_postgresql_data_version) || return 1
-    if [[ -n "${pg_major}" && "${pg_major}" -lt 18 ]]; then
-      log_error 'This installer requires coordinated PostgreSQL 18 migration. Update JDMC on both nodes before applying this package.'
-      return 1
-    fi
-  fi
+  local INCLUDE_PANDA_IMAGE=0 image_scope=${2:-all}
+  case "$image_scope" in
+    all|business) ;;
+    jdmc) is_jdmc_enabled || return 1 ;;
+    *) log_error "Unknown image group: $image_scope"; return 2 ;;
+  esac
+  check_jdmc_deployment || return 1
   if [[ -d "${IMAGE_DIR}" && $(find "${IMAGE_DIR}" -type f -name "*.zst" -print -quit 2>/dev/null) ]]; then
     load_image_files || return 1
   else
     pull_images || return 1
   fi
-  if ! prepare_virtualapp_resources; then
+  if [[ "$image_scope" != jdmc ]] && ! prepare_virtualapp_resources; then
     log_warn 'Virtual app offline resources could not be prepared; installation will continue. Existing resources have been kept.'
   fi
   echo_done
 }
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
-  main
+  main "$@"
 fi

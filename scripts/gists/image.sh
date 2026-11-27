@@ -91,12 +91,28 @@ function emit_image_mapping() {
   printf '%s\t%s\t%s\n' "${source_image}" "${target_image}" "${exact_source}"
 }
 
+function emit_app_image_mapping() {
+  local service=$1 namespace=$2 override
+  if [[ "$service" == jdmc ]]; then
+    override=$(get_container_jdmc_image_override)
+    if [[ -n "$override" ]]; then
+      emit_image_mapping "$override" "$override" 1
+      return
+    fi
+  fi
+  emit_image_mapping "jumpserver/${service}:${VERSION}" "${namespace}/${service}:${VERSION}"
+}
+
 function get_image_mappings() {
   local use_xpack enabled_services service image db_image namespace executor_tag
-  local koko_included=0 razor_included=0
+  local core_image_added=false koko_included=0 razor_included=0
 
   use_xpack=$(get_config_or_env USE_XPACK)
   namespace=$(get_image_namespace)
+  if [[ ${image_scope:-all} == jdmc ]]; then
+    emit_app_image_mapping jdmc "$namespace"
+    return
+  fi
   emit_image_mapping "redis:8.10.3-trixie" "redis:8.10.3-trixie"
   db_image=$(get_db_images)
   if [[ -n "${db_image}" ]] && ! should_skip_external_db_image "${db_image}"; then
@@ -125,7 +141,12 @@ function get_image_mappings() {
         ;;
     esac
     case "${service}" in
-      "" | celery | jdmc | panda)
+      "" | jdmc | panda)
+        ;;
+      core|celery)
+        [[ "$core_image_added" == false ]] || continue
+        emit_app_image_mapping core "$namespace"
+        core_image_added=true
         ;;
       ansible-executor)
         executor_tag=$(get_ansible_executor_tag) || return 1
@@ -134,9 +155,7 @@ function get_image_mappings() {
           "${namespace}/ansible-executor:${executor_tag}"
         ;;
       *)
-        emit_image_mapping \
-          "jumpserver/${service}:${VERSION}" \
-          "${namespace}/${service}:${VERSION}"
+        emit_app_image_mapping "$service" "$namespace"
         ;;
     esac
   done
@@ -151,10 +170,8 @@ function get_image_mappings() {
     image=$(get_openbao_image)
     emit_image_mapping "${image}" "${image}"
   fi
-  if should_include_jdmc_image; then
-    emit_image_mapping \
-      "jumpserver/jdmc:${VERSION}" \
-      "${namespace}/jdmc:${VERSION}"
+  if [[ ${image_scope:-all} != business ]] && is_jdmc_enabled; then
+    emit_app_image_mapping jdmc "$namespace"
   fi
 }
 

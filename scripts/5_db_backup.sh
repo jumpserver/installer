@@ -33,21 +33,11 @@ SHARED_BACKUP_TABLES=(
   terminal
 )
 
-MODE="full"
-if [[ $# -gt 0 ]]; then
-  case "$1" in
-    audit)
-      MODE="audit"
-      ;;
-    no_audit)
-      MODE="no_audit"
-      ;;
-    *)
-      log_error "Usage: $0 [audit|no_audit]"
-      exit 1
-      ;;
-  esac
-fi
+MODE=${1:-full}
+case "${MODE}" in
+  full|audit|no_audit) ;;
+  *) log_error "Usage: $0 [full|audit|no_audit] [core-version]"; exit 1 ;;
+esac
 
 function ensure_backup_dir() {
   if [[ ! -d "${BACKUP_DIR}" ]]; then
@@ -323,5 +313,5 @@ function main() {
 
 if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
   trap cleanup_db_env EXIT
-  main
+  VERSION=${2:-${VERSION}} main
 fi

@@ -1,0 +1,12 @@
+services:
+  core:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "jdmc.host.internal=${JDMC_CALLBACK_HOST:-host-gateway}"
+    volumes:
+      - type: bind
+        source: ${VOLUME_DIR:-/data/jumpserver}/../jdmc/config/core
+        target: /run/jdmc-core
+        read_only: true
+        bind:
+          create_host_path: false

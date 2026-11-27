@@ -245,6 +245,13 @@ function get_docker_compose_services() {
   echo "${services}"
 }
 
+# Omit only the callback overlay when the host identity cannot be mounted safely.
+# The selected file list is also used later when Compose recreates a service.
+function jdmc_callback_available() {
+  [[ ${JDMC_CALLBACK_UNAVAILABLE:-0} != 1 ]] || return 1
+  jdmc_layout check-callback "$(get_config_or_env VOLUME_DIR /data/jumpserver)" "$(get_config_or_env JDMC_CALLBACK_HOST host-gateway)"
+}
+
 function get_docker_compose_cmd_line() {
   postgresql_upgrade_start_guard || return 1
   ignore_db=${1-}
@@ -253,22 +260,33 @@ function get_docker_compose_cmd_line() {
   http_port=$(get_config HTTP_PORT)
   cap_addon=$(get_config CAP_ADDON)
 
-  cmd="docker compose"
+  cmd="env"
+  # Older Web images select the JDMC proxy using USE_XPACK from Compose.
+  if [[ "$(get_config_or_env USE_XPACK)" == 1 ]] && ! is_enterprise_edition; then
+    cmd+=" USE_XPACK=0"
+  fi
+  services=$(get_docker_compose_services "ignore_db")
+  if [[ " ${services} " == *" ansible-executor "* ]]; then
+    local executor_tag
+    executor_tag=$(get_ansible_executor_tag) || return 1
+    cmd+=" ANSIBLE_EXECUTOR_TAG=${executor_tag}"
+  fi
+  cmd+=" docker compose"
   if [[ "${use_ipv6}" != "1" ]]; then
     cmd+=" -f compose/network.yml"
   else
     cmd+=" -f compose/network-v6.yml"
   fi
-  services=$(get_docker_compose_services "ignore_db")
-
-  for service in $services; do
-      if [[ "${service}" == "ansible-executor" ]]; then
-        local executor_tag
-        executor_tag=$(get_ansible_executor_tag) || return 1
-        cmd="env ANSIBLE_EXECUTOR_TAG=${executor_tag} ${cmd}"
-      fi
-      cmd+=" -f compose/${service}.yml"
+  for service in ${services}; do
+    cmd+=" -f compose/${service}.yml"
   done
+  if is_jdmc_enabled; then
+    if [[ " ${services} " == *" core "* ]]; then cmd+=" -f compose/core.jdmc-port.yml"; fi
+    if jdmc_callback_available; then
+      if [[ " ${services} " == *" core "* ]]; then cmd+=" -f compose/jdmc.yml"; fi
+      if [[ " ${services} " == *" celery "* ]]; then cmd+=" -f compose/jdmc-celery.yml"; fi
+    fi
+  fi
 
   if [[ "${ignore_db}" != "ignore_db" ]]; then
     db_yml=$(get_db_compose_yml) || return 1
@@ -277,12 +295,13 @@ function get_docker_compose_cmd_line() {
     fi
   fi
 
-  if [[ -n "${https_port}" && "${https_port}" != "0" ]]; then
-    cmd+=" -f compose/web.https.yml"
-  fi
-
-  if [[ -n "${http_port}" && "${http_port}" != "0" ]]; then
-    cmd+=" -f compose/web.http.yml"
+  if [[ " ${services} " == *" web "* ]]; then
+    if [[ -n "${https_port}" && "${https_port}" != "0" ]]; then
+      cmd+=" -f compose/web.https.yml"
+    fi
+    if [[ -n "${http_port}" && "${http_port}" != "0" ]]; then
+      cmd+=" -f compose/web.http.yml"
+    fi
   fi
 
   if [[ "${cap_addon}" == "1" ]]; then
@@ -543,7 +562,10 @@ function get_db_compose_cmd() {
 function get_db_migrate_compose_cmd() {
   cmd=$(get_db_compose_cmd "all") || return 1
   cmd+=" -f compose/init-db.yml"
-  echo "$cmd"
+  if is_jdmc_enabled && jdmc_callback_available; then
+    cmd+=" -f compose/jdmc.yml"
+  fi
+  echo "${cmd}"
 }
 
 function create_db_ops_env() {

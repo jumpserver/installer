@@ -110,7 +110,7 @@ The Docker networks `DOCKER_SUBNET` (default `192.168.250.0/24`) and `DOCKER_EXE
 
 ## Management commands
 
-Run `sudo ./jmsctl.sh <command>` from the installer directory. `--skip-jdmc` on `start`, `stop`, `restart`, `status`, and `down` only prevents a JDMC-initiated restart from stopping JDMC itself; it is not a component switch.
+Run `sudo ./jmsctl.sh <command>` from the installer directory. To manage only JDMC, use `start jdmc`, `stop jdmc`, `restart jdmc`, `status jdmc`, or `tail jdmc`.
 
 | Command | Description |
 | --- | --- |
@@ -240,9 +240,7 @@ sudo ./jmsctl.sh load_image
 
 ## Enterprise edition (JDMC)
 
-JDMC is an enterprise-edition component enabled with `USE_XPACK=1`. It runs as a host systemd service and is not part of the Docker Compose stack. The community edition neither downloads nor installs JDMC; the enterprise edition always installs it.
-
-See [Enterprise edition: JDMC](docs/jdmc.md) for image handling, HA host dependencies, data paths, migration from KOTL, service preparation, and the video worker.
+With `USE_XPACK=1`, the enterprise installer runs JDMC in a separate Compose project. Community packages skip JDMC. See [Enterprise edition: JDMC](docs/jdmc.md) for connectivity, storage, and migration from a host installation.
 
 ## SSH Ansible executor
 

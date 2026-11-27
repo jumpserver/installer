@@ -184,20 +184,28 @@ function get_config_enabled() {
 }
 
 
-function prepare_jmsctl() {
-  if check_root; then
-    echo -e "#!/usr/bin/env bash\n#" > /usr/bin/jmsctl
-    echo -e "cd ${PROJECT_DIR}" >> /usr/bin/jmsctl
-    echo -e './jmsctl.sh $@' >> /usr/bin/jmsctl
-    chmod 755 /usr/bin/jmsctl
-  fi
-}
+function prepare_jmsctl() (
+  check_root || return 0
+  local wrapper
+  wrapper=$(mktemp /usr/bin/.jmsctl.XXXXXX) || return 1
+  trap 'rm -f -- "$wrapper"' EXIT
+  {
+    printf '#!/usr/bin/env bash\ninstaller=%q\n' "$PROJECT_DIR"
+    cat <<'JMSCTL'
+if [[ -f /opt/current/installer/jmsctl.sh ]]; then
+  installer=/opt/current/installer
+fi
+cd -- "$installer" || exit 1
+exec ./jmsctl.sh "$@"
+JMSCTL
+  } > "$wrapper" && chmod 0755 "$wrapper" && mv -fT -- "$wrapper" /usr/bin/jmsctl
+)
 
 
 function prepare_config() {
   local database_config database_config_name
   cd "${PROJECT_DIR}" || exit 1
-  prepare_jmsctl
+  prepare_jmsctl || log_warn "Could not update /usr/bin/jmsctl. Use ${PROJECT_DIR}/jmsctl.sh instead."
 
   echo_yellow "1. $(gettext 'Check Configuration File')"
   echo "$(gettext 'Path to Configuration file'): ${CONFIG_DIR}"

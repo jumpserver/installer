@@ -1,58 +1,45 @@
 #!/usr/bin/env bash
 
-# JDMC is a mandatory host-side component in Enterprise Edition. Community
-# Edition does not install it. JDMC_SOCK_PATH is kept for Core integration.
 JDMC_SERVICE_NAME=${JDMC_SERVICE_NAME:-jdmc.service}
-JDMC_CORE_SOCKET_PATH=${JDMC_CORE_SOCKET_PATH:-/opt/jumpserver/data/unshare/jdmc.sock}
 JDMC_INSTALL_DIR=${JDMC_INSTALL_DIR:-/opt/jdmc}
 JDMC_LEGACY_SERVICE_NAME=${KOTL_SERVICE_NAME:-kotl.service}
 JDMC_LEGACY_INSTALL_DIR=${KOTL_INSTALL_DIR:-/opt/kotl}
-JDMC_LEGACY_CORE_SOCKET_PATH=${KOTL_CORE_SOCKET_PATH:-/opt/jumpserver/data/unshare/kotl.sock}
-JDMC_HA_CLI=${JDMC_HA_CLI:-${JDMC_INSTALL_DIR}/current/ha/ha.sh}
 JDMC_SYSTEMD_DIRS=${JDMC_SYSTEMD_DIRS:-/etc/systemd/system:/run/systemd/system:/usr/local/lib/systemd/system:/usr/lib/systemd/system:/lib/systemd/system}
 
 function is_enterprise_edition() {
-  [[ "$(get_config_or_env USE_XPACK 0)" == "1" ]]
+  [[ "${VERSION:-}" != *-ce && "$(get_config_or_env USE_XPACK 0)" == "1" ]]
 }
 
 function is_jdmc_enabled() {
   is_enterprise_edition
 }
 
-function should_include_jdmc_image() {
-  is_jdmc_enabled
+function warn_jdmc_unavailable() {
+  local message="$1. Continuing with JumpServer."
+  log_warn "$message"
+  if [[ -n ${JDMC_UPGRADE_LOG_DIR:-} ]]; then
+    printf '%s\n' "$message" >> "$JDMC_UPGRADE_LOG_DIR/jdmc-upgrade-warning" ||
+      log_warn "Could not save the JDMC warning to the upgrade directory."
+  fi
+}
+
+function can_manage_existing_jdmc() {
+  # A lost config.txt must not bypass HA protection or strand an EE uninstall.
+  is_jdmc_enabled || [[ "${VERSION:-}" == *-ee && ! -f "${CONFIG_FILE}" ]]
+}
+
+function get_container_jdmc_image_override() {
+  local image
+  image=$(get_config_or_env JDMC_IMAGE)
+  if [[ -n "$image" ]] && is_jdmc_enabled; then
+    printf '%s\n' "$image"
+  fi
 }
 
 function get_jdmc_image() {
-  local namespace
-
-  namespace=$(get_config_or_env NAMESPACE jumpserver)
-  namespace=${namespace%/}
-  echo "${namespace:-jumpserver}/jdmc:${VERSION}"
-}
-
-function configure_jdmc() {
-  local socket_path
-
-  # JDMC follows the edition and is no longer configurable. Legacy switches
-  # are deliberately ignored here and cleaned only after install/upgrade has
-  # succeeded, so a failed upgrade can still be rolled back with its old config.
-  if ! is_enterprise_edition; then
-    gen_safe_config >/dev/null
-    return 0
-  fi
-
-  socket_path=$(get_config_or_env JDMC_SOCK_PATH)
-  if check_legacy_kotl_installed && ! check_current_jdmc_installed; then
-    # Keep Core connected to a still-running legacy service until the new
-    # artifact has completed its on-host migration.
-    socket_path="${socket_path:-${JDMC_LEGACY_CORE_SOCKET_PATH}}"
-  elif [[ -z "${socket_path}" || "${socket_path}" == "/opt/jumpserver/data/unshare/kotl.sock" ]]; then
-    # Migrate the standard legacy filename, but retain custom socket paths.
-    socket_path="${JDMC_CORE_SOCKET_PATH}"
-  fi
-  set_config JDMC_SOCK_PATH "${socket_path}" || return 1
-  gen_safe_config >/dev/null
+  local image
+  image=$(get_container_jdmc_image_override)
+  printf '%s\n' "${image:-$(get_image_namespace)/jdmc:${VERSION}}"
 }
 
 function cleanup_jdmc_legacy_switches() {
@@ -60,32 +47,6 @@ function cleanup_jdmc_legacy_switches() {
   remove_config JDMC_HOST_ENABLED
   remove_config JDMC_ENABLED
   gen_safe_config >/dev/null
-}
-
-function check_jdmc_runtime() {
-  if ! command -v systemctl &>/dev/null; then
-    log_error "JDMC requires systemd, but systemctl was not found"
-    return 1
-  fi
-}
-
-function ensure_jdmc_ha_dependencies() {
-  local dependency_installer="${JDMC_INSTALL_DIR}/current/ha/scripts/install-dependencies.sh"
-
-  # HA dependencies are optional for standalone install/upgrade. HA setup,
-  # prepare and install enforce them again before deploying the cluster.
-  if [[ ! -x "${dependency_installer}" ]]; then
-    log_warn "JDMC HA dependency installer is missing: ${dependency_installer}; continuing standalone install/upgrade"
-    log_warn "Repair the JDMC package before enabling HA; HA deployment requires complete host dependencies"
-    return 0
-  fi
-  echo_yellow "\n>>> Installing JDMC HA host dependencies"
-  if ! "${dependency_installer}"; then
-    log_warn "JDMC HA host dependencies are incomplete; continuing standalone install/upgrade"
-    log_warn "Before enabling HA, resolve the dependency error above and retry as root: \"${dependency_installer}\""
-    log_warn "HA deployment will check dependencies again and fail if they are still incomplete"
-  fi
-  return 0
 }
 
 function jdmc_unit_exists() {
@@ -117,288 +78,74 @@ function get_legacy_kotl_data_dir() {
   echo "$(get_jdmc_storage_root)/kotl"
 }
 
-function jdmc_ha_lifecycle_present() {
-  local state_dir=$1 marker
-
-  for marker in installed rollback-terminal.json standalone-prepare standalone retired-safe; do
-    if jdmc_path_exists "${state_dir}/${marker}"; then
-      return 0
-    fi
-  done
-  return 1
-}
-
-function retire_jdmc_ha_lifecycle() {
-  local data_dir=$1 ha_cli=$2
-  local volume_dir
-
-  jdmc_ha_lifecycle_present "${data_dir}/ha" || return 0
-  if [[ ! -x "${ha_cli}" ]]; then
-    log_error "JDMC HA state exists, but the safe HA uninstall command is missing: ${ha_cli}"
-    log_error "Repair JDMC before uninstalling; refusing to remove an active or ambiguous HA node"
+# Container HA stores its handoff in management/ha. These markers belong to
+# the host services and must be retired with the installer that created them.
+function check_jdmc_deployment() {
+  [[ "${VERSION:-}" == *-ee || "${1:-}" == *-ee ]] || is_jdmc_enabled || return 0
+  local root marker
+  if [[ "${HA_MODE:-0}" == 1 || "$(get_config HA_MODE)" == 1 ]]; then
+    log_error "Legacy host HA (HA_MODE=1) requires retirement with the original installer and a fresh installation."
     return 1
   fi
-  volume_dir=$(get_config_or_env VOLUME_DIR /data/jumpserver)
-  echo_yellow "\n>>> Safely retiring JDMC HA"
-  JUMPSERVER_VOLUME_DIR="${volume_dir}" "${ha_cli}" uninstall
+  root=$(get_jdmc_storage_root) || return 1
+  for marker in "$root"/{jdmc,kotl}/ha/{installed,rollback-terminal.json,standalone-prepare,standalone,retired-safe}; do
+    if jdmc_path_exists "$marker"; then
+      log_error "Legacy host HA detected at $marker. Retire it with the original installer, then reinstall."
+      return 1
+    fi
+  done
+  return 0
+}
+
+function jdmc_managed_host_file() {
+  [[ -f "$1" && ! -L "$1" && $(stat -c %u -- "$1") == 0 &&
+     $(head -n1 -- "$1") == '# Managed by JumpServer JDMC' ]]
+}
+
+function jdmc_uninstall_ready() {
+  local active
+  if [[ -d /etc/docker/.jdmc-undo.pending || -d /etc/docker/.jdmc-undo.claimed ]]; then
+    log_error "A previous JDMC release left a Docker recovery record in /etc/docker. Check the configuration and finish recovery on the host before uninstalling."
+    return 1
+  fi
+  if [[ -d /run/systemd/system ]]; then
+    active=$(systemctl list-units --plain --no-legend --state=active,activating,reloading,deactivating \
+             'jumpserver-jdmc-maintenance[-@]*.service') || return 1
+    [[ -z "$active" ]] || { log_error "A JDMC package maintenance task is running"; return 1; }
+  fi
+}
+
+function remove_container_jdmc_integration() {
+  local unit=/etc/systemd/system/jumpserver-jdmc-maintenance@.service
+  local profile=/etc/apparmor.d/jumpserver-jdmc rule=/etc/tmpfiles.d/zz-jumpserver-jdmc.conf
+  jdmc_uninstall_ready || return 1
+  if jdmc_managed_host_file "$unit"; then
+    rm -- "$unit" || return 1
+    if [[ -d /run/systemd/system ]]; then systemctl daemon-reload || return 1; fi
+  fi
+  if jdmc_managed_host_file "$profile"; then
+    local profiles=/sys/kernel/security/apparmor/profiles
+    if [[ -r /sys/module/apparmor/parameters/enabled && $(< /sys/module/apparmor/parameters/enabled) == Y ]]; then
+      [[ -r "$profiles" ]] || { log_error "Cannot inspect loaded AppArmor profiles"; return 1; }
+      if grep -Eq '^jumpserver-jdmc \(' "$profiles"; then apparmor_parser -R "$profile" || return 1; fi
+    fi
+    rm -- "$profile" || return 1
+  fi
+  if jdmc_managed_host_file "$rule"; then rm -- "$rule" || return 1; fi
 }
 
 function prepare_jdmc_uninstall() {
-  retire_jdmc_ha_lifecycle "$(get_current_jdmc_data_dir)" "${JDMC_HA_CLI}"
-}
-
-function check_current_jdmc_installed() {
-  [[ -x "${JDMC_INSTALL_DIR}/jdmc" ]] && jdmc_unit_exists "${JDMC_SERVICE_NAME}"
-}
-
-function check_legacy_kotl_installed() {
-  [[ -x "${JDMC_LEGACY_INSTALL_DIR}/kotl" ]] && jdmc_unit_exists "${JDMC_LEGACY_SERVICE_NAME}"
-}
-
-function check_current_jdmc_footprint() {
-  local data_dir
-
-  data_dir=$(get_current_jdmc_data_dir)
-  jdmc_unit_exists "${JDMC_SERVICE_NAME}" ||
-    jdmc_path_exists "${JDMC_INSTALL_DIR}" ||
-    jdmc_path_exists "${data_dir}"
-}
-
-function check_legacy_kotl_footprint() {
-  local data_dir
-
-  data_dir=$(get_legacy_kotl_data_dir)
-  jdmc_unit_exists "${JDMC_LEGACY_SERVICE_NAME}" ||
-    jdmc_path_exists "${JDMC_LEGACY_INSTALL_DIR}" ||
-    jdmc_path_exists "${data_dir}"
-}
-
-function check_jdmc_installed() {
-  # Upgrade scripts can repair partial installs and migrate data-only legacy
-  # layouts, so any recognizable footprint must take the upgrade path.
-  check_current_jdmc_footprint || check_legacy_kotl_footprint
-}
-
-function check_jdmc_service_installed() {
-  jdmc_unit_exists "${JDMC_SERVICE_NAME}" || jdmc_unit_exists "${JDMC_LEGACY_SERVICE_NAME}"
-}
-
-function get_installed_jdmc_service_name() {
-  if jdmc_unit_exists "${JDMC_SERVICE_NAME}"; then
-    echo "${JDMC_SERVICE_NAME}"
-  elif jdmc_unit_exists "${JDMC_LEGACY_SERVICE_NAME}"; then
-    echo "${JDMC_LEGACY_SERVICE_NAME}"
-  else
-    echo "${JDMC_SERVICE_NAME}"
+  local node existing=''
+  node=$(jdmc_installer_dir) || return 1
+  # A first failed start can leave only releases. A VOLUME_DIR change can leave
+  # only the container, whose ownership the down action checks before removal.
+  if [[ ! -d "$node/releases" ]] && command -v docker >/dev/null; then
+    existing=$(docker ps -aq --filter label=com.docker.compose.project=jdmc --filter label=com.docker.compose.service=jdmc) || return 1
   fi
-}
-
-function run_jdmc_package_action() {
-  local action=$1
-  local image volume_dir
-
-  image=$(get_jdmc_image)
-  volume_dir=$(get_config_or_env VOLUME_DIR /data/jumpserver)
-  if ! docker image inspect "${image}" &>/dev/null; then
-    log_error "JDMC artifact image not found: ${image}"
-    return 1
+  if [[ -d "$node/releases" || -n "$existing" ]]; then
+    jdmc_uninstall_ready || return 1
+    container_jdmc_action down || return 1
   fi
-
-  (
-    local temp_dir container_id script_path
-
-    if ! temp_dir=$(mktemp -d -t jdmc-installer.XXXXXX); then
-      log_error "Failed to create a temporary directory for JDMC"
-      exit 1
-    fi
-    container_id=""
-    function cleanup_jdmc_package() {
-      if [[ -n "${container_id}" ]]; then
-        docker rm -f "${container_id}" &>/dev/null || true
-      fi
-      if [[ -n "${temp_dir}" && -d "${temp_dir}" ]]; then
-        rm -rf "${temp_dir}"
-      fi
-    }
-    trap cleanup_jdmc_package EXIT
-
-    if ! container_id=$(docker create "${image}" /__jdmc_artifact_placeholder__); then
-      log_error "Failed to create a temporary container from ${image}"
-      exit 1
-    fi
-    if ! docker cp "${container_id}:/dist/." "${temp_dir}/"; then
-      log_error "Failed to extract /dist from ${image}"
-      exit 1
-    fi
-
-    script_path="${temp_dir}/scripts/${action}.sh"
-    if [[ ! -f "${script_path}" ]]; then
-      log_error "JDMC package script not found: scripts/${action}.sh"
-      exit 1
-    fi
-
-    # When VOLUME_DIR is directly under /opt, JDMC's persistent config
-    # directory resolves to /opt/jdmc, which is also the package install
-    # directory. Older JDMC packages then try to replace each persistent file
-    # with a symlink to itself and abort with "are the same file". Guard those
-    # legacy link commands in the extracted package before running it.
-    sed -i \
-      -e 's#^  ln -sfn "\${CONFIG_FILE}" "\${INSTALL_CONFIG_LINK}"$#  [[ "${CONFIG_FILE}" == "${INSTALL_CONFIG_LINK}" ]] || ln -sfn "${CONFIG_FILE}" "${INSTALL_CONFIG_LINK}"#' \
-      -e 's#^  ln -sfn "\${AFTER_START_HOOK}" "\${INSTALL_AFTER_START_LINK}"$#  [[ "${AFTER_START_HOOK}" == "${INSTALL_AFTER_START_LINK}" ]] || ln -sfn "${AFTER_START_HOOK}" "${INSTALL_AFTER_START_LINK}"#' \
-      -e 's#^  ln -sfn "\${MIGRATION_HOOK}" "\${INSTALL_MIGRATION_LINK}"$#  [[ "${MIGRATION_HOOK}" == "${INSTALL_MIGRATION_LINK}" ]] || ln -sfn "${MIGRATION_HOOK}" "${INSTALL_MIGRATION_LINK}"#' \
-      -e 's#^  ln -sfn "\${CONFIG_FILE}" "\${CONFIG_LINK}"$#  [[ "${CONFIG_FILE}" == "${CONFIG_LINK}" ]] || ln -sfn "${CONFIG_FILE}" "${CONFIG_LINK}"#' \
-      -e 's#^  ln -sfn "\${AFTER_START_HOOK_TARGET}" "\${AFTER_START_LINK}"$#  [[ "${AFTER_START_HOOK_TARGET}" == "${AFTER_START_LINK}" ]] || ln -sfn "${AFTER_START_HOOK_TARGET}" "${AFTER_START_LINK}"#' \
-      -e 's#^  ln -sfn "\${MIGRATION_HOOK_TARGET}" "\${MIGRATION_LINK}"$#  [[ "${MIGRATION_HOOK_TARGET}" == "${MIGRATION_LINK}" ]] || ln -sfn "${MIGRATION_HOOK_TARGET}" "${MIGRATION_LINK}"#' \
-      "${script_path}"
-
-    chmod +x "${script_path}" || exit 1
-    cd "${temp_dir}" || exit 1
-    # JDMC runs on the host, so its package scripts need the host-side
-    # JumpServer data root instead of paths mounted inside Compose.
-    JUMPSERVER_VOLUME_DIR="${volume_dir}"
-    export JUMPSERVER_VOLUME_DIR
-    bash "./scripts/${action}.sh"
-  )
-}
-
-function install_jdmc() {
-  if ! is_jdmc_enabled; then
-    cleanup_jdmc_legacy_switches
-    return $?
-  fi
-  check_jdmc_runtime || return 1
-  configure_jdmc || return 1
-
-  if check_current_jdmc_installed; then
-    echo_check "JDMC is already installed"
-    ensure_jdmc_ha_dependencies
-    cleanup_jdmc_legacy_switches
-    return $?
-  fi
-
-  if check_jdmc_installed; then
-    if check_legacy_kotl_footprint && ! check_current_jdmc_footprint; then
-      echo_yellow "\n>>> Migrating KOTL to JDMC"
-    else
-      echo_yellow "\n>>> Repairing or upgrading JDMC"
-    fi
-    run_jdmc_package_action upgrade || return 1
-    ensure_jdmc_ha_dependencies
-    configure_jdmc || return 1
-    cleanup_jdmc_legacy_switches
-    return $?
-  fi
-
-  echo_yellow "\n>>> Installing JDMC"
-  run_jdmc_package_action install || return 1
-  ensure_jdmc_ha_dependencies
-  configure_jdmc || return 1
-  cleanup_jdmc_legacy_switches
-}
-
-function upgrade_jdmc() {
-  if ! is_jdmc_enabled; then
-    cleanup_jdmc_legacy_switches
-    return $?
-  fi
-  check_jdmc_runtime || return 1
-  configure_jdmc || return 1
-
-  echo_yellow "\n>>> Upgrading JDMC"
-  if check_jdmc_installed; then
-    run_jdmc_package_action upgrade || return 1
-  else
-    run_jdmc_package_action install || return 1
-  fi
-  ensure_jdmc_ha_dependencies
-  configure_jdmc || return 1
-  cleanup_jdmc_legacy_switches
-}
-
-function start_jdmc() {
-  local service_name
-
-  is_jdmc_enabled || return 0
-  check_jdmc_runtime || return 1
-  if ! check_jdmc_service_installed; then
-    log_error "JDMC service is not installed; run ./jmsctl.sh install first"
-    return 1
-  fi
-  service_name=$(get_installed_jdmc_service_name)
-  systemctl start "${service_name}"
-}
-
-function stop_jdmc() {
-  local failed=0
-
-  check_jdmc_service_installed || return 0
-  check_jdmc_runtime || return 1
-  if jdmc_unit_exists "${JDMC_SERVICE_NAME}"; then
-    systemctl stop "${JDMC_SERVICE_NAME}" || failed=1
-  fi
-  if [[ "${JDMC_LEGACY_SERVICE_NAME}" != "${JDMC_SERVICE_NAME}" ]] && \
-    jdmc_unit_exists "${JDMC_LEGACY_SERVICE_NAME}"; then
-    systemctl stop "${JDMC_LEGACY_SERVICE_NAME}" || failed=1
-  fi
-  return "${failed}"
-}
-
-function restart_jdmc() {
-  local service_name
-
-  if ! is_jdmc_enabled; then
-    stop_jdmc
-    return $?
-  fi
-  check_jdmc_runtime || return 1
-  if ! check_jdmc_service_installed; then
-    log_error "JDMC is enabled but not installed; run ./jmsctl.sh install first"
-    return 1
-  fi
-  service_name=$(get_installed_jdmc_service_name)
-  systemctl restart "${service_name}"
-}
-
-function status_jdmc() {
-  local service_name
-
-  check_jdmc_service_installed || return 0
-  check_jdmc_runtime || return 1
-  service_name=$(get_installed_jdmc_service_name)
-  systemctl status "${service_name}" --no-pager || true
-}
-
-function tail_jdmc() {
-  local service_name
-
-  check_jdmc_runtime || return 1
-  if ! check_jdmc_service_installed; then
-    log_error "JDMC service is not installed; run ./jmsctl.sh install first"
-    return 1
-  fi
-  service_name=$(get_installed_jdmc_service_name)
-  journalctl -u "${service_name}" -n 100 -f -o cat
-}
-
-function disable_jdmc_service() {
-  local service_name=$1
-  local failed=0
-
-  jdmc_unit_exists "${service_name}" || return 0
-  systemctl stop "${service_name}" || failed=1
-  systemctl disable "${service_name}" || failed=1
-  return "${failed}"
-}
-
-function disable_jdmc() {
-  local failed=0
-
-  check_jdmc_runtime || return 1
-  disable_jdmc_service "${JDMC_SERVICE_NAME}" || failed=1
-  if [[ "${JDMC_LEGACY_SERVICE_NAME}" != "${JDMC_SERVICE_NAME}" ]]; then
-    disable_jdmc_service "${JDMC_LEGACY_SERVICE_NAME}" || failed=1
-  fi
-  return "${failed}"
 }
 
 function remove_jdmc_main_service_unit() {
@@ -453,10 +200,9 @@ function remove_jdmc_main_service_unit() {
 function cleanup_jdmc_host_integration() {
   local failed=0
 
-  if check_jdmc_service_installed; then
-    disable_jdmc || failed=1
-  fi
   remove_jdmc_main_service_unit "${JDMC_SERVICE_NAME}" "${JDMC_INSTALL_DIR}" || failed=1
   remove_jdmc_main_service_unit "${JDMC_LEGACY_SERVICE_NAME}" "${JDMC_LEGACY_INSTALL_DIR}" || failed=1
   return "${failed}"
 }
+
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/jdmc-container.sh"

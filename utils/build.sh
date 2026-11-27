@@ -1,6 +1,8 @@
 #!/bin/bash -i
 #
 # 该build基于registry.fit2cloud.com/public/python:3
+set -eo pipefail
+umask go-w
 utils_dir=$(pwd)
 project_dir=$(dirname "$utils_dir")
 release_dir=${project_dir}/release
@@ -13,12 +15,14 @@ rm -rf "${release_dir:?}"/*
 to_dir="${release_dir}/jumpserver-installer"
 mkdir -p "${to_dir}"
 
-if [[ -d '.git' ]]; then
+if [[ -e .git ]]; then
   command -v git || yum -q -y install git
-  git archive --format tar HEAD | tar x -C "${to_dir}"
+  git -c tar.umask=0022 archive --format=tar HEAD | tar --no-same-permissions -xf - -C "${to_dir}"
 else
-  cp -R . /tmp/jumpserver
-  mv /tmp/jumpserver/* "${to_dir}"
+  for entry in *; do
+    [[ "${entry}" == release ]] && continue
+    cp -R -- "${entry}" "${to_dir}/"
+  done
 fi
 
 shopt -s expand_aliases

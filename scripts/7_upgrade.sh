@@ -383,7 +383,7 @@ function migrate_data_folder() {
 function migrate_config() {
   local component
 
-  prepare_jmsctl
+  prepare_jmsctl || log_warn "Could not update /usr/bin/jmsctl. Use ${PROJECT_DIR}/jmsctl.sh instead."
   migrate_compat_config "KOKO_SSH_PORT" "SSH_PORT" "2222"
   migrate_compat_config "RAZOR_RDP_PORT" "RDP_PORT" "3389"
   migrate_compat_config "VIDEO_WORKER_ENABLED" "VIDEO_ENABLED" ""
@@ -506,7 +506,7 @@ function backup_db() {
     # Avoid an implicit docker run pull when the offline client is unavailable.
     log_warn "External database backup image ${db_image} is unavailable."
     backup_failed=1
-  elif ! bash "${SCRIPT_DIR}/5_db_backup.sh"; then
+  elif ! bash "${SCRIPT_DIR}/5_db_backup.sh" full "${VERSION}"; then
     backup_failed=1
   fi
 
@@ -558,6 +558,7 @@ function db_migrations() {
 
 function clean_images() {
   local previous_version=$1 to_version=$2 namespace images image old_tag new_tag confirm=y
+  local override pinned_tags= jdmc_warning=${3:-}
   local -a old_images=()
 
   if [[ -z "${to_version}" || -z "${previous_version}" ]]; then
@@ -571,9 +572,16 @@ function clean_images() {
   fi
 
   namespace=$(get_image_namespace)
+  # Keep all tags of the configured JDMC image, including previous-release tags.
+  override=$(get_container_jdmc_image_override)
+  if [[ -n "$override" ]]; then
+    pinned_tags=$(docker image inspect --format '{{range .RepoTags}}{{println .}}{{end}}' "$override" 2>/dev/null) || pinned_tags=${override#docker.io/}
+  fi
   images=$(docker images --format '{{.Repository}}:{{.Tag}}') || return 1
   while IFS= read -r image; do
     [[ "${image%/*}" == "${namespace}" ]] || continue
+    if [[ -n "$jdmc_warning" && "$image" == "$namespace/jdmc:$previous_version" ]]; then continue; fi
+    [[ $'\n'"${pinned_tags}"$'\n' != *$'\n'"$image"$'\n'* ]] || continue
     if [[ "${image%:*}" == "${namespace}/ansible-executor" ]]; then
       # CE and EE can share an executor tag across an edition change.
       old_tag=$(VERSION="${previous_version}" get_ansible_executor_tag 2>/dev/null) || continue
@@ -646,7 +654,8 @@ function upgrade_compose() {
 }
 
 function main() {
-  local installer_version_before_upgrade previous_version target_version
+  local installer_version_before_upgrade previous_version target_version jdmc_warning=
+  check_jdmc_deployment "${target:-}" || exit 1
   trap cleanup_failed_upgrade EXIT
   write_upgrade_recovery_state running || exit 1
   cd "${PROJECT_DIR}" || exit 1
@@ -698,22 +707,31 @@ function main() {
   # Database backup starts a Core container using the target version.
   # Load the offline images before that container is created.
   echo_yellow "\n3. $(gettext 'Loading Docker Image')"
-  if ! POSTGRESQL_MAJOR_UPGRADE=1 ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh"; then
+  if ! POSTGRESQL_MAJOR_UPGRADE=1 ALLOW_MISSING_DB_IMAGE=1 bash "${BASE_DIR}/3_load_images.sh" "${to_version}" business; then
     log_error "$(gettext 'Failed to load Docker images')"
     exit 1
   fi
 
   echo_yellow "\n4. $(gettext 'Backup database')"
   UPGRADE_CONFIG_CHANGED=1
+  if is_jdmc_enabled; then
+    if ! bash "${BASE_DIR}/3_load_images.sh" "${to_version}" jdmc; then
+      jdmc_warning="JDMC image unavailable. Load the target JDMC image before retrying ./jmsctl.sh start jdmc"
+    elif ! container_jdmc_action deploy; then
+      jdmc_warning="JDMC deployment failed. Inspect the error and retry ./jmsctl.sh start jdmc"
+    fi
+    if [[ -n "$jdmc_warning" ]]; then warn_jdmc_unavailable "$jdmc_warning"; fi
+  fi
   migrate_internal_mysql_root_password || exit 1
   backup_db
 
   echo_yellow "\n5. $(gettext 'Update Configuration File')"
   update_config_if_need
-  configure_jdmc || {
-    log_error "Failed to configure JDMC"
-    exit 1
-  }
+  if is_jdmc_enabled && ! configure_container_jdmc; then
+    export JDMC_CALLBACK_UNAVAILABLE=1
+    jdmc_warning="JDMC callback setup failed. After repair, run ./jmsctl.sh start jdmc, ./jmsctl.sh start core and ./jmsctl.sh start celery from this installer"
+    warn_jdmc_unavailable "$jdmc_warning"
+  fi
 
   echo_yellow "\n6. $(gettext 'Apply database changes')"
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
@@ -734,19 +752,10 @@ function main() {
   db_migrations
 
   echo_yellow "\n7. $(gettext 'Upgrade Docker')"
-  # Binary updates can change into scripts/. Keep subsequent Compose calls
-  # in the installer root, where their relative configuration paths resolve.
+  # These helpers may cd into scripts/ to install binaries. Recovery runs
+  # Compose with paths relative to the installer root.
   (upgrade_docker) || exit 1
   (upgrade_compose) || exit 1
-  ensure_current_installer_link || {
-    log_error "Failed to update /opt/current/installer"
-    exit 1
-  }
-  upgrade_jdmc || {
-    jdmc_status=$?
-    log_error "Failed to upgrade JDMC"
-    exit "${jdmc_status}"
-  }
 
   persist_installer_version || {
     log_error "Failed to update ${STATIC_ENV}"
@@ -764,6 +773,10 @@ function main() {
     log_error "PostgreSQL migrated, but application recovery is incomplete; retry the same upgrade"
     exit 1
   }
+  ensure_current_installer_link || {
+    log_error "Failed to update /opt/current/installer"
+    exit 1
+  }
   UPGRADE_COMMITTED=1
   trap - EXIT
   retire_merged_services remove || {
@@ -773,11 +786,16 @@ function main() {
   installation_log "upgrade"
 
   echo_yellow "\n8. $(gettext 'Cleanup Image')"
-  clean_images "${previous_version}" "${to_version}" || log_warn "Upgrade applied, but cleanup of images for ${previous_version} failed"
+  clean_images "${previous_version}" "${to_version}" "$jdmc_warning" || log_warn "Upgrade applied, but cleanup of images for ${previous_version} failed"
 
   echo_yellow "\n9. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "cd ${PROJECT_DIR}"
-  echo "./jmsctl.sh start"
+  if [[ -n "$jdmc_warning" ]]; then
+    log_warn "$jdmc_warning"
+    echo "./jmsctl.sh start --skip-jdmc"
+  else
+    echo "./jmsctl.sh start"
+  fi
   echo -e "\n"
 }
 

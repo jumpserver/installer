@@ -121,7 +121,7 @@ function remove_compose() {
 }
 
 function remove_jumpserver() {
-  local images volume_dir jdmc_data_dir kotl_data_dir image
+  local include_jdmc=${1:-false} images volume_dir image dir
   local failed=0
 
   if [[ ! -f "${CONFIG_FILE}" ]]; then
@@ -131,20 +131,19 @@ function remove_jumpserver() {
   echo_warn "$(gettext 'Make sure you have a backup of data, this operation is not reversible')! \n"
   images=$(get_images)
   volume_dir=$(get_config_or_env VOLUME_DIR /data/jumpserver)
-  jdmc_data_dir=$(get_current_jdmc_data_dir)
-  kotl_data_dir=$(get_legacy_kotl_data_dir)
   confirm="n"
   read_from_input confirm "$(gettext 'Are you clean up JumpServer files')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
     if [[ -f "${CONFIG_FILE}" ]]; then
       retire_merged_services remove || return 1
     fi
-    remove_managed_dir "${volume_dir}" || return 1
-    remove_managed_dir "${jdmc_data_dir}" || return 1
-    remove_managed_dir "${kotl_data_dir}" || return 1
-    remove_managed_dir "${JDMC_INSTALL_DIR}" || return 1
-    remove_managed_dir "${JDMC_LEGACY_INSTALL_DIR}" || return 1
-    remove_managed_dir "${CONFIG_DIR}" || return 1
+    local -a dirs=("${volume_dir}")
+    if [[ "${include_jdmc}" == true ]]; then
+      dirs+=("$(get_current_jdmc_data_dir)" "$(get_legacy_kotl_data_dir)" "${JDMC_INSTALL_DIR}" "${JDMC_LEGACY_INSTALL_DIR}")
+    fi
+    for dir in "${dirs[@]}" "${CONFIG_DIR}"; do
+      remove_managed_dir "${dir}" || return 1
+    done
     rm -f "${PROJECT_DIR}/.env" "${PROJECT_DIR}/compose/.env" || return 1
   fi
   echo
@@ -168,18 +167,25 @@ function remove_jumpserver() {
 }
 
 function main() {
+  check_jdmc_deployment || return 1
   echo_yellow "\n>>> $(gettext 'Uninstall JumpServer')"
-  prepare_jdmc_uninstall || {
-    log_error "Failed to safely retire JDMC HA"
-    return 1
-  }
+  local include_jdmc=false
+  if can_manage_existing_jdmc; then
+    include_jdmc=true
+    prepare_jdmc_uninstall || {
+      log_error "Failed to prepare JDMC for uninstall"
+      return 1
+    }
+  fi
   stop_services || return 1
-  cleanup_jdmc_host_integration || {
-    log_error "Failed to clean up JDMC host integration"
-    return 1
-  }
+  if [[ "${include_jdmc}" == true ]]; then
+    cleanup_jdmc_host_integration || {
+      log_error "Failed to clean up JDMC host integration"
+      return 1
+    }
+  fi
   installation_log "uninstall" || true
-  remove_jumpserver || return 1
+  remove_jumpserver "${include_jdmc}" || return 1
   remove_compose || return 1
   remove_docker || return 1
   remove_jmsctl

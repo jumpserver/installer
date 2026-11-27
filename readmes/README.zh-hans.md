@@ -110,7 +110,7 @@ Docker 网络 `DOCKER_SUBNET`（默认 `192.168.250.0/24`）和 `DOCKER_EXECUTOR
 
 ## 管理命令
 
-在安装器目录中执行 `sudo ./jmsctl.sh <命令>`。`start`、`stop`、`restart`、`status` 和 `down` 支持 `--skip-jdmc`，它仅用于避免 JDMC 发起的重启停止 JDMC 自身，不是组件开关。
+在安装器目录中执行 `sudo ./jmsctl.sh <命令>`。单独管理 JDMC 可使用 `start jdmc`、`stop jdmc`、`restart jdmc`、`status jdmc` 或 `tail jdmc`。
 
 | 命令 | 说明 |
 | --- | --- |
@@ -240,9 +240,7 @@ sudo ./jmsctl.sh load_image
 
 ## 企业版 JDMC
 
-JDMC 是企业版组件，通过 `USE_XPACK=1` 启用。它以宿主机 systemd 服务运行，不加入 Docker Compose。社区版不会下载或安装 JDMC；企业版必须安装 JDMC。
-
-镜像处理、HA 宿主机依赖、数据目录、KOTL 迁移、服务准备和 video-worker 见 [企业版 JDMC](../docs/zh-hans/jdmc.md)。
+设置 `USE_XPACK=1` 的企业版节点通过独立的 Compose 项目运行 JDMC。社区版跳过 JDMC。连接方式、数据目录及宿主版迁移步骤见[企业版 JDMC](../docs/zh-hans/jdmc.md)。
 
 ## SSH Ansible 执行器
 
