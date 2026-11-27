@@ -33,13 +33,15 @@ jobs:
           tag: ${{ steps.get_version.outputs.TAG }}
       
       - name: Create Upload Assets
+        env:
+          TAG: ${{ steps.get_version.outputs.TAG }}
         run: |
-          mkdir -p build jumpserver-installer-${{ steps.get_version.outputs.TAG }}
-          git archive --format tar HEAD | tar x -C jumpserver-installer-${{ steps.get_version.outputs.TAG }}
-          tar -czf build/jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz jumpserver-installer-${{ steps.get_version.outputs.TAG }}
+          mkdir -p build
+          archive="jumpserver-installer-${TAG}.tar.gz"
+          git -c tar.umask=0022 archive --format=tar.gz --prefix="jumpserver-installer-${TAG}/" --output="build/${archive}" HEAD
           cd build
-          md5sum jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz > jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz.md5
-          sha256sum jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz > jumpserver-installer-${{ steps.get_version.outputs.TAG }}.tar.gz.sha256
+          md5sum "${archive}" > "${archive}.md5"
+          sha256sum "${archive}" > "${archive}.sha256"
           
       - name: Release Upload Assets
         run: |

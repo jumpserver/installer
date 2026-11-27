@@ -23,11 +23,6 @@
 #
 # NAMESPACE=jumpserver
 
-# Optional image references for enterprise container deployments.
-# JDMC_CORE_IMAGE applies to both Core and Celery.
-# JDMC_IMAGE=
-# JDMC_CORE_IMAGE=
-
 # The connection to docker.io in China will timeout or the download speed will be slow, enable this option to use Huawei Cloud image acceleration
 # Legacy mirror configuration. IMAGE_PULL_PREFIX takes precedence when set.
 #
@@ -172,12 +167,14 @@ DOMAINS=
 
 # Configure the components that do not need to be started, by default all components will be started, if you do not need a certain component, you can set {component name}_ENABLED to 0 to turn it off
 # CORE_ENABLED=0
-# KAEL_ENABLED=0
 # CELERY_ENABLED=0
 # KOKO_ENABLED=0
-# CHEN_ENABLED=0
 # WEB_ENABLED=0
 # VIDEO_WORKER_ENABLED=0
+
+# The Chen workbench follows KOKO_ENABLED. Set KAEL_ENABLED=0 to disable
+# the bundled Kael process and its Web route.
+# KAEL_ENABLED=0
 
 # Celery keeps privileged mode for local Ansible execution with bwrap.
 # SSH-only deployments can disable it; changing this requires recreating Celery.
@@ -229,8 +226,11 @@ WEB_PROXY_ALLOWED_HOSTS=localhost,127.0.0.1
 # XPack package, invalid setting in open source version
 #
 KOKO_SSH_PORT=2222
+# Razor hosts the RDP, Magnus database proxy, and NEC VNC services in one EE container.
+# RAZOR_ENABLED=0
 RAZOR_RDP_PORT=3389
 MAGNUS_PORT=5525
+NEC_VNC_PORT=15900
 
 # XRDP is optional and disabled by default. Set it to 1 only when needed.
 XRDP_ENABLED=0

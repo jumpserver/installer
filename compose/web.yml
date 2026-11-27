@@ -19,7 +19,8 @@ services:
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-4096m}
       CORE_ENABLED: ${CORE_ENABLED:-1}
       KOKO_ENABLED: ${KOKO_ENABLED:-1}
-      CHEN_ENABLED: ${CHEN_ENABLED:-1}
+      # Older Web images use this switch for their standalone chen:8082 upstream.
+      CHEN_ENABLED: "0"
       KAEL_ENABLED: ${KAEL_ENABLED:-1}
       RAZOR_ENABLED: ${RAZOR_ENABLED:-1}
       # Compatibility for older web images; the value is derived from the

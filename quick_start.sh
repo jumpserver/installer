@@ -53,7 +53,7 @@ function get_installer() {
       echo -e "[\033[31m ERROR \033[0m] Installer checksum verification failed"
       exit 1
     fi
-    tar --no-same-owner -xf "/opt/${archive}" -C /opt || {
+    (umask go-w && tar --no-same-owner --no-same-permissions -xf "/opt/${archive}" -C /opt) || {
       rm -rf /opt/jumpserver-installer-${VERSION}
       echo -e "[\033[31m ERROR \033[0m] Failed to unzip jumpserver-installer-${VERSION}"
       exit 1

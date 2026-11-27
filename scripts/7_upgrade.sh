@@ -13,8 +13,7 @@ UPGRADE_DATABASE_MIGRATION_STARTED=0
 UPGRADE_COMMITTED=0
 
 function verify_upgrade_version() {
-  required_version="v3.10.11"
-  current_version=$(get_config CURRENT_VERSION)
+  local current_version=$1 required_version="v3.10.11"
 
   if [[ -z "${current_version}" ]]; then
     log_error "$(gettext 'The current version is not detected, please check')"
@@ -239,9 +238,7 @@ function migrate_internal_mysql_business_account() {
 
 function remove_obsolete_containers() {
   local container existing_containers
-  # Kael and Magnus are current services. Keep their containers until the normal
-  # stop/recreate flow so PostgreSQL migration can record their restart intent.
-  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_video" "jms_lion" "jms_facelive" "jms_panda")
+  local containers=("jms_guacamole" "jms_lina" "jms_luna" "jms_nginx" "jms_xpack" "jms_lb" "jms_omnidb" "jms_video" "jms_facelive" "jms_panda")
 
   # XRDP is still supported when explicitly enabled in the enterprise edition.
   if [[ "$(get_config_or_env USE_XPACK)" != "1" || "$(get_config_or_env XRDP_ENABLED)" != "1" ]]; then
@@ -391,7 +388,7 @@ function migrate_config() {
   migrate_compat_config "RAZOR_RDP_PORT" "RDP_PORT" "3389"
   migrate_compat_config "VIDEO_WORKER_ENABLED" "VIDEO_ENABLED" ""
   migrate_compat_config "VIDEO_WORKER_ENABLED" "VIDEO_ENABLE" ""
-  for component in CORE AI CELERY KOKO CHEN WEB MAGNUS RAZOR XRDP NEC; do
+  for component in CORE AI CELERY KOKO WEB MAGNUS RAZOR XRDP NEC; do
     migrate_compat_config "${component}_ENABLED" "${component}_ENABLE" ""
   done
 }
@@ -560,28 +557,46 @@ function db_migrations() {
 }
 
 function clean_images() {
-  current_version=$(get_config CURRENT_VERSION)
+  local previous_version=$1 to_version=$2 namespace images image old_tag new_tag confirm=y
+  local override pinned_tags= jdmc_warning=${3:-}
+  local -a old_images=()
 
-  if [[ -z "${to_version}" || -z "${current_version}" ]];then
+  if [[ -z "${to_version}" || -z "${previous_version}" ]]; then
     echo "to_version or current_version is empty, skip clean images"
-    return
+    return 0
   fi
 
-  if [[ "${current_version}" == "${to_version}" ]]; then
+  if [[ "${previous_version}" == "${to_version}" ]]; then
     echo "current_version is equal to to_version, skip clean images"
-    return
+    return 0
   fi
 
-  namespace=$(get_config_or_env NAMESPACE jumpserver)
-  namespace=${namespace%/}
-  old_images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${namespace}/" | grep "${current_version}" || true)
-  if [[ -n "${old_images}" ]]; then
-    confirm="y"
-    read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
-    if [[ "${confirm}" == "y" ]]; then
-      echo "${old_images}" | xargs docker rmi -f || true
-    fi
+  namespace=$(get_image_namespace)
+  # Keep all tags of the configured JDMC image, including previous-release tags.
+  override=$(get_container_jdmc_image_override)
+  if [[ -n "$override" ]]; then
+    pinned_tags=$(docker image inspect --format '{{range .RepoTags}}{{println .}}{{end}}' "$override" 2>/dev/null) || pinned_tags=${override#docker.io/}
   fi
+  images=$(docker images --format '{{.Repository}}:{{.Tag}}') || return 1
+  while IFS= read -r image; do
+    [[ "${image%/*}" == "${namespace}" ]] || continue
+    if [[ -n "$jdmc_warning" && "$image" == "$namespace/jdmc:$previous_version" ]]; then continue; fi
+    [[ $'\n'"${pinned_tags}"$'\n' != *$'\n'"$image"$'\n'* ]] || continue
+    if [[ "${image%:*}" == "${namespace}/ansible-executor" ]]; then
+      # CE and EE can share an executor tag across an edition change.
+      old_tag=$(VERSION="${previous_version}" get_ansible_executor_tag 2>/dev/null) || continue
+      new_tag=$(VERSION="${to_version}" get_ansible_executor_tag 2>/dev/null) || continue
+      [[ "${old_tag}" != "${new_tag}" && "${image##*:}" == "${old_tag}" ]] || continue
+    elif [[ "${image##*:}" != "${previous_version}" ]]; then
+      continue
+    fi
+    old_images+=("${image}")
+  done <<<"${images}"
+
+  (( ${#old_images[@]} > 0 )) || return 0
+  read_from_input confirm "$(gettext 'Do you need to clean up the old version image')?" "y/n" "${confirm}"
+  [[ "${confirm}" == "y" ]] || return 0
+  docker rmi -f "${old_images[@]}"
 }
 
 function upgrade_docker() {
@@ -592,13 +607,19 @@ function upgrade_docker() {
       read_from_input confirm "$(gettext 'Do you need upgrade Docker binaries')?" "y/n" "${confirm}"
       if [[ "${confirm}" == "y" ]]; then
         echo
+        local archive="${BASE_DIR}/docker/docker.tar.gz"
+        if [[ -f "${archive}" ]]; then
+          verify_sha256 "${archive}" "${DOCKER_BIN_SHA256}" || return 1
+        else
+          prepare_docker_bin || return 1
+        fi
         cd "${PROJECT_DIR}" || exit 1
-        bash ./jmsctl.sh down
+        bash ./jmsctl.sh down || return 1
         sleep 2s
         echo
-        systemctl stop docker
+        systemctl stop docker || return 1
         cd "${BASE_DIR}" || exit 1
-        install_docker
+        copy_docker || return 1
         check_docker_install
         check_docker_start
       fi
@@ -607,24 +628,33 @@ function upgrade_docker() {
 }
 
 function upgrade_compose() {
-  if check_root && [[ -f "/usr/local/libexec/docker/cli-plugins/docker-compose" || -f "$HOME/.docker/cli-plugins/docker-compose" ]]; then
-    if ! docker compose version | grep ${DOCKER_COMPOSE_VERSION} &>/dev/null; then
-      echo
-      echo -e "$(docker compose version) \033[33m-->\033[0m Docker Compose version \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
-      confirm="n"
-      read_from_input confirm "$(gettext 'Do you need upgrade Docker Compose')?" "y/n" "${confirm}"
-      if [[ "${confirm}" == "y" ]]; then
-        echo
-        cd "${BASE_DIR}" || exit 1
-        check_compose_install
-        check_docker_compose
-      fi
-    fi
-  fi
+  local plugin current_version
+  check_root || return 0
+  plugin=$(docker info --format '{{range .ClientInfo.Plugins}}{{if eq .Name "compose"}}{{.Path}}{{end}}{{end}}') || plugin=""
+  case "${plugin}" in
+    "/usr/local/libexec/docker/cli-plugins/docker-compose"|"${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose")
+      if [[ -L "${plugin}" ]]; then
+        log_warn "Skipping Docker Compose upgrade: managed externally via symlink ${plugin}"
+        return 0
+      fi ;;
+    *)
+      log_warn "Skipping Docker Compose upgrade: unmanaged or unknown plugin path (${plugin:-unknown})"
+      return 0 ;;
+  esac
+
+  current_version=$(docker compose version --short) || return 1
+  [[ "${current_version#v}" != "${DOCKER_COMPOSE_VERSION#v}" ]] || return 0
+  echo -e "Docker Compose ${current_version} \033[33m-->\033[0m \033[32m${DOCKER_COMPOSE_VERSION}\033[0m"
+  local confirm=n
+  read_from_input confirm "$(gettext 'Do you need upgrade Docker Compose')?" "y/n" "${confirm}"
+  [[ "${confirm}" == "y" ]] || return 0
+
+  check_compose_install "${plugin}" || return 1
+  check_docker_compose "${DOCKER_COMPOSE_VERSION}"
 }
 
 function main() {
-  local installer_version_before_upgrade target_version jdmc_warning=
+  local installer_version_before_upgrade previous_version target_version jdmc_warning=
   check_jdmc_deployment "${target:-}" || exit 1
   trap cleanup_failed_upgrade EXIT
   write_upgrade_recovery_state running || exit 1
@@ -664,9 +694,10 @@ function main() {
 
   export VERSION="${to_version}"
   echo
-  verify_upgrade_version || exit 1
+  previous_version=$(get_config CURRENT_VERSION)
+  verify_upgrade_version "${previous_version}" || exit 1
   echo
-  check_compose_install
+  check_compose_install || exit 1
 
   echo_yellow "\n2. $(gettext 'Backup Configuration File')"
   if ! backup_config; then
@@ -706,6 +737,10 @@ function main() {
   echo "$(gettext 'Changing database schema may take a while, please wait patiently')"
   write_upgrade_recovery_state recovery_required || exit 1
   UPGRADE_DATABASE_MIGRATION_STARTED=1
+  retire_merged_services stop || {
+    log_error "Failed to stop services merged into KoKo or Razor; retry the upgrade"
+    exit 1
+  }
   upgrade_internal_postgresql || {
     log_error "PostgreSQL migration did not complete; business remains stopped. Retry the same upgrade."
     exit 1
@@ -744,10 +779,14 @@ function main() {
   }
   UPGRADE_COMMITTED=1
   trap - EXIT
+  retire_merged_services remove || {
+    log_error "Upgrade applied, but standalone container cleanup failed; retry the upgrade"
+    exit 1
+  }
   installation_log "upgrade"
 
   echo_yellow "\n8. $(gettext 'Cleanup Image')"
-  clean_images
+  clean_images "${previous_version}" "${to_version}" "$jdmc_warning" || log_warn "Upgrade applied, but cleanup of images for ${previous_version} failed"
 
   echo_yellow "\n9. $(gettext 'Upgrade successfully. You can now restart the program')"
   echo "cd ${PROJECT_DIR}"

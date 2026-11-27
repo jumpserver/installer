@@ -25,8 +25,10 @@ function should_skip_external_db_image() {
 function report_image_failure() {
   local image=$1 message=$2
 
-  if [[ "${ALLOW_MISSING_DB_IMAGE:-0}" == 1 ]] && is_external_db_image "${image}"; then
-    log_warn "${message}. External database backup image ${image} is unavailable; continuing without the backup client."
+  # Upgrades defer unavailable external database clients to the backup prompt.
+  # Built-in databases and application images remain required.
+  if [[ "${ALLOW_MISSING_DB_IMAGE:-0}" == "1" ]] && is_external_db_image "${image}"; then
+    log_warn "${message}. External database backup image ${image} could not be prepared; continuing to the backup step."
     return 0
   fi
   echo_red "${message}"
@@ -90,20 +92,20 @@ function emit_image_mapping() {
 }
 
 function emit_app_image_mapping() {
-  local service=$1 namespace=$2 override=''
-  case "$service" in
-    core) override=$(get_container_jdmc_image_override JDMC_CORE_IMAGE) ;;
-    jdmc) override=$(get_container_jdmc_image_override JDMC_IMAGE) ;;
-  esac
-  if [[ -n "$override" ]]; then
-    emit_image_mapping "$override" "$override" 1
-  else
-    emit_image_mapping "jumpserver/${service}:${VERSION}" "${namespace}/${service}:${VERSION}"
+  local service=$1 namespace=$2 override
+  if [[ "$service" == jdmc ]]; then
+    override=$(get_container_jdmc_image_override)
+    if [[ -n "$override" ]]; then
+      emit_image_mapping "$override" "$override" 1
+      return
+    fi
   fi
+  emit_image_mapping "jumpserver/${service}:${VERSION}" "${namespace}/${service}:${VERSION}"
 }
 
 function get_image_mappings() {
-  local use_xpack enabled_services service image db_image namespace executor_tag core_image_added=false
+  local use_xpack enabled_services service image db_image namespace executor_tag
+  local core_image_added=false koko_included=0 razor_included=0
 
   use_xpack=$(get_config_or_env USE_XPACK)
   namespace=$(get_image_namespace)
@@ -125,6 +127,19 @@ function get_image_mappings() {
   enabled_services=${enabled_services//,/ }
 
   for service in ${enabled_services}; do
+    # Older offline build lists may request a bundled component by name.
+    case "${service}" in
+      chen|kael|lion|koko)
+        [[ "${koko_included}" == 0 ]] || continue
+        service=koko
+        koko_included=1
+        ;;
+      magnus|nec|razor)
+        [[ "${use_xpack}" == "1" && "${razor_included}" == 0 ]] || continue
+        service=razor
+        razor_included=1
+        ;;
+    esac
     case "${service}" in
       "" | jdmc | panda)
         ;;

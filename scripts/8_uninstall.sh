@@ -13,6 +13,7 @@ function stop_services() {
       return 1
     fi
     cd "${PROJECT_DIR?}" || return 1
+    retire_merged_services stop || return 1
     bash ./jmsctl.sh down || return 1
     sleep 2s
     echo
@@ -108,19 +109,19 @@ function remove_compose() {
       rm -f /usr/local/libexec/docker/cli-plugins/docker-compose || return 1
     fi
   fi
-  if [ -f "$HOME/.docker/cli-plugins/docker-compose" ]; then
+  if [ -f "${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose" ]; then
     echo
     confirm="n"
     read_from_input confirm "$(gettext 'Do you need to clean up the Docker Compose binaries')?" "y/n" "${confirm}"
     if [[ "${confirm}" == "y" ]]; then
-      echo -e "$(gettext 'Cleaning up') $HOME/.docker/cli-plugins/docker-compose"
-      rm -f "$HOME/.docker/cli-plugins/docker-compose" || return 1
+      echo -e "$(gettext 'Cleaning up') ${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose"
+      rm -f "${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose" || return 1
     fi
   fi
 }
 
 function remove_jumpserver() {
-  local include_jdmc=$1 images volume_dir image dir
+  local include_jdmc=${1:-false} images volume_dir image dir
   local failed=0
 
   if [[ ! -f "${CONFIG_FILE}" ]]; then
@@ -133,6 +134,9 @@ function remove_jumpserver() {
   confirm="n"
   read_from_input confirm "$(gettext 'Are you clean up JumpServer files')?" "y/n" "${confirm}"
   if [[ "${confirm}" == "y" ]]; then
+    if [[ -f "${CONFIG_FILE}" ]]; then
+      retire_merged_services remove || return 1
+    fi
     local -a dirs=("${volume_dir}")
     if [[ "${include_jdmc}" == true ]]; then
       dirs+=("$(get_current_jdmc_data_dir)" "$(get_legacy_kotl_data_dir)" "${JDMC_INSTALL_DIR}" "${JDMC_LEGACY_INSTALL_DIR}")

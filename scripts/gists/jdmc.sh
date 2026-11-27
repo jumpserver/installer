@@ -30,7 +30,7 @@ function can_manage_existing_jdmc() {
 
 function get_container_jdmc_image_override() {
   local image
-  image=$(get_config_or_env "$1")
+  image=$(get_config_or_env JDMC_IMAGE)
   if [[ -n "$image" ]] && is_jdmc_enabled; then
     printf '%s\n' "$image"
   fi
@@ -38,7 +38,7 @@ function get_container_jdmc_image_override() {
 
 function get_jdmc_image() {
   local image
-  image=$(get_container_jdmc_image_override JDMC_IMAGE)
+  image=$(get_container_jdmc_image_override)
   printf '%s\n' "${image:-$(get_image_namespace)/jdmc:${VERSION}}"
 }
 

@@ -64,17 +64,30 @@ function usage() {
   echo
 }
 
+# Free the listener ports of standalone services bundled into KoKo and Razor.
+function start_compose_services() {
+  local service=$1 compose_cmd=$2
+  shift 2
+  if [[ ( -z "$service" || "$service" == koko ) && "$(get_config_or_env KOKO_ENABLED)" != 0 ]]; then
+    retire_merged_services stop koko || return 1
+  fi
+  if [[ ( -z "$service" || "$service" == razor ) && "$(get_config_or_env USE_XPACK)" == 1 && "$(get_config_or_env RAZOR_ENABLED)" != 0 ]]; then
+    retire_merged_services stop razor || return 1
+  fi
+  ${compose_cmd} "$@"
+}
+
 # The executor must be ready before any services that use it are started.
 function up_application_stack() {
   local compose_cmd=$1 operation=$2 enabled service
   local -a up_args=("${@:3}") remaining=()
   if [[ "$(get_config_or_env ANSIBLE_EXECUTOR_ENABLED)" == 0 ]]; then
-    ${compose_cmd} "${up_args[@]}"
+    start_compose_services "" "$compose_cmd" "${up_args[@]}"
     return
   fi
   ${compose_cmd} "${up_args[@]}" --wait --wait-timeout 60 ansible-executor || return 1
   if [[ "$operation" == start ]]; then
-    ${compose_cmd} "${up_args[@]}"
+    start_compose_services "" "$compose_cmd" "${up_args[@]}"
     return
   fi
 
@@ -85,14 +98,14 @@ function up_application_stack() {
     [[ "$service" == ansible-executor ]] || remaining+=("$service")
   done <<<"$enabled"
   if (( ${#remaining[@]} )); then
-    ${compose_cmd} "${up_args[@]}" --no-deps "${remaining[@]}"
+    start_compose_services "" "$compose_cmd" "${up_args[@]}" --no-deps "${remaining[@]}"
   fi
 }
 
 function start_applications() {
   local operation=$1 service=${2:-} compose_cmd
   local -a flags=(up -d)
-  [[ "$operation" != restart ]] || flags+=(--force-recreate)
+  if [[ "$operation" == restart && -z "$service" ]]; then flags+=(--force-recreate); fi
   if [[ -z "$service" ]]; then
     postgresql_upgrade_start_guard || return 1
     set_openbao || return 1
@@ -101,8 +114,11 @@ function start_applications() {
   compose_cmd=$(get_docker_compose_cmd_line) || return 1
   if [[ -n "$service" ]]; then
     [[ "$service" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]] || return 2
+    if [[ "$operation" == restart ]]; then
+      ${compose_cmd} stop "$service" && ${compose_cmd} rm -f "$service" || return 1
+    fi
     prepare_services_for_start "$service" || return 1
-    ${compose_cmd} "${flags[@]}" "$service" || return 1
+    start_compose_services "$service" "$compose_cmd" "${flags[@]}" "$service" || return 1
   else
     stop_disabled_video_worker || return 1
     prepare_services_for_start || return 1
@@ -315,6 +331,15 @@ function main() {
     esac
   fi
   check_ha_handoff || return 1
+
+  # Stale standalone containers can outlive their config and Compose files.
+  if [[ "$action" == stop ]]; then
+    case "$target" in
+      chen|kael|lion|magnus|nec) retire_merged_services stop "$target"; return ;;
+      koko|razor) retire_merged_services stop "$target" || return 1 ;;
+      ''|ignore_db) retire_merged_services stop || return 1 ;;
+    esac
+  fi
 
   case "$action" in
     help|h|-h|--help) usage; return ;;

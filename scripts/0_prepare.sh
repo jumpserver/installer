@@ -5,6 +5,8 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 . "${BASE_DIR}/utils.sh"
 
 IMAGE_DIR="${BASE_DIR}/images"
+# JDMC validates the installer tree, including downloaded Docker and image files.
+umask go-w
 
 function file_sha256() {
   local file=$1

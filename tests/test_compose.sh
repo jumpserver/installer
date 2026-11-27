@@ -20,13 +20,16 @@ default_config=$(
   export JS_CONFIG_DIR="${test_dir}"
   . ./scripts/utils.sh
   compose_cmd=$(get_docker_compose_cmd_line)
-  assert_contains "${compose_cmd}" 'compose/kael.yml' 'default Compose command must include Kael'
   if [[ "${compose_cmd}" == *'compose/ai.yml'* ]]; then
     fail 'default Compose command must not include the removed AI service'
   fi
   ${compose_cmd} --env-file "${CONFIG_FILE}" config
 )
-assert_contains "${default_config}" 'jms_kael' 'rendered Compose config must contain Kael'
+assert_contains "${default_config}" 'container_name: jms_koko'
+assert_contains "${default_config}" 'target: /opt/kael/data' 'KoKo must reuse the persistent Kael data directory'
+assert_contains "${default_config}" 'source: /data/jumpserver/kael/data'
+assert_contains "${default_config}" 'KAEL_ENABLED: "1"'
+[[ "${default_config}" != *'jms_chen'* && "${default_config}" != *'jms_kael'* && "${default_config}" != *'jms_lion'* ]] || fail 'standalone Chen, Kael and Lion containers must be absent'
 assert_contains "${default_config}" 'published: "5001"' 'Koko Web Proxy must publish the configured external port'
 assert_contains "${default_config}" 'target: 5001' 'Koko Web Proxy must use container port 5001'
 assert_contains "${default_config}" 'WEB_PROXY_BIND_HOST: 0.0.0.0' 'Koko Web Proxy must listen on the container network'
@@ -63,11 +66,13 @@ custom_web_proxy_config=$(
   cd "${TEST_ROOT}"
   export JS_CONFIG_DIR="${test_dir}"
   export KOKO_WEB_PROXY_PORT=15001
+  export KAEL_ENABLED=0
   . ./scripts/utils.sh
   compose_cmd=$(get_docker_compose_cmd_line)
   ${compose_cmd} --env-file "${CONFIG_FILE}" config
 )
 assert_contains "${custom_web_proxy_config}" 'published: "15001"' 'KOKO_WEB_PROXY_PORT must override the published Web Proxy port'
+assert_contains "${custom_web_proxy_config}" 'KAEL_ENABLED: "0"'
 
 printf '%s\n' \
   'USE_XPACK=1' \
@@ -94,8 +99,8 @@ offline_manifest=$(
   . ./scripts/utils.sh
   get_offline_image_manifest
 )
-assert_contains "${offline_manifest}" 'jumpserver/kael:' 'offline manifest must contain the Kael image'
-for optional_image in elasticsearch minio grafana/loki grafana/promtail; do
+assert_contains "${offline_manifest}" 'jumpserver/koko:'
+for optional_image in jumpserver/chen: jumpserver/kael: jumpserver/lion: elasticsearch minio grafana/loki grafana/promtail; do
   if [[ "${offline_manifest}" == *"${optional_image}"* ]]; then
     fail "optional image must not be included in the offline manifest: ${optional_image}"
   fi
@@ -117,6 +122,10 @@ import json
 import sys
 config = json.load(open(sys.argv[1]))
 services = config['services']
+assert services['koko']['healthcheck'] == {
+    'test': ['CMD-SHELL', 'check http://localhost:5000/koko/health/'],
+    'interval': '10s', 'timeout': '5s', 'retries': 3, 'start_period': '10s',
+}
 assert bool(config['networks']['executor'].get('enable_ipv6')) == bool(int(sys.argv[2]))
 assert bool(config['networks']['net'].get('enable_ipv6')) == bool(int(sys.argv[2]))
 assert config['networks']['executor']['ipam']['config'][0]['subnet'] == sys.argv[3]

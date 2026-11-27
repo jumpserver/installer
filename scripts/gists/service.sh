@@ -1,7 +1,7 @@
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/postgresql-upgrade-standalone.sh"
 
-common_services=(core kael celery ansible-executor koko chen web)
-xpack_services=(magnus razor xrdp video-worker nec)
+common_services=(core celery ansible-executor koko web)
+xpack_services=(razor xrdp video-worker)
 
 
 function get_enabled_services() {
@@ -261,7 +261,6 @@ function get_docker_compose_cmd_line() {
   cap_addon=$(get_config CAP_ADDON)
 
   cmd="env"
-  if ! is_jdmc_enabled; then cmd+=" JDMC_CORE_IMAGE="; fi
   # Older Web images select the JDMC proxy using USE_XPACK from Compose.
   if [[ "$(get_config_or_env USE_XPACK)" == 1 ]] && ! is_enterprise_edition; then
     cmd+=" USE_XPACK=0"
@@ -333,6 +332,37 @@ function video_worker_can_start() {
      "$(get_config_or_env VIDEO_WORKER_ENABLED)" != "0" ]]
 }
 
+function retire_merged_services() {
+  local action=$1 target=${2:-} service container_id
+  local -a services
+  case "${target}" in
+    koko) services=(chen kael lion) ;;
+    razor) services=(magnus nec) ;;
+    '') services=(chen kael lion magnus nec) ;;
+    chen|kael|lion|magnus|nec) services=("${target}") ;;
+    *) return 1 ;;
+  esac
+  for service in "${services[@]}"; do
+    container_id=$(docker ps -aq --filter "name=^/jms_${service}$" \
+      --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-jms}" \
+      --filter "label=com.docker.compose.service=${service}") || return 1
+    [[ -n "${container_id}" ]] || continue
+    case "${action}" in
+      stop)
+        # Keep the old services stopped across daemon restarts.
+        docker update --restart=no "${container_id}" >/dev/null || return 1
+        docker stop "${container_id}" >/dev/null || return 1
+        echo_check "Stopped standalone jms_${service}"
+        ;;
+      remove)
+        docker rm "${container_id}" >/dev/null || return 1
+        echo_check "Removed standalone jms_${service} and retained its volumes"
+        ;;
+      *) return 1 ;;
+    esac
+  done
+}
+
 function stop_disabled_video_worker() {
   local container_id
   video_worker_can_start && return 0
@@ -377,7 +407,12 @@ function prepare_services_for_start() {
       }
     fi
     case "${service#jms_}" in
-      chen) prepare_chen_volume "${image}" "${owner}" || return 1 ;;
+      chen)
+        # JDMC can still prepare an installed container during an HA upgrade.
+        if [[ "${from_containers}" == 1 ]]; then
+          prepare_chen_volume "${image}" "${owner}" || return 1
+        fi
+        ;;
       video-worker) prepare_video_worker_volume "${image}" "${owner}" || return 1 ;;
       ansible-executor|ansible_executor) prepare_ansible_executor "${image}" || return 1 ;;
     esac
@@ -387,7 +422,7 @@ function prepare_services_for_start() {
 function prepare_chen_volume() {
   [[ "$(get_config_or_env CHEN_ENABLED)" != "0" ]] || return 0
   local image owner data_dir folder
-  image=${1:-"$(get_image_namespace)/chen:${VERSION}"}
+  image=$1
   owner=${2:-}
   if [[ -z "${owner}" ]]; then
     owner=$(docker image inspect -f '{{.Config.User}}' "${image}") || {
@@ -527,10 +562,8 @@ function get_db_compose_cmd() {
 function get_db_migrate_compose_cmd() {
   cmd=$(get_db_compose_cmd "all") || return 1
   cmd+=" -f compose/init-db.yml"
-  if is_jdmc_enabled; then
-    if jdmc_callback_available; then cmd+=" -f compose/jdmc.yml"; fi
-  else
-    cmd="env JDMC_CORE_IMAGE= ${cmd}"
+  if is_jdmc_enabled && jdmc_callback_available; then
+    cmd+=" -f compose/jdmc.yml"
   fi
   echo "${cmd}"
 }
