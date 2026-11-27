@@ -290,4 +290,6 @@ Maintainer notes for the Docker and Compose binary mirror are in [Docker and Com
 
 ## License
 
-This project is licensed under the GNU General Public License version 3 (GPLv3), matching [JumpServer](https://github.com/jumpserver/jumpserver). See [LICENSE](LICENSE) for the full terms.
+Copyright (c) 2014-2026 FIT2CLOUD, All rights reserved.
+
+Licensed under the GNU General Public License version 3 (GPLv3), consistent with the [JumpServer main repository](https://github.com/jumpserver/jumpserver). See [LICENSE](LICENSE) for the full license text.

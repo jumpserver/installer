@@ -288,6 +288,8 @@ Docker 與 Compose 二進位鏡像的維護說明見 [Docker 與 Compose 鏡像�
 - Issues：<https://github.com/jumpserver/jumpserver/issues>
 - Discord：<https://discord.gg/jumpserver>
 
-## 授權條款
+## 許可證
 
-本專案採用 GNU General Public License version 3（GPLv3），與 [JumpServer](https://github.com/jumpserver/jumpserver) 保持一致。完整授權條款見 [LICENSE](../LICENSE)。
+Copyright (c) 2014-2026 FIT2CLOUD, All rights reserved.
+
+本項目基於 GNU General Public License version 3（GPLv3）許可，與 [JumpServer 主倉庫](https://github.com/jumpserver/jumpserver)一致。完整許可文本請參閱 [LICENSE](../LICENSE)。
